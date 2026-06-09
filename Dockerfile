@@ -47,6 +47,10 @@ RUN apt-get update \
 
 COPY --from=builder2 /build/new-api /
 COPY LICENSE NOTICE THIRD-PARTY-LICENSES.md /licenses/
+# Default HTTP port (override with PORT). Dokploy / Traefik domain → set internal port to match.
+ENV PORT=3000
 EXPOSE 3000
 WORKDIR /data
+HEALTHCHECK --interval=30s --timeout=10s --start-period=90s --retries=5 \
+  CMD wget -qO- http://127.0.0.1:3000/api/status | grep -q '"success"' || exit 1
 ENTRYPOINT ["/new-api"]

@@ -1,0 +1,67 @@
+# Dokploy 部署参考：将本文件选为 Compose 路径，或在 Dokploy 中对照配置。
+#
+# 要点：
+# 1) 绑定域名时「应用内部端口」必须为 3000（与 Dockerfile ENV PORT / EXPOSE 一致）。
+# 2) new-api 必须加入外部网络 dokploy-network，Traefik 才能转发流量。
+# 3) MySQL 仅走内部网络 new-api-internal，勿对公网暴露 3306。
+#
+# 在 Dokploy 项目环境变量中设置（勿提交真实密码到仓库）：
+#   MYSQL_ROOT_PASSWORD
+# 在 Dokploy 项目环境变量中设置（勿提交真实密码到仓库）：
+#   MYSQL_ROOT_PASSWORD
+#   SQL_DSN=root:<同上密码>@tcp(mysql:3306)/new-api?charset=utf8mb4
+#   SESSION_SECRET=<随机长字符串>（生产建议设置）
+
+services:
+  new-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: always
+    expose:
+      - "3000"
+    environment:
+      PORT: "3000"
+      TZ: Asia/Shanghai
+      SQL_DSN: ${SQL_DSN}
+      SESSION_SECRET: ${SESSION_SECRET:-}
+    volumes:
+      - new_api_data:/data
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - dokploy-network
+      - new-api-internal
+
+  mysql:
+    image: mysql:8
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?set MYSQL_ROOT_PASSWORD in Dokploy}
+      MYSQL_DATABASE: new-api
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - new-api-internal
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          'mysqladmin ping -h 127.0.0.1 -uroot -p"$$MYSQL_ROOT_PASSWORD" || exit 1',
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 40s
+
+volumes:
+  new_api_data:
+  mysql_data:
+
+networks:
+  dokploy-network:
+    external: true
+  new-api-internal:
+    driver: bridge

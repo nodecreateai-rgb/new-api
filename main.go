@@ -204,7 +204,9 @@ func main() {
 	// Log startup success message
 	common.LogStartupSuccess(startTime, port)
 
-	err = server.Run(":" + port)
+	// Explicit 0.0.0.0 so reverse proxies (Traefik / Dokploy / K8s) reliably reach the process;
+	// ":"+port can behave differently across environments.
+	err = server.Run("0.0.0.0:" + port)
 	if err != nil {
 		common.FatalLog("failed to start HTTP server: " + err.Error())
 	}
