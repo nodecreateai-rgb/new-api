@@ -55,6 +55,12 @@ networks:
 
 后端已调整：对缺失的 `/assets/*` 返回普通 **404**，不再返回 API 用的 JSON，避免浏览器把错误响应当成脚本解析。
 
+## 8. 数据库里的「服务器地址」(ServerAddress)
+
+- 面板/数据库中的键名必须是 **`ServerAddress`**（区分大小写），值例如：`https://llm.example.com`（不要末尾 `/`）。  
+- 该字段用于 **OAuth 回调、邮件里的链接、Webhook 说明、Passkey 等**，**不会让 DNS 或 Traefik  magically 指向你的主机**；域名打不开时仍要查网络与 Dokploy 端口。  
+- 修改 `options` 表后，进程会通过定时同步读到新值；若曾启用 Passkey 且遇到域名更换后仍异常，请部署 **含本修复的版本**（Passkey 推导不再锁死旧域名），或同时在后台把 **Passkey 的 RPID / Origins** 改成与新域名一致。
+
 ## 快速自检
 
 1. Dokploy 容器日志：应用是否已打印启动成功、是否在连库/Redis 处退出。  

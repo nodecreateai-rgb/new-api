@@ -32,19 +32,31 @@ func init() {
 	config.GlobalConfig.Register("passkey", &defaultPasskeySettings)
 }
 
+// GetPasskeySettings returns effective passkey settings for the current request.
+//
+// It must NOT mutate defaultPasskeySettings when deriving RPID/Origins from ServerAddress:
+// ServerAddress is reloaded from the DB on a timer, and writing derived fields into the global
+// struct would freeze RPID/Origins at the first seen ServerAddress (breaking domain moves).
 func GetPasskeySettings() *PasskeySettings {
-	if defaultPasskeySettings.RPID == "" && ServerAddress != "" {
-		// 从ServerAddress提取域名作为RPID
-		// ServerAddress可能是 "https://newapi.pro" 这种格式
+	out := defaultPasskeySettings
+
+	origins := strings.TrimSpace(out.Origins)
+	if origins == "" || origins == "[]" {
+		out.Origins = strings.TrimSpace(ServerAddress)
+	}
+
+	rpID := strings.TrimSpace(out.RPID)
+	if rpID == "" {
 		serverAddr := strings.TrimSpace(ServerAddress)
-		if parsed, err := url.Parse(serverAddr); err == nil && parsed.Host != "" {
-			defaultPasskeySettings.RPID = parsed.Host
-		} else {
-			defaultPasskeySettings.RPID = serverAddr
+		if serverAddr != "" {
+			if parsed, err := url.Parse(serverAddr); err == nil && parsed.Host != "" {
+				rpID = parsed.Host
+			} else {
+				rpID = serverAddr
+			}
 		}
 	}
-	if defaultPasskeySettings.Origins == "" || defaultPasskeySettings.Origins == "[]" {
-		defaultPasskeySettings.Origins = ServerAddress
-	}
-	return &defaultPasskeySettings
+	out.RPID = rpID
+
+	return &out
 }
