@@ -2,7 +2,7 @@
 # 
 # Quick Start:
 #   1. docker-compose up -d
-#   2. Access at http://localhost:${HOST_PORT:-23088}
+#   2. Access at http://localhost:${HOST_PORT:-3060}
 #      (override HOST_PORT in .env if needed)
 #
 # Using MySQL instead of PostgreSQL:
@@ -22,7 +22,7 @@ services:
     restart: always
     command: --log-dir /app/logs
     ports:
-      - "${HOST_PORT:-23088}:3000"
+      - "${HOST_PORT:-3060}:3000"
     volumes:
       - ./data:/data
       - ./logs:/app/logs
