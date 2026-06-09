@@ -32,8 +32,16 @@ func SetWebRouter(router *gin.Engine, assets ThemeAssets) {
 	router.Use(static.Serve("/", themeFS))
 	router.NoRoute(func(c *gin.Context) {
 		c.Set(middleware.RouteTagKey, "web")
-		if strings.HasPrefix(c.Request.RequestURI, "/v1") || strings.HasPrefix(c.Request.RequestURI, "/api") || strings.HasPrefix(c.Request.RequestURI, "/assets") {
+		// Use URL.Path only (no query string) so "/api/foo?x=/v1" is not misclassified.
+		p := c.Request.URL.Path
+		// Wrong / missing build chunks must not return RelayNotFound JSON — browsers expect
+		// JavaScript and may fail to boot the SPA, which then surfaces as the in-app 404 page.
+		if strings.HasPrefix(p, "/v1") || strings.HasPrefix(p, "/api") {
 			controller.RelayNotFound(c)
+			return
+		}
+		if strings.HasPrefix(p, "/assets/") || p == "/assets" {
+			c.AbortWithStatus(http.StatusNotFound)
 			return
 		}
 		c.Header("Cache-Control", "no-cache")
