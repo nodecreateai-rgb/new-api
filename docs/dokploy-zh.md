@@ -2,6 +2,18 @@
 
 本文说明在 [Dokploy](https://dokploy.com) 上部署本仓库时的常见坑与推荐做法。若域名无法打开，请按顺序排查。
 
+## Dokploy 控制台必查（与业务代码无关）
+
+以下与 [Dokploy 文档：Troubleshooting](https://docs.dokploy.com/docs/core/troubleshooting)、[Docker Compose Domains](https://docs.dokploy.com/docs/core/docker-compose/domains) 一致：
+
+1. **必须在 Dokploy UI → 你的 Compose 应用 → Domains 里添加域名**，并选择服务名 **`new-api`**、内部端口 **`3000`**。若只保存了 compose、却**从未在 UI 里添加域名**，Dokploy **不会**注入 Traefik 路由，公网用域名访问会**一直失败**（文档明确：未配域名则不会对 compose 自动加 labels）。  
+2. 部署前点 **Preview Compose**，确认最终执行的文件里，`new-api` 带有 `traefik.enable=true` 以及 `loadbalancer.server.port=3000`（或与你 `PORT` 一致）等配置。  
+3. **先**在 DNS 把域名 **A 记录** 指到服务器公网 IP，**再**在 Dokploy 里添加域名并签证书；顺序反了 Let's Encrypt 可能失败，需删域名重加或按文档处理 Traefik。  
+4. 一般**不要**在 Dokploy「高级」里给 Web 服务再绑主机 **Ports**（除非你要 `IP:端口` 直连），以免与 Traefik 的 80/443 冲突。  
+5. Compose 里若 **healthcheck 一直失败**，官方说明可能导致**域名永远不通**；本仓库示例里 `new-api` 依赖 **MySQL healthy**，若 MySQL 密码/健康检查不对，`new-api` 可能**一直起不来**，Traefik 也无后端可连。  
+6. 容器挂在**多个 Docker 网络**时，Traefik 可能连到错误的网卡；`docker-compose.dokploy.yml` 已为 `new-api` 设置 **`traefik.docker.network=dokploy-network`**。  
+7. 使用 Compose / 模板时，**每次在 UI 里改域名后都要重新 Deploy** 才会生效。
+
 ## 1. 内部端口必须是 3000
 
 本应用默认监听 **3000**（可通过环境变量 `PORT` 修改；Dockerfile 已设置 `ENV PORT=3000`）。

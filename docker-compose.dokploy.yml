@@ -7,10 +7,12 @@
 #
 # 在 Dokploy 项目环境变量中设置（勿提交真实密码到仓库）：
 #   MYSQL_ROOT_PASSWORD
-# 在 Dokploy 项目环境变量中设置（勿提交真实密码到仓库）：
-#   MYSQL_ROOT_PASSWORD
 #   SQL_DSN=root:<同上密码>@tcp(mysql:3306)/new-api?charset=utf8mb4
 #   SESSION_SECRET=<随机长字符串>（生产建议设置）
+#
+# Dokploy（官方文档）：若未在 UI「Domains」里添加域名，不会注入 Traefik 路由，公网域名无法访问。
+# 添加域名后务必「Preview Compose」确认已出现 traefik.* labels；改域名后需重新部署。
+# 多网络时 Traefik 可能连错网卡，故强制走 dokploy-network。
 
 services:
   new-api:
@@ -30,6 +32,8 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
+    labels:
+      - traefik.docker.network=dokploy-network
     networks:
       - dokploy-network
       - new-api-internal
