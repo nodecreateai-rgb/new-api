@@ -14,13 +14,28 @@
 6. 容器挂在**多个 Docker 网络**时，Traefik 可能连到错误的网卡；`docker-compose.dokploy.yml` 已为 `new-api` 设置 **`traefik.docker.network=dokploy-network`**。  
 7. 使用 Compose / 模板时，**每次在 UI 里改域名后都要重新 Deploy** 才会生效。
 
-## 1. 内部端口必须是 3000
+## 1. Dokploy 里填 3060 还是 3000？（最常见误配）
 
-本应用默认监听 **3000**（可通过环境变量 `PORT` 修改；Dockerfile 已设置 `ENV PORT=3000`）。
+根目录 **`docker-compose.yml`** 里有：
 
-在 Dokploy 中为该服务绑定域名时，**「内部端口 / Container Port」必须填 `3000`**。若填成 `80`、`8080` 等，Traefik 会把流量打到错误端口，表现为超时、502 或「访问不到」。
+```yaml
+ports:
+  - "${HOST_PORT:-3060}:3000"
+```
 
-仓库根目录提供 **`docker-compose.dokploy.yml`**：`new-api` 使用 `expose: "3000"`，便于与 Traefik 对齐，且不把数据库暴露到公网。
+含义是：
+
+| 端口 | 含义 | 谁在用 |
+|------|------|--------|
+| **3060** | **宿主机**上映射出来的端口 | 你在自己电脑上访问 `http://服务器IP:3060` 时走这条 |
+| **3000** | **容器内** new-api 进程真正监听的端口 | `Dockerfile` 里 `ENV PORT=3000`，进程 `Listen 0.0.0.0:3000` |
+
+**Dokploy 的 Traefik 和容器在同一个 Docker 网络里**，它会把流量直接转到 **`new-api` 容器的某个端口**，**不会**先绕到宿主机的 `3060`。  
+因此在 **Domains** 里填的「内部端口 / Container Port」必须是 **3000**（除非你显式把环境变量 `PORT` 改成了别的，并与之一致）。
+
+若填 **3060**：Traefik 会去连 `new-api:3060`，而容器里**没有**进程监听 3060 → 典型表现是 **502 / Bad Gateway / 连接被拒绝**。你改成 3000「仍不好使」时，请再核对：**服务名是否为 `new-api`、是否已 Preview Compose 看到 `loadbalancer.server.port=3000`、MySQL 是否 healthy 导致容器根本没起来**。
+
+仓库里的 **`docker-compose.dokploy.yml`** 使用 `expose: "3000"`、不设 `ports: 3060:3000`，就是为了和 Dokploy/Traefik 的语义一致，避免和本机映射端口混淆。
 
 ## 2. 网络：加入 `dokploy-network`
 

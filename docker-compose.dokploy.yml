@@ -1,7 +1,8 @@
 # Dokploy 部署参考：将本文件选为 Compose 路径，或在 Dokploy 中对照配置。
 #
 # 要点：
-# 1) 绑定域名时「应用内部端口」必须为 3000（与 Dockerfile ENV PORT / EXPOSE 一致）。
+# 1) Dokploy「Domains → 内部端口」= 容器内监听端口，默认 3000（与 Dockerfile ENV PORT / EXPOSE 一致）。
+#    不要填仓库根 docker-compose.yml 里的宿主机端口 3060（ports: 3060:3000 左侧是宿主机，Traefik 不走它）。
 # 2) new-api 必须加入外部网络 dokploy-network，Traefik 才能转发流量。
 # 3) MySQL 仅走内部网络 new-api-internal，勿对公网暴露 3306。
 #

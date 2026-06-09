@@ -22,6 +22,8 @@ services:
     restart: always
     command: --log-dir /app/logs
     ports:
+      # 左侧 = 宿主机端口（本机访问用）；右侧 = 容器内端口（new-api 监听 3000）。
+      # Dokploy/Traefik 走 Docker 网络直连容器，Domains 里请填右侧的 3000，不要填左侧的宿主机端口。
       - "${HOST_PORT:-3060}:3000"
     volumes:
       - ./data:/data
