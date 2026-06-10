@@ -314,6 +314,12 @@ var defaultModelPrice = map[string]float64{
 	"veo-3.0-fast-generate-001":      0.15,
 	"veo-3.1-generate-preview":       0.4,
 	"veo-3.1-fast-generate-preview":  0.15,
+	// Seedance video models on dopio are sold per generated item.
+	// Prices are stored in USD because per-call billing multiplies by QuotaPerUnit.
+	// CNY list prices at USDExchangeRate=7.3: c1=¥4, c2=¥3, c3=¥5.
+	"seedance2-c1": 4.0 / 7.3,
+	"seedance2-c2": 3.0 / 7.3,
+	"seedance2-c3": 5.0 / 7.3,
 }
 
 var defaultAudioRatio = map[string]float64{

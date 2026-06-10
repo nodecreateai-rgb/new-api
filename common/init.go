@@ -155,9 +155,14 @@ func initConstantEnv() {
 	// 异步任务超时时间（分钟），超过此时间未完成的任务将被标记为失败并退款。0 表示禁用。
 	constant.TaskTimeoutMinutes = GetEnvOrDefault("TASK_TIMEOUT_MINUTES", 1440)
 
+	// TASK_PRICE_PATCH lists asynchronous task models that are billed per request
+	// instead of multiplying their base price by request-derived ratios like seconds
+	// or resolution. Seedance models are sold per generated item, so keep them as
+	// built-in defaults while still allowing operators to add/override via env.
+	taskPricePatches := []string{"seedance2-c1", "seedance2-c2", "seedance2-c3"}
 	soraPatchStr := GetEnvOrDefaultString("TASK_PRICE_PATCH", "")
 	if soraPatchStr != "" {
-		var taskPricePatches []string
+		taskPricePatches = nil
 		soraPatches := strings.Split(soraPatchStr, ",")
 		for _, patch := range soraPatches {
 			trimmedPatch := strings.TrimSpace(patch)
@@ -165,8 +170,8 @@ func initConstantEnv() {
 				taskPricePatches = append(taskPricePatches, trimmedPatch)
 			}
 		}
-		constant.TaskPricePatches = taskPricePatches
 	}
+	constant.TaskPricePatches = taskPricePatches
 
 	// Initialize trusted redirect domains for URL validation
 	trustedDomainsStr := GetEnvOrDefaultString("TRUSTED_REDIRECT_DOMAINS", "")
