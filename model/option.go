@@ -201,7 +201,9 @@ func loadOptionsFromDatabase() {
 // USDExchangeRate≈7.3. Dopio now treats account balance/prices as RMB 1:1, so
 // startup normalizes both the exchange rate and these per-call model prices.
 func ensureDopioRMBPricing() {
+	const targetPrice = "1"
 	const targetUSDExchangeRate = "1"
+	const targetQuotaDisplayType = operation_setting.QuotaDisplayTypeCNY
 	targetModelPrices := map[string]float64{
 		"sd2-c1": 4,
 		"sd2-c2": 3,
@@ -210,12 +212,20 @@ func ensureDopioRMBPricing() {
 
 	updates := map[string]string{}
 	common.OptionMapRWMutex.RLock()
+	currentPrice := common.OptionMap["Price"]
 	currentRate := common.OptionMap["USDExchangeRate"]
+	currentQuotaDisplayType := common.OptionMap["general_setting.quota_display_type"]
 	currentModelPrice := common.OptionMap["ModelPrice"]
 	common.OptionMapRWMutex.RUnlock()
 
+	if currentPrice != targetPrice {
+		updates["Price"] = targetPrice
+	}
 	if currentRate != targetUSDExchangeRate {
 		updates["USDExchangeRate"] = targetUSDExchangeRate
+	}
+	if currentQuotaDisplayType != targetQuotaDisplayType {
+		updates["general_setting.quota_display_type"] = targetQuotaDisplayType
 	}
 
 	prices := map[string]float64{}
@@ -247,7 +257,7 @@ func ensureDopioRMBPricing() {
 		common.SysLog("failed to enforce Dopio RMB pricing: " + err.Error())
 		return
 	}
-	common.SysLog("enforced Dopio RMB pricing for sd2-c1/sd2-c2/sd2-c3 and USDExchangeRate=1")
+	common.SysLog("enforced Dopio RMB pricing for sd2-c1/sd2-c2/sd2-c3, Price=1, USDExchangeRate=1, quota_display_type=CNY")
 }
 
 func SyncOptions(frequency int) {
