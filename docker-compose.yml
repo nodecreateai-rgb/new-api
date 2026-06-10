@@ -17,6 +17,11 @@ version: '3.4' # For compatibility with older Docker versions
 
 services:
   new-api:
+    # Build from the checked-out source so Dokploy redeploys include local code changes.
+    # Keep image as the tag for the built artifact instead of pulling a stale upstream latest.
+    build:
+      context: .
+      dockerfile: Dockerfile
     image: calciumion/new-api:latest
     container_name: new-api
     restart: always
