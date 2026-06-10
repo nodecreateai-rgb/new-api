@@ -340,6 +340,7 @@ var defaultAudioCompletionRatio = map[string]float64{
 }
 
 var modelPriceMap = types.NewRWMap[string, float64]()
+var modelGroupPriceMap = types.NewRWMap[string, map[string]float64]()
 var modelRatioMap = types.NewRWMap[string, float64]()
 var completionRatioMap = types.NewRWMap[string, float64]()
 
@@ -370,8 +371,29 @@ func ModelPrice2JSONString() string {
 	return modelPriceMap.MarshalJSONString()
 }
 
+func ModelGroupPrice2JSONString() string {
+	return modelGroupPriceMap.MarshalJSONString()
+}
+
 func UpdateModelPriceByJSONString(jsonStr string) error {
 	return types.LoadFromJsonStringWithCallback(modelPriceMap, jsonStr, InvalidateExposedDataCache)
+}
+
+func UpdateModelGroupPriceByJSONString(jsonStr string) error {
+	return types.LoadFromJsonStringWithCallback(modelGroupPriceMap, jsonStr, InvalidateExposedDataCache)
+}
+
+func GetModelGroupPrice(group, name string) (float64, bool) {
+	name = FormatMatchingModelName(name)
+	groupPrices, ok := modelGroupPriceMap.Get(group)
+	if !ok {
+		return -1, false
+	}
+	price, ok := groupPrices[name]
+	if !ok {
+		return -1, false
+	}
+	return price, true
 }
 
 // GetModelPrice 返回模型的价格，如果模型不存在则返回-1，false

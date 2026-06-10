@@ -64,6 +64,20 @@ func HandleGroupRatio(ctx *gin.Context, relayInfo *relaycommon.RelayInfo) types.
 	return groupRatioInfo
 }
 
+func applyModelGroupPrice(info *relaycommon.RelayInfo, groupRatioInfo *types.GroupRatioInfo, modelPrice *float64, usePrice bool) {
+	if !usePrice {
+		return
+	}
+	price, ok := ratio_setting.GetModelGroupPrice(info.UsingGroup, info.OriginModelName)
+	if !ok {
+		return
+	}
+	*modelPrice = price
+	groupRatioInfo.GroupRatio = 1
+	groupRatioInfo.GroupSpecialRatio = 1
+	groupRatioInfo.HasSpecialRatio = true
+}
+
 func ModelPriceHelper(c *gin.Context, info *relaycommon.RelayInfo, promptTokens int, meta *types.TokenCountMeta) (types.PriceData, error) {
 	modelPrice, usePrice := ratio_setting.GetModelPrice(info.OriginModelName, false)
 
@@ -121,6 +135,8 @@ func ModelPriceHelper(c *gin.Context, info *relaycommon.RelayInfo, promptTokens 
 	}
 
 	// check if free model pre-consume is disabled
+	applyModelGroupPrice(info, &groupRatioInfo, &modelPrice, usePrice)
+
 	if !operation_setting.GetQuotaSetting().EnableFreeModelPreConsume {
 		// if model price or ratio is 0, do not pre-consume quota
 		if groupRatioInfo.GroupRatio == 0 {
@@ -189,6 +205,8 @@ func ModelPriceHelperPerCall(c *gin.Context, info *relaycommon.RelayInfo) (types
 			}
 		}
 	}
+
+	applyModelGroupPrice(info, &groupRatioInfo, &modelPrice, usePrice)
 
 	var quota int
 	freeModel := false
