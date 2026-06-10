@@ -1,6 +1,7 @@
 package model
 
 import (
+	"encoding/json"
 	"strconv"
 	"strings"
 	"time"
@@ -182,6 +183,7 @@ func InitOptionMap() {
 
 	common.OptionMapRWMutex.Unlock()
 	loadOptionsFromDatabase()
+	ensureDopioRMBPricing()
 }
 
 func loadOptionsFromDatabase() {
@@ -192,6 +194,60 @@ func loadOptionsFromDatabase() {
 			common.SysLog("failed to update option map: " + err.Error())
 		}
 	}
+}
+
+// ensureDopioRMBPricing keeps the Dopio Seedance aliases billed directly in RMB.
+// Historically these prices were stored as USD amounts converted from RMB with
+// USDExchangeRate≈7.3. Dopio now treats account balance/prices as RMB 1:1, so
+// startup normalizes both the exchange rate and these per-call model prices.
+func ensureDopioRMBPricing() {
+	const targetUSDExchangeRate = "1"
+	targetModelPrices := map[string]float64{
+		"sd2-c1": 4,
+		"sd2-c2": 3,
+		"sd2-c3": 4,
+	}
+
+	updates := map[string]string{}
+	common.OptionMapRWMutex.RLock()
+	currentRate := common.OptionMap["USDExchangeRate"]
+	currentModelPrice := common.OptionMap["ModelPrice"]
+	common.OptionMapRWMutex.RUnlock()
+
+	if currentRate != targetUSDExchangeRate {
+		updates["USDExchangeRate"] = targetUSDExchangeRate
+	}
+
+	prices := map[string]float64{}
+	if currentModelPrice != "" {
+		if err := json.Unmarshal([]byte(currentModelPrice), &prices); err != nil {
+			common.SysLog("failed to parse ModelPrice while enforcing Dopio RMB pricing: " + err.Error())
+			prices = map[string]float64{}
+		}
+	}
+	changed := false
+	for model, price := range targetModelPrices {
+		if prices[model] != price {
+			prices[model] = price
+			changed = true
+		}
+	}
+	if changed {
+		if b, err := json.Marshal(prices); err == nil {
+			updates["ModelPrice"] = string(b)
+		} else {
+			common.SysLog("failed to marshal ModelPrice while enforcing Dopio RMB pricing: " + err.Error())
+		}
+	}
+
+	if len(updates) == 0 {
+		return
+	}
+	if err := UpdateOptionsBulk(updates); err != nil {
+		common.SysLog("failed to enforce Dopio RMB pricing: " + err.Error())
+		return
+	}
+	common.SysLog("enforced Dopio RMB pricing for sd2-c1/sd2-c2/sd2-c3 and USDExchangeRate=1")
 }
 
 func SyncOptions(frequency int) {
