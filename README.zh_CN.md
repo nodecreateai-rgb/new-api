@@ -394,7 +394,7 @@ docker run --name new-api -d --restart always \
 <details>
 <summary><strong>方式 4：Dokploy</strong></summary>
 
-使用仓库中的 **`docker-compose.dokploy.yml`**（含 `dokploy-network` 与 MySQL 内部网络），或在现有 Compose 中对照配置。绑定域名时请将 **应用内部端口设为 `3000`**，并与 Traefik 服务端口一致。
+使用仓库中的 **`docker-compose.dokploy.yml`**（含健康检查、日志轮转、可选本机调试端口注释；**公网路由由 Dokploy 在 Domains 绑定后自动注入**）。环境变量模板见 **[`docs/env.dokploy.example`](./docs/env.dokploy.example)**。绑定域名时请将 **应用内部端口设为 `3000`**。
 
 📖 详细说明与排错：[docs/dokploy-zh.md](./docs/dokploy-zh.md)
 

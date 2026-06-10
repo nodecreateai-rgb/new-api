@@ -1,19 +1,18 @@
-# Dokploy 部署参考：将本文件选为 Compose 路径，或在 Dokploy 中对照配置。
+# Dokploy 部署参考：在 Dokploy 中选择本文件作为 Compose 路径（或对照字段合并进自有 compose）。
 #
-# 要点：
-# 1) Dokploy「Domains → 内部端口」= 容器内监听端口，默认 3000（与 Dockerfile ENV PORT / EXPOSE 一致）。
-#    不要填仓库根 docker-compose.yml 里的宿主机端口 3060（ports: 3060:3000 左侧是宿主机，Traefik 不走它）。
-# 2) new-api 必须加入外部网络 dokploy-network，Traefik 才能转发流量。
-# 3) MySQL 仅走内部网络 new-api-internal，勿对公网暴露 3306。
+# Traefik / 公网路由（重要）：
+# - 在 Dokploy UI → Domains 里为服务 **new-api** 绑定域名，内部端口 **3000**，保存后 **Redeploy**。
+#   Dokploy 会自动注入 traefik.* 标签，并把 **new-api** 接到 Traefik 可达的网络（非隔离部署常见为
+#   dokploy-network；隔离部署时为项目专有网络）。
+# - 本文件**不**声明外部网络 dokploy-network、**不**写 traefik.docker.network 标签，避免与「隔离部署」
+#   所用网络名不一致时出现 502 / 路由失败。若 Preview Compose 里没有任何 traefik 行，说明 Domains
+#   未配置或未重新部署。
 #
-# 在 Dokploy 项目环境变量中设置（勿提交真实密码到仓库）：
-#   MYSQL_ROOT_PASSWORD
-#   SQL_DSN=root:<同上密码>@tcp(mysql:3306)/new-api?charset=utf8mb4
-#   SESSION_SECRET=<随机长字符串>（生产建议设置）
+# 端口：容器内监听见 Dockerfile `PORT=3000`；Domains 填 3000，不要填宿主机映射端口（如 3060）。
 #
-# Dokploy（官方文档）：若未在 UI「Domains」里添加域名，不会注入 Traefik 路由，公网域名无法访问。
-# 添加域名后务必「Preview Compose」确认已出现 traefik.* labels；改域名后需重新部署。
-# 多网络时 Traefik 可能连错网卡，故强制走 dokploy-network。
+# MySQL：仅挂在 `new-api-internal`，不对外暴露 3306。
+#
+# 在 Dokploy 环境变量中设置（勿提交真实密码到仓库）；完整示例见 docs/env.dokploy.example。
 
 services:
   new-api:
@@ -23,6 +22,9 @@ services:
     restart: always
     expose:
       - "3000"
+    # 仅绑定本机时可取消注释，用于 SSH 隧道排错；生产建议依赖 Traefik 443，不要长期暴露公网。
+    # ports:
+    #   - "127.0.0.1:3060:3000"
     environment:
       PORT: "3000"
       TZ: Asia/Shanghai
@@ -33,11 +35,24 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
-    labels:
-      - traefik.docker.network=dokploy-network
     networks:
-      - dokploy-network
       - new-api-internal
+    stop_grace_period: 30s
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget -qO- http://127.0.0.1:3000/api/status | grep -q '\"success\"' || exit 1",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "3"
 
   mysql:
     image: mysql:8
@@ -45,11 +60,13 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?set MYSQL_ROOT_PASSWORD in Dokploy}
       MYSQL_DATABASE: new-api
+      TZ: Asia/Shanghai
     command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
     volumes:
       - mysql_data:/var/lib/mysql
     networks:
       - new-api-internal
+    stop_grace_period: 60s
     healthcheck:
       test:
         [
@@ -60,13 +77,16 @@ services:
       timeout: 5s
       retries: 30
       start_period: 40s
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "3"
 
 volumes:
   new_api_data:
   mysql_data:
 
 networks:
-  dokploy-network:
-    external: true
   new-api-internal:
     driver: bridge
