@@ -249,11 +249,19 @@ func (a *TaskAdaptor) DoResponse(c *gin.Context, resp *http.Response, info *rela
 		return
 	}
 
-	// 使用公开 task_xxxx ID 返回给客户端
+	// 使用公开 task_xxxx ID 和本地模型别名返回给客户端；上游模型名仅用于内部请求。
 	dResp.ID = info.PublicTaskID
 	dResp.TaskID = info.PublicTaskID
-	c.JSON(http.StatusOK, dResp)
-	return upstreamID, responseBody, nil
+	if info.OriginModelName != "" {
+		dResp.Model = info.OriginModelName
+	}
+	clientResponseBody, err := common.Marshal(dResp)
+	if err != nil {
+		taskErr = service.TaskErrorWrapper(err, "marshal_response_body_failed", http.StatusInternalServerError)
+		return
+	}
+	c.Data(http.StatusOK, "application/json", clientResponseBody)
+	return upstreamID, clientResponseBody, nil
 }
 
 // FetchTask fetch task status
@@ -326,6 +334,14 @@ func (a *TaskAdaptor) ConvertToOpenAIVideo(task *model.Task) ([]byte, error) {
 	var err error
 	if data, err = sjson.SetBytes(data, "id", task.TaskID); err != nil {
 		return nil, errors.Wrap(err, "set id failed")
+	}
+	if data, err = sjson.SetBytes(data, "task_id", task.TaskID); err != nil {
+		return nil, errors.Wrap(err, "set task_id failed")
+	}
+	if task.Properties.OriginModelName != "" {
+		if data, err = sjson.SetBytes(data, "model", task.Properties.OriginModelName); err != nil {
+			return nil, errors.Wrap(err, "set model failed")
+		}
 	}
 	return data, nil
 }
