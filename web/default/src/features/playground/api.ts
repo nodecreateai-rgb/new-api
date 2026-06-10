@@ -21,6 +21,8 @@ import { API_ENDPOINTS } from './constants'
 import type {
   ChatCompletionRequest,
   ChatCompletionResponse,
+  VideoGenerationRequest,
+  VideoGenerationResponse,
   ModelOption,
   GroupOption,
 } from './types'
@@ -32,6 +34,18 @@ export async function sendChatCompletion(
   payload: ChatCompletionRequest
 ): Promise<ChatCompletionResponse> {
   const res = await api.post(API_ENDPOINTS.CHAT_COMPLETIONS, payload, {
+    skipErrorHandler: true,
+  } as Record<string, unknown>)
+  return res.data
+}
+
+/**
+ * Send video generation request from playground.
+ */
+export async function sendVideoGeneration(
+  payload: VideoGenerationRequest
+): Promise<VideoGenerationResponse> {
+  const res = await api.post(API_ENDPOINTS.VIDEO_GENERATIONS, payload, {
     skipErrorHandler: true,
   } as Record<string, unknown>)
   return res.data

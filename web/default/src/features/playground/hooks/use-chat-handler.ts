@@ -18,10 +18,12 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import { useCallback } from 'react'
 import { toast } from 'sonner'
-import { sendChatCompletion } from '../api'
+import { sendChatCompletion, sendVideoGeneration } from '../api'
 import { MESSAGE_STATUS, ERROR_MESSAGES } from '../constants'
 import {
   buildChatCompletionPayload,
+  buildVideoGenerationPayload,
+  isPlaygroundVideoModel,
   updateAssistantMessageWithError,
   updateLastAssistantMessage,
   processStreamingContent,
@@ -125,9 +127,69 @@ export function useChatHandler({
     ]
   )
 
+  const updateAssistantWithContent = useCallback(
+    (content: string) => {
+      onMessageUpdate((prev) =>
+        updateLastAssistantMessage(prev, (message) => ({
+          ...finalizeMessage({
+            ...message,
+            versions: [
+              {
+                ...message.versions[0],
+                content,
+              },
+            ],
+          }),
+          status: MESSAGE_STATUS.COMPLETE,
+        }))
+      )
+    },
+    [onMessageUpdate]
+  )
+
+  const sendVideo = useCallback(
+    async (messages: Message[]) => {
+      const payload = buildVideoGenerationPayload(messages, config)
+      try {
+        const response = await sendVideoGeneration(payload)
+        const taskId = response.task_id || response.id || ''
+        const status = response.status || 'queued'
+        const content = [
+          '视频任务已提交。',
+          taskId ? `任务 ID：${taskId}` : '',
+          `状态：${status}`,
+          `模型：${response.model || config.model}`,
+        ]
+          .filter(Boolean)
+          .join('\n')
+        updateAssistantWithContent(content)
+      } catch (error: unknown) {
+        const err = error as {
+          response?: {
+            data?: { message?: string; error?: { code?: string; message?: string } }
+          }
+          message?: string
+        }
+        handleStreamError(
+          err?.response?.data?.message ||
+            err?.response?.data?.error?.message ||
+            err?.message ||
+            ERROR_MESSAGES.API_REQUEST_ERROR,
+          err?.response?.data?.error?.code || undefined
+        )
+      }
+    },
+    [config, updateAssistantWithContent, handleStreamError]
+  )
+
   // Send non-streaming chat request
   const sendNonStreamingChat = useCallback(
     async (messages: Message[]) => {
+      if (isPlaygroundVideoModel(config.model)) {
+        await sendVideo(messages)
+        return
+      }
+
       const payload = buildChatCompletionPayload(
         messages,
         config,
@@ -171,19 +233,23 @@ export function useChatHandler({
         )
       }
     },
-    [config, parameterEnabled, onMessageUpdate, handleStreamError]
+    [config, parameterEnabled, onMessageUpdate, handleStreamError, sendVideo]
   )
 
   // Send chat request (stream or non-stream based on config)
   const sendChat = useCallback(
     (messages: Message[]) => {
+      if (isPlaygroundVideoModel(config.model)) {
+        sendNonStreamingChat(messages)
+        return
+      }
       if (config.stream) {
         sendStreamingChat(messages)
       } else {
         sendNonStreamingChat(messages)
       }
     },
-    [config.stream, sendStreamingChat, sendNonStreamingChat]
+    [config.model, config.stream, sendStreamingChat, sendNonStreamingChat]
   )
 
   // Stop generation

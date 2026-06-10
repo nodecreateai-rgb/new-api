@@ -18,6 +18,7 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import type {
   ChatCompletionRequest,
+  VideoGenerationRequest,
   Message,
   PlaygroundConfig,
   ParameterEnabled,
@@ -64,4 +65,36 @@ export function buildChatCompletionPayload(
   })
 
   return payload
+}
+
+
+export function isPlaygroundVideoModel(model: string): boolean {
+  const normalized = model.trim().toLowerCase()
+  if (!normalized) return false
+  if (/^sd2-c\d+$/.test(normalized)) return true
+  if (/^seedance/.test(normalized)) return true
+  if (/^doubao-seedance/.test(normalized)) return true
+  if (/^sora/.test(normalized)) return true
+  if (/^veo/.test(normalized)) return true
+  if (/^kling/.test(normalized)) return true
+  if (/^hailuo/.test(normalized)) return true
+  return false
+}
+
+export function buildVideoGenerationPayload(
+  messages: Message[],
+  config: PlaygroundConfig
+): VideoGenerationRequest {
+  const lastUserMessage = [...messages]
+    .reverse()
+    .find((message) => message.from === 'user')
+  const prompt = lastUserMessage?.versions[0]?.content?.trim() || ''
+
+  return {
+    model: config.model,
+    group: config.group,
+    prompt,
+    seconds: '5',
+    size: '1280x720',
+  }
 }

@@ -85,6 +85,24 @@ export interface ChatCompletionChunk {
   }>
 }
 
+
+export interface VideoGenerationRequest {
+  model: string
+  group?: string
+  prompt: string
+  seconds?: string
+  size?: string
+}
+
+export interface VideoGenerationResponse {
+  id?: string
+  task_id?: string
+  object?: string
+  model?: string
+  status?: string
+  progress?: number
+}
+
 export interface ChatCompletionResponse {
   id: string
   object: string
