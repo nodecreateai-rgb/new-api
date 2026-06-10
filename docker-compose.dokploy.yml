@@ -20,6 +20,7 @@ services:
       context: .
       dockerfile: Dockerfile
     restart: always
+    working_dir: /
     expose:
       - "3000"
     # 仅绑定本机时可取消注释，用于 SSH 隧道排错；生产建议依赖 Traefik 443，不要长期暴露公网。
