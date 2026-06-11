@@ -210,6 +210,27 @@ func ensureDopioRMBPricing() {
 		"sd2-c2": 3,
 		"sd2-c3": 4,
 	}
+	targetGroupRatios := map[string]float64{
+		"default": 1,
+		"vip":     1,
+		"svip":    1,
+	}
+	// Fixed per-group RMB prices for Dopio video aliases. ModelGroupPrice
+	// overrides ModelPrice and resets group ratio to 1 during billing, which is
+	// required for absolute discounts (vip is base price minus ¥1; svip is ¥2 for
+	// every sd2 model) rather than multiplicative discounts such as 0.75×.
+	targetModelGroupPrices := map[string]map[string]float64{
+		"vip": {
+			"sd2-c1": 3,
+			"sd2-c2": 2,
+			"sd2-c3": 3,
+		},
+		"svip": {
+			"sd2-c1": 2,
+			"sd2-c2": 2,
+			"sd2-c3": 2,
+		},
+	}
 
 	updates := map[string]string{}
 	common.OptionMapRWMutex.RLock()
@@ -217,6 +238,8 @@ func ensureDopioRMBPricing() {
 	currentRate := common.OptionMap["USDExchangeRate"]
 	currentQuotaDisplayType := common.OptionMap["general_setting.quota_display_type"]
 	currentModelPrice := common.OptionMap["ModelPrice"]
+	currentGroupRatio := common.OptionMap["GroupRatio"]
+	currentModelGroupPrice := common.OptionMap["ModelGroupPrice"]
 	common.OptionMapRWMutex.RUnlock()
 
 	if currentPrice != targetPrice {
@@ -251,6 +274,55 @@ func ensureDopioRMBPricing() {
 		}
 	}
 
+	groupRatios := map[string]float64{}
+	if currentGroupRatio != "" {
+		if err := json.Unmarshal([]byte(currentGroupRatio), &groupRatios); err != nil {
+			common.SysLog("failed to parse GroupRatio while enforcing Dopio RMB pricing: " + err.Error())
+			groupRatios = map[string]float64{}
+		}
+	}
+	changed = false
+	for group, ratio := range targetGroupRatios {
+		if groupRatios[group] != ratio {
+			groupRatios[group] = ratio
+			changed = true
+		}
+	}
+	if changed {
+		if b, err := json.Marshal(groupRatios); err == nil {
+			updates["GroupRatio"] = string(b)
+		} else {
+			common.SysLog("failed to marshal GroupRatio while enforcing Dopio RMB pricing: " + err.Error())
+		}
+	}
+
+	modelGroupPrices := map[string]map[string]float64{}
+	if currentModelGroupPrice != "" {
+		if err := json.Unmarshal([]byte(currentModelGroupPrice), &modelGroupPrices); err != nil {
+			common.SysLog("failed to parse ModelGroupPrice while enforcing Dopio RMB pricing: " + err.Error())
+			modelGroupPrices = map[string]map[string]float64{}
+		}
+	}
+	changed = false
+	for group, targetPrices := range targetModelGroupPrices {
+		if modelGroupPrices[group] == nil {
+			modelGroupPrices[group] = map[string]float64{}
+		}
+		for model, price := range targetPrices {
+			if modelGroupPrices[group][model] != price {
+				modelGroupPrices[group][model] = price
+				changed = true
+			}
+		}
+	}
+	if changed {
+		if b, err := json.Marshal(modelGroupPrices); err == nil {
+			updates["ModelGroupPrice"] = string(b)
+		} else {
+			common.SysLog("failed to marshal ModelGroupPrice while enforcing Dopio RMB pricing: " + err.Error())
+		}
+	}
+
 	if len(updates) == 0 {
 		return
 	}
@@ -258,7 +330,7 @@ func ensureDopioRMBPricing() {
 		common.SysLog("failed to enforce Dopio RMB pricing: " + err.Error())
 		return
 	}
-	common.SysLog("enforced Dopio RMB pricing for sd2-c1/sd2-c2/sd2-c3, Price=1, USDExchangeRate=1, quota_display_type=CNY")
+	common.SysLog("enforced Dopio RMB pricing for sd2-c1/sd2-c2/sd2-c3, default=4/3/4, vip=3/2/3, svip=2/2/2, Price=1, USDExchangeRate=1, quota_display_type=CNY")
 }
 
 func SyncOptions(frequency int) {
@@ -597,6 +669,8 @@ func updateOptionMap(key string, value string) (err error) {
 		err = ratio_setting.UpdateCompletionRatioByJSONString(value)
 	case "ModelPrice":
 		err = ratio_setting.UpdateModelPriceByJSONString(value)
+	case "ModelGroupPrice":
+		err = ratio_setting.UpdateModelGroupPriceByJSONString(value)
 	case "CacheRatio":
 		err = ratio_setting.UpdateCacheRatioByJSONString(value)
 	case "CreateCacheRatio":
