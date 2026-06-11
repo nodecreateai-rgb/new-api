@@ -164,7 +164,13 @@ func RefundTaskQuota(ctx context.Context, task *model.Task, reason string) {
 	// 2. 退还令牌额度
 	taskAdjustTokenQuota(ctx, task, -quota)
 
-	// 3. 记录日志
+	// 3. 反向调整已用额度统计。任务提交时 LogTaskConsumption 已经把
+	// 预扣额度计入 used_quota/channel.used_quota；失败退款后必须扣回，
+	// 否则用户账单会显示“总额度 = 剩余额度 + 已用额度”虚高。
+	model.AdjustUserUsedQuota(task.UserId, -quota)
+	model.UpdateChannelUsedQuota(task.ChannelId, -quota)
+
+	// 4. 记录日志
 	other := taskBillingOther(task)
 	other["task_id"] = task.TaskID
 	other["reason"] = reason
@@ -226,6 +232,8 @@ func RecalculateTaskQuota(ctx context.Context, task *model.Task, actualQuota int
 	} else {
 		logType = model.LogTypeRefund
 		logQuota = -quotaDelta
+		model.AdjustUserUsedQuota(task.UserId, quotaDelta)
+		model.UpdateChannelUsedQuota(task.ChannelId, quotaDelta)
 	}
 	other := taskBillingOther(task)
 	other["task_id"] = task.TaskID

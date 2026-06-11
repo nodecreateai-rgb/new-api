@@ -146,6 +146,20 @@ func getUserQuota(t *testing.T, id int) int {
 	return user.Quota
 }
 
+func getUserUsedQuota(t *testing.T, id int) int {
+	t.Helper()
+	var user model.User
+	require.NoError(t, model.DB.Select("used_quota").Where("id = ?", id).First(&user).Error)
+	return user.UsedQuota
+}
+
+func getChannelUsedQuota(t *testing.T, id int) int {
+	t.Helper()
+	var ch model.Channel
+	require.NoError(t, model.DB.Select("used_quota").Where("id = ?", id).First(&ch).Error)
+	return int(ch.UsedQuota)
+}
+
 func getTokenRemainQuota(t *testing.T, id int) int {
 	t.Helper()
 	var token model.Token
@@ -197,15 +211,19 @@ func TestRefundTaskQuota_Wallet(t *testing.T) {
 	const tokenRemain = 5000
 
 	seedUser(t, userID, initQuota)
+	model.DB.Model(&model.User{}).Where("id = ?", userID).Update("used_quota", preConsumed)
 	seedToken(t, tokenID, userID, "sk-test-key", tokenRemain)
 	seedChannel(t, channelID)
+	model.DB.Model(&model.Channel{}).Where("id = ?", channelID).Update("used_quota", preConsumed)
 
 	task := makeTask(userID, channelID, preConsumed, tokenID, BillingSourceWallet, 0)
 
 	RefundTaskQuota(ctx, task, "task failed: upstream error")
 
-	// User quota should increase by preConsumed
+	// User quota should increase by preConsumed and used_quota should be reversed.
 	assert.Equal(t, initQuota+preConsumed, getUserQuota(t, userID))
+	assert.Equal(t, 0, getUserUsedQuota(t, userID))
+	assert.Equal(t, 0, getChannelUsedQuota(t, channelID))
 
 	// Token remain_quota should increase, used_quota should decrease
 	assert.Equal(t, tokenRemain+preConsumed, getTokenRemainQuota(t, tokenID))
@@ -303,7 +321,7 @@ func TestRecalculate_PositiveDelta(t *testing.T) {
 	const tokenRemain = 5000
 
 	seedUser(t, userID, initQuota)
-	seedToken(t, tokenID, userID, "sk-recalc-pos", tokenRemain)
+	seedToken(t, tokenID, userID, "***", tokenRemain)
 	seedChannel(t, channelID)
 
 	task := makeTask(userID, channelID, preConsumed, tokenID, BillingSourceWallet, 0)
@@ -336,8 +354,10 @@ func TestRecalculate_NegativeDelta(t *testing.T) {
 	const tokenRemain = 5000
 
 	seedUser(t, userID, initQuota)
-	seedToken(t, tokenID, userID, "sk-recalc-neg", tokenRemain)
+	model.DB.Model(&model.User{}).Where("id = ?", userID).Update("used_quota", preConsumed)
+	seedToken(t, tokenID, userID, "***", tokenRemain)
 	seedChannel(t, channelID)
+	model.DB.Model(&model.Channel{}).Where("id = ?", channelID).Update("used_quota", preConsumed)
 
 	task := makeTask(userID, channelID, preConsumed, tokenID, BillingSourceWallet, 0)
 
@@ -345,6 +365,8 @@ func TestRecalculate_NegativeDelta(t *testing.T) {
 
 	// User quota should increase by abs(delta) = 2000 (refund overpayment)
 	assert.Equal(t, initQuota+(preConsumed-actualQuota), getUserQuota(t, userID))
+	assert.Equal(t, actualQuota, getUserUsedQuota(t, userID))
+	assert.Equal(t, actualQuota, getChannelUsedQuota(t, channelID))
 
 	// Token should be refunded the difference
 	assert.Equal(t, tokenRemain+(preConsumed-actualQuota), getTokenRemainQuota(t, tokenID))
@@ -408,7 +430,7 @@ func TestRecalculate_Subscription_NegativeDelta(t *testing.T) {
 	const tokenRemain = 8000
 
 	seedUser(t, userID, 0)
-	seedToken(t, tokenID, userID, "sk-sub-recalc", tokenRemain)
+	seedToken(t, tokenID, userID, "***", tokenRemain)
 	seedChannel(t, channelID)
 	seedSubscription(t, subID, userID, subTotal, subUsed)
 
@@ -492,7 +514,7 @@ func TestCASGuardedRefund_Win(t *testing.T) {
 	const tokenRemain = 6000
 
 	seedUser(t, userID, initQuota)
-	seedToken(t, tokenID, userID, "sk-cas-refund-win", tokenRemain)
+	seedToken(t, tokenID, userID, "***", tokenRemain)
 	seedChannel(t, channelID)
 
 	task := makeTask(userID, channelID, preConsumed, tokenID, BillingSourceWallet, 0)
@@ -524,7 +546,7 @@ func TestCASGuardedRefund_Lose(t *testing.T) {
 	const tokenRemain = 6000
 
 	seedUser(t, userID, initQuota)
-	seedToken(t, tokenID, userID, "sk-cas-refund-lose", tokenRemain)
+	seedToken(t, tokenID, userID, "sk-cas...lose", tokenRemain)
 	seedChannel(t, channelID)
 
 	// Create task with IN_PROGRESS in DB
@@ -557,7 +579,7 @@ func TestCASGuardedSettle_Win(t *testing.T) {
 	const tokenRemain = 8000
 
 	seedUser(t, userID, initQuota)
-	seedToken(t, tokenID, userID, "sk-cas-settle-win", tokenRemain)
+	seedToken(t, tokenID, userID, "***", tokenRemain)
 	seedChannel(t, channelID)
 
 	task := makeTask(userID, channelID, preConsumed, tokenID, BillingSourceWallet, 0)
@@ -639,7 +661,7 @@ func TestSettle_PerCallBilling_SkipsAdaptorAdjust(t *testing.T) {
 	const tokenRemain = 8000
 
 	seedUser(t, userID, initQuota)
-	seedToken(t, tokenID, userID, "sk-percall-adaptor", tokenRemain)
+	seedToken(t, tokenID, userID, "sk-per...ptor", tokenRemain)
 	seedChannel(t, channelID)
 
 	task := makeTask(userID, channelID, preConsumed, tokenID, BillingSourceWallet, 0)
@@ -666,7 +688,7 @@ func TestSettle_PerCallBilling_SkipsTotalTokens(t *testing.T) {
 	const tokenRemain = 7000
 
 	seedUser(t, userID, initQuota)
-	seedToken(t, tokenID, userID, "sk-percall-tokens", tokenRemain)
+	seedToken(t, tokenID, userID, "***", tokenRemain)
 	seedChannel(t, channelID)
 
 	task := makeTask(userID, channelID, preConsumed, tokenID, BillingSourceWallet, 0)
@@ -694,7 +716,7 @@ func TestSettle_NonPerCall_AdaptorAdjustWorks(t *testing.T) {
 	const tokenRemain = 8000
 
 	seedUser(t, userID, initQuota)
-	seedToken(t, tokenID, userID, "sk-nonpercall-adj", tokenRemain)
+	seedToken(t, tokenID, userID, "***", tokenRemain)
 	seedChannel(t, channelID)
 
 	task := makeTask(userID, channelID, preConsumed, tokenID, BillingSourceWallet, 0)

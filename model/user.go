@@ -984,6 +984,23 @@ func updateUserUsedQuotaAndRequestCount(id int, quota int, count int) {
 	//}
 }
 
+// AdjustUserUsedQuota adjusts used_quota without changing request_count.
+// It is used by asynchronous task refunds/settlements: the request was already
+// counted when the task was submitted, but the amount recorded as used must be
+// reversed when the task fails or when final billing is lower than the precharge.
+func AdjustUserUsedQuota(id int, delta int) {
+	if delta == 0 {
+		return
+	}
+	err := DB.Model(&User{}).Where("id = ?", id).Update(
+		"used_quota",
+		gorm.Expr("CASE WHEN used_quota + ? < 0 THEN 0 ELSE used_quota + ? END", delta, delta),
+	).Error
+	if err != nil {
+		common.SysLog("failed to adjust user used quota: " + err.Error())
+	}
+}
+
 func updateUserQuotaUsedQuotaAndRequestCount(id int, quota int, usedQuota int, requestCount int) {
 	if quota == 0 && usedQuota == 0 && requestCount == 0 {
 		return
