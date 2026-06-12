@@ -42,6 +42,24 @@ import {
   createProgressColumn,
 } from './column-helpers'
 
+
+function getTaskModelName(log: TaskLog): string {
+  const props = log.properties
+  if (props?.origin_model_name) return props.origin_model_name
+  if (props?.upstream_model_name) return props.upstream_model_name
+
+  if (typeof log.data === 'string') {
+    try {
+      const parsed = JSON.parse(log.data) as Record<string, unknown>
+      if (typeof parsed.model === 'string') return parsed.model
+      if (typeof parsed.model_name === 'string') return parsed.model_name
+    } catch {
+      return ''
+    }
+  }
+  return ''
+}
+
 function parseTaskData(data: unknown): unknown[] {
   if (Array.isArray(data)) return data
   if (typeof data === 'string') {
@@ -122,6 +140,25 @@ export function useTaskLogsColumns(isAdmin: boolean): ColumnDef<TaskLog>[] {
 
   if (isAdmin) {
     columns.push(createChannelColumn<TaskLog>({ headerLabel: t('Channel') }), {
+      id: 'model',
+      accessorFn: (row) => getTaskModelName(row),
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title={t('Model')} />
+      ),
+      cell: ({ row }) => {
+        const model = getTaskModelName(row.original)
+        if (!model) return <span className='text-muted-foreground/60 text-xs'>-</span>
+        return (
+          <StatusBadge
+            label={model}
+            autoColor={model}
+            size='sm'
+            className='border-border/60 bg-muted/30 max-w-[120px] truncate rounded-md border px-1.5 py-0.5 font-mono'
+          />
+        )
+      },
+      meta: { label: t('Model') },
+    }, {
       id: 'user',
       accessorFn: (row) => row.username || row.user_id,
       header: ({ column }) => (
