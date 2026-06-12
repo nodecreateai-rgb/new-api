@@ -44,6 +44,17 @@ func VideoProxy(c *gin.Context) {
 		videoProxyError(c, http.StatusInternalServerError, "server_error", "Failed to query task")
 		return
 	}
+	if (!exists || task == nil) && model.IsAdmin(userID) {
+		// Admin console users can inspect task records owned by other users. The
+		// task-log detail preview uses the same video proxy endpoint, so fall back
+		// to a global task lookup only after authenticated admin authorization.
+		task, exists, err = model.GetByOnlyTaskId(taskID)
+		if err != nil {
+			logger.LogError(c.Request.Context(), fmt.Sprintf("Failed to query admin task %s: %s", taskID, err.Error()))
+			videoProxyError(c, http.StatusInternalServerError, "server_error", "Failed to query task")
+			return
+		}
+	}
 	if !exists || task == nil {
 		videoProxyError(c, http.StatusNotFound, "invalid_request_error", "Task not found")
 		return
@@ -107,11 +118,14 @@ func VideoProxy(c *gin.Context) {
 			return
 		}
 	case constant.ChannelTypeOpenAI, constant.ChannelTypeSora:
-		videoURL = fmt.Sprintf("%s/v1/videos/%s/content", baseURL, task.GetUpstreamTaskID())
-		req.Header.Set("Authorization", "Bearer "+channel.Key)
+		if directURL := getStoredVideoURL(task); directURL != "" {
+			videoURL = directURL
+		} else {
+			videoURL = fmt.Sprintf("%s/v1/videos/%s/content", baseURL, task.GetUpstreamTaskID())
+			req.Header.Set("Authorization", "Bearer "+channel.Key)
+		}
 	default:
-		// Video URL is stored in PrivateData.ResultURL (fallback to FailReason for old data)
-		videoURL = task.GetResultURL()
+		videoURL = getStoredVideoURL(task)
 	}
 
 	videoURL = strings.TrimSpace(videoURL)
@@ -169,6 +183,50 @@ func VideoProxy(c *gin.Context) {
 	if _, err = io.Copy(c.Writer, resp.Body); err != nil {
 		logger.LogError(c.Request.Context(), fmt.Sprintf("Failed to stream video content: %s", err.Error()))
 	}
+}
+
+func getStoredVideoURL(task *model.Task) string {
+	if task == nil {
+		return ""
+	}
+	candidates := []string{task.GetResultURL()}
+	if len(task.Data) > 0 {
+		var payload map[string]any
+		if err := common.Unmarshal(task.Data, &payload); err == nil {
+			candidates = append(candidates, findVideoURLInPayload(payload))
+		}
+	}
+	for _, candidate := range candidates {
+		candidate = strings.TrimSpace(candidate)
+		if candidate == "" || isTaskProxyContentURL(candidate, task.TaskID) {
+			continue
+		}
+		return candidate
+	}
+	return ""
+}
+
+func findVideoURLInPayload(payload any) string {
+	switch v := payload.(type) {
+	case map[string]any:
+		for _, key := range []string{"video_url", "videoUrl", "url", "output_url", "outputUrl", "remote_url", "remoteUrl"} {
+			if value, ok := v[key].(string); ok && strings.TrimSpace(value) != "" {
+				return value
+			}
+		}
+		for _, value := range v {
+			if found := findVideoURLInPayload(value); found != "" {
+				return found
+			}
+		}
+	case []any:
+		for _, item := range v {
+			if found := findVideoURLInPayload(item); found != "" {
+				return found
+			}
+		}
+	}
+	return ""
 }
 
 func writeVideoDataURL(c *gin.Context, dataURL string) error {
