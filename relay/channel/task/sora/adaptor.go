@@ -224,6 +224,21 @@ func (a *TaskAdaptor) DoRequest(c *gin.Context, info *relaycommon.RelayInfo, req
 	return channel.DoTaskApiRequest(a, c, info, requestBody)
 }
 
+func normalizeSoraVideoStatus(status string) string {
+	switch strings.ToLower(strings.TrimSpace(status)) {
+	case "queued", "pending":
+		return dto.VideoStatusQueued
+	case "processing", "in_progress", "running":
+		return dto.VideoStatusInProgress
+	case "completed", "succeeded", "success":
+		return dto.VideoStatusCompleted
+	case "failed", "cancelled", "canceled":
+		return dto.VideoStatusFailed
+	default:
+		return status
+	}
+}
+
 // DoResponse handles upstream response, returns taskID etc.
 func (a *TaskAdaptor) DoResponse(c *gin.Context, resp *http.Response, info *relaycommon.RelayInfo) (taskID string, taskData []byte, taskErr *dto.TaskError) {
 	responseBody, err := io.ReadAll(resp.Body)
@@ -255,6 +270,7 @@ func (a *TaskAdaptor) DoResponse(c *gin.Context, resp *http.Response, info *rela
 	if info.OriginModelName != "" {
 		dResp.Model = info.OriginModelName
 	}
+	dResp.Status = normalizeSoraVideoStatus(dResp.Status)
 	clientResponseBody, err := common.Marshal(dResp)
 	if err != nil {
 		taskErr = service.TaskErrorWrapper(err, "marshal_response_body_failed", http.StatusInternalServerError)
@@ -337,6 +353,25 @@ func (a *TaskAdaptor) ConvertToOpenAIVideo(task *model.Task) ([]byte, error) {
 	}
 	if data, err = sjson.SetBytes(data, "task_id", task.TaskID); err != nil {
 		return nil, errors.Wrap(err, "set task_id failed")
+	}
+	status := task.Status.ToVideoStatus()
+	if status == dto.VideoStatusUnknown {
+		var raw responseTask
+		_ = common.Unmarshal(data, &raw)
+		status = normalizeSoraVideoStatus(raw.Status)
+	}
+	if status != "" {
+		if data, err = sjson.SetBytes(data, "status", status); err != nil {
+			return nil, errors.Wrap(err, "set status failed")
+		}
+	}
+	progress := strings.TrimSuffix(task.Progress, "%")
+	if progress != "" {
+		if n, convErr := strconv.Atoi(progress); convErr == nil {
+			if data, err = sjson.SetBytes(data, "progress", n); err != nil {
+				return nil, errors.Wrap(err, "set progress failed")
+			}
+		}
 	}
 	if task.Properties.OriginModelName != "" {
 		if data, err = sjson.SetBytes(data, "model", task.Properties.OriginModelName); err != nil {
