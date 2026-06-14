@@ -80,9 +80,9 @@ func TestModelPriceHelperPerCallDopioGroupPrices(t *testing.T) {
 		require.NoError(t, config.GlobalConfig.LoadFromDB(saved))
 	})
 
-	require.NoError(t, ratio_setting.UpdateModelPriceByJSONString(`{"sd2-c1":4,"sd2-c2":3,"sd2-c3":4}`))
-	require.NoError(t, ratio_setting.UpdateGroupRatioByJSONString(`{"default":1,"vip":1,"svip":1}`))
-	require.NoError(t, ratio_setting.UpdateModelGroupPriceByJSONString(`{"vip":{"sd2-c1":3,"sd2-c2":2,"sd2-c3":3},"svip":{"sd2-c1":2,"sd2-c2":2,"sd2-c3":2}}`))
+	require.NoError(t, ratio_setting.UpdateModelPriceByJSONString(`{"sd2-c1":4,"sd2-c2":3,"sd2-c3":4,"sd2-c5":5}`))
+	require.NoError(t, ratio_setting.UpdateGroupRatioByJSONString(`{"default":1,"vip1":1,"vip":1,"svip":1}`))
+	require.NoError(t, ratio_setting.UpdateModelGroupPriceByJSONString(`{"vip1":{"sd2-c5":3},"vip":{"sd2-c1":3,"sd2-c2":2,"sd2-c3":3,"sd2-c5":4},"svip":{"sd2-c1":2,"sd2-c2":2,"sd2-c3":2,"sd2-c5":2}}`))
 
 	cases := []struct {
 		group string
@@ -92,12 +92,16 @@ func TestModelPriceHelperPerCallDopioGroupPrices(t *testing.T) {
 		{"default", "sd2-c1", 4},
 		{"default", "sd2-c2", 3},
 		{"default", "sd2-c3", 4},
+		{"default", "sd2-c5", 5},
+		{"vip1", "sd2-c5", 3},
 		{"vip", "sd2-c1", 3},
 		{"vip", "sd2-c2", 2},
 		{"vip", "sd2-c3", 3},
+		{"vip", "sd2-c5", 4},
 		{"svip", "sd2-c1", 2},
 		{"svip", "sd2-c2", 2},
 		{"svip", "sd2-c3", 2},
+		{"svip", "sd2-c5", 2},
 	}
 	for _, tc := range cases {
 		t.Run(tc.group+"/"+tc.model, func(t *testing.T) {

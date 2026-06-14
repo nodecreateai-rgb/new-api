@@ -209,9 +209,11 @@ func ensureDopioRMBPricing() {
 		"sd2-c1": 4,
 		"sd2-c2": 3,
 		"sd2-c3": 4,
+		"sd2-c5": 5,
 	}
 	targetGroupRatios := map[string]float64{
 		"default": 1,
+		"vip1":    1,
 		"vip":     1,
 		"svip":    1,
 	}
@@ -220,15 +222,20 @@ func ensureDopioRMBPricing() {
 	// required for absolute discounts (vip is base price minus ¥1; svip is ¥2 for
 	// every sd2 model) rather than multiplicative discounts such as 0.75×.
 	targetModelGroupPrices := map[string]map[string]float64{
+		"vip1": {
+			"sd2-c5": 3,
+		},
 		"vip": {
 			"sd2-c1": 3,
 			"sd2-c2": 2,
 			"sd2-c3": 3,
+			"sd2-c5": 4,
 		},
 		"svip": {
 			"sd2-c1": 2,
 			"sd2-c2": 2,
 			"sd2-c3": 2,
+			"sd2-c5": 2,
 		},
 	}
 
@@ -330,7 +337,7 @@ func ensureDopioRMBPricing() {
 		common.SysLog("failed to enforce Dopio RMB pricing: " + err.Error())
 		return
 	}
-	common.SysLog("enforced Dopio RMB pricing for sd2-c1/sd2-c2/sd2-c3, default=4/3/4, vip=3/2/3, svip=2/2/2, Price=1, USDExchangeRate=1, quota_display_type=CNY")
+	common.SysLog("enforced Dopio RMB pricing for sd2-c1/sd2-c2/sd2-c3/sd2-c5, default=4/3/4/5, vip1(c5)=3, vip=3/2/3/4, svip=2/2/2/2, Price=1, USDExchangeRate=1, quota_display_type=CNY")
 }
 
 func SyncOptions(frequency int) {
