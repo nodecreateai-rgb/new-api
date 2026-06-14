@@ -29,6 +29,8 @@ func SetVideoRouter(router *gin.Engine) {
 	{
 		videoV1Router.POST("/videos", controller.RelayTask)
 		videoV1Router.GET("/videos/:task_id", controller.RelayTaskFetch)
+		videoV1Router.GET("/tasks/:task_id", controller.RelayTaskFetch)
+		videoV1Router.GET("/task/:task_id", controller.RelayTaskFetch)
 	}
 
 	klingV1Router := router.Group("/kling/v1")
