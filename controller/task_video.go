@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"sync"
 	"time"
 
 	"github.com/QuantumNous/new-api/common"
@@ -44,21 +45,27 @@ func updateVideoTaskAll(ctx context.Context, platform constant.TaskPlatform, cha
 		}
 		return fmt.Errorf("CacheGetChannel failed: %w", err)
 	}
-	adaptor := relay.GetTaskAdaptor(platform)
-	if adaptor == nil {
-		return fmt.Errorf("video adaptor not found")
-	}
-	info := &relaycommon.RelayInfo{}
-	info.ChannelMeta = &relaycommon.ChannelMeta{
-		ChannelBaseUrl: cacheGetChannel.GetBaseURL(),
-	}
-	info.ApiKey = cacheGetChannel.Key
-	adaptor.Init(info)
+
+	var wg sync.WaitGroup
 	for _, taskId := range taskIds {
-		if err := updateVideoSingleTask(ctx, adaptor, cacheGetChannel, taskId, taskM); err != nil {
-			logger.LogError(ctx, fmt.Sprintf("Failed to update video task %s: %s", taskId, err.Error()))
-		}
+		wg.Add(1)
+		go func(taskId string) {
+			defer wg.Done()
+			adaptor := relay.GetTaskAdaptor(platform)
+			if adaptor == nil {
+				logger.LogError(ctx, fmt.Sprintf("Failed to update video task %s: video adaptor not found", taskId))
+				return
+			}
+			info := &relaycommon.RelayInfo{}
+			info.ChannelMeta = &relaycommon.ChannelMeta{ChannelBaseUrl: cacheGetChannel.GetBaseURL()}
+			info.ApiKey = cacheGetChannel.Key
+			adaptor.Init(info)
+			if err := updateVideoSingleTask(ctx, adaptor, cacheGetChannel, taskId, taskM); err != nil {
+				logger.LogError(ctx, fmt.Sprintf("Failed to update video task %s: %s", taskId, err.Error()))
+			}
+		}(taskId)
 	}
+	wg.Wait()
 	return nil
 }
 
