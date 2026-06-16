@@ -158,6 +158,7 @@ func (a *TaskAdaptor) BuildRequestBody(c *gin.Context, info *relaycommon.RelayIn
 		var bodyMap map[string]interface{}
 		if err := common.Unmarshal(cachedBody, &bodyMap); err == nil {
 			bodyMap["model"] = info.UpstreamModelName
+			normalizeOpenAIVideoAspectBody(bodyMap)
 			if newBody, err := common.Marshal(bodyMap); err == nil {
 				return bytes.NewReader(newBody), nil
 			}
@@ -173,11 +174,12 @@ func (a *TaskAdaptor) BuildRequestBody(c *gin.Context, info *relaycommon.RelayIn
 		var buf bytes.Buffer
 		writer := multipart.NewWriter(&buf)
 		writer.WriteField("model", info.UpstreamModelName)
-		for key, values := range formData.Value {
+		values := normalizeOpenAIVideoAspectForm(formData.Value)
+		for key, vals := range values {
 			if key == "model" {
 				continue
 			}
-			for _, v := range values {
+			for _, v := range vals {
 				writer.WriteField(key, v)
 			}
 		}
@@ -379,4 +381,101 @@ func (a *TaskAdaptor) ConvertToOpenAIVideo(task *model.Task) ([]byte, error) {
 		}
 	}
 	return data, nil
+}
+
+func normalizeOpenAIVideoAspectBody(body map[string]interface{}) {
+	if body == nil {
+		return
+	}
+	size, _ := body["size"].(string)
+	aspect, _ := body["aspect_ratio"].(string)
+	aspect, size = normalizeOpenAIVideoAspectValues(aspect, size)
+	if aspect != "" {
+		body["aspect_ratio"] = aspect
+	}
+	if size != "" {
+		body["size"] = size
+	}
+}
+
+func normalizeOpenAIVideoAspectForm(values map[string][]string) map[string][]string {
+	out := make(map[string][]string, len(values)+2)
+	for k, v := range values {
+		vv := append([]string(nil), v...)
+		out[k] = vv
+	}
+	first := func(key string) string {
+		if xs := out[key]; len(xs) > 0 {
+			return xs[0]
+		}
+		return ""
+	}
+	aspect, size := normalizeOpenAIVideoAspectValues(first("aspect_ratio"), first("size"))
+	if aspect != "" {
+		out["aspect_ratio"] = []string{aspect}
+	}
+	if size != "" {
+		out["size"] = []string{size}
+	}
+	return out
+}
+
+func normalizeOpenAIVideoAspectValues(aspect, size string) (string, string) {
+	aspect = strings.TrimSpace(strings.ToLower(aspect))
+	size = strings.TrimSpace(strings.ToLower(strings.ReplaceAll(size, "*", "x")))
+	if aspect == "" {
+		aspect = aspectFromOpenAIVideoSize(size)
+	}
+	if size == "" || isAspectRatioToken(size) {
+		size = defaultOpenAIVideoSizeForAspect(aspect)
+	}
+	return aspect, size
+}
+
+func isAspectRatioToken(s string) bool {
+	switch strings.TrimSpace(strings.ToLower(s)) {
+	case "16:9", "9:16", "1:1", "4:3", "3:4", "21:9":
+		return true
+	default:
+		return false
+	}
+}
+
+func aspectFromOpenAIVideoSize(size string) string {
+	if isAspectRatioToken(size) {
+		return size
+	}
+	parts := strings.SplitN(size, "x", 2)
+	if len(parts) != 2 {
+		return ""
+	}
+	w, _ := strconv.Atoi(strings.TrimSpace(parts[0]))
+	h, _ := strconv.Atoi(strings.TrimSpace(parts[1]))
+	if w <= 0 || h <= 0 {
+		return ""
+	}
+	if w == h {
+		return "1:1"
+	}
+	if h > w {
+		return "9:16"
+	}
+	return "16:9"
+}
+
+func defaultOpenAIVideoSizeForAspect(aspect string) string {
+	switch strings.TrimSpace(strings.ToLower(aspect)) {
+	case "9:16", "3:4":
+		return "1080x1920"
+	case "1:1":
+		return "1080x1080"
+	case "4:3":
+		return "1440x1080"
+	case "21:9":
+		return "2520x1080"
+	case "16:9":
+		return "1920x1080"
+	default:
+		return ""
+	}
 }
