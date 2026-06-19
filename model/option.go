@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/QuantumNous/new-api/common"
+	"github.com/QuantumNous/new-api/constant"
 	"github.com/QuantumNous/new-api/setting"
 	"github.com/QuantumNous/new-api/setting/config"
 	"github.com/QuantumNous/new-api/setting/operation_setting"
@@ -185,6 +186,7 @@ func InitOptionMap() {
 	common.OptionMapRWMutex.Unlock()
 	loadOptionsFromDatabase()
 	ensureDopioRMBPricing()
+	ensureDopioChannelFromEnv()
 }
 
 func loadOptionsFromDatabase() {
@@ -195,6 +197,89 @@ func loadOptionsFromDatabase() {
 			common.SysLog("failed to update option map: " + err.Error())
 		}
 	}
+}
+
+// ensureDopioChannelFromEnv optionally keeps the Dopio OpenAI-compatible video
+// channel present from deployment secrets. The API key is intentionally not
+// stored in source code; operators provide DOPIO_API_KEY in the runtime env.
+func ensureDopioChannelFromEnv() {
+	key := strings.TrimSpace(common.GetEnvOrDefaultString("DOPIO_API_KEY", ""))
+	if key == "" {
+		return
+	}
+
+	name := strings.TrimSpace(common.GetEnvOrDefaultString("DOPIO_CHANNEL_NAME", "Dopio Seedance Video"))
+	if name == "" {
+		name = "Dopio Seedance Video"
+	}
+	baseURL := strings.TrimRight(strings.TrimSpace(common.GetEnvOrDefaultString("DOPIO_BASE_URL", "https://api.dopio.cyou")), "/")
+	if baseURL == "" {
+		baseURL = "https://api.dopio.cyou"
+	}
+	models := strings.TrimSpace(common.GetEnvOrDefaultString("DOPIO_MODELS", "sd2-c1,sd2-c2,sd2-c3,sd2-c5"))
+	modelMapping := strings.TrimSpace(common.GetEnvOrDefaultString("DOPIO_MODEL_MAPPING", `{"sd2-c1":"seedance2-c1","sd2-c2":"seedance2-c2","sd2-c3":"seedance2-c3","sd2-c5":"seedance2-c5"}`))
+	groups := strings.TrimSpace(common.GetEnvOrDefaultString("DOPIO_GROUPS", "default,vip,svip,vip1"))
+	settings := strings.TrimSpace(common.GetEnvOrDefaultString("DOPIO_CHANNEL_SETTINGS", "{}"))
+	if settings == "" {
+		settings = "{}"
+	}
+
+	weight := uint(100)
+	priority := int64(10)
+	autoBan := 1
+	baseURLPtr := baseURL
+	modelMappingPtr := modelMapping
+
+	updates := map[string]interface{}{
+		"type":          constant.ChannelTypeOpenAI,
+		"key":           key,
+		"status":        common.ChannelStatusEnabled,
+		"name":          name,
+		"weight":        weight,
+		"base_url":      baseURL,
+		"models":        models,
+		"model_mapping": modelMapping,
+		"group":         groups,
+		"priority":      priority,
+		"auto_ban":      autoBan,
+		"settings":      settings,
+	}
+
+	var channel Channel
+	err := DB.Where("name = ? OR base_url = ?", name, baseURL).Order("id asc").First(&channel).Error
+	if err == nil {
+		if err := DB.Model(&channel).Updates(updates).Error; err != nil {
+			common.SysLog("failed to update Dopio channel from env: " + err.Error())
+			return
+		}
+		common.SysLog("updated Dopio channel from DOPIO_API_KEY env")
+		return
+	}
+	if err != gorm.ErrRecordNotFound {
+		common.SysLog("failed to query Dopio channel from env: " + err.Error())
+		return
+	}
+
+	channel = Channel{
+		Type:          constant.ChannelTypeOpenAI,
+		Key:           key,
+		Status:        common.ChannelStatusEnabled,
+		Name:          name,
+		Weight:        &weight,
+		CreatedTime:   common.GetTimestamp(),
+		BaseURL:       &baseURLPtr,
+		Models:        models,
+		Group:         groups,
+		ModelMapping:  &modelMappingPtr,
+		Priority:      &priority,
+		AutoBan:       &autoBan,
+		OtherSettings: settings,
+	}
+	if err := DB.Create(&channel).Error; err != nil {
+		common.SysLog("failed to create Dopio channel from env: " + err.Error())
+		return
+	}
+	common.SysLog("created Dopio channel from DOPIO_API_KEY env")
 }
 
 // ensureDopioRMBPricing keeps the Dopio Seedance aliases billed directly in RMB.
