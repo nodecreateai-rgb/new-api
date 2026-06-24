@@ -206,10 +206,15 @@ func ensureDopioRMBPricing() {
 	const targetUSDExchangeRate = "1"
 	const targetQuotaDisplayType = operation_setting.QuotaDisplayTypeCNY
 	targetModelPrices := map[string]float64{
-		"sd2-c1": 4,
-		"sd2-c2": 3,
-		"sd2-c3": 4,
-		"sd2-c5": 5,
+		"sd2-c1":  4,
+		"sd2-c2":  3,
+		"sd2-c3":  4,
+		"sd2-c5":  5,
+		"sd2-c6":  2,
+		"sd2-c7":  2,
+		"sd2-c8":  5,
+		"sd2-c9":  2,
+		"sd2-c10": 1,
 	}
 	targetGroupRatios := map[string]float64{
 		"default": 1,
@@ -223,7 +228,12 @@ func ensureDopioRMBPricing() {
 	// every sd2 model) rather than multiplicative discounts such as 0.75×.
 	targetModelGroupPrices := map[string]map[string]float64{
 		"vip1": {
-			"sd2-c5": 3,
+			"sd2-c5":  3,
+			"sd2-c6":  1.5,
+			"sd2-c7":  1.5,
+			"sd2-c8":  3,
+			"sd2-c9":  1,
+			"sd2-c10": 0.5,
 		},
 		"vip": {
 			"sd2-c1": 3,

@@ -20,6 +20,7 @@ services:
       - TZ=Asia/Shanghai
       - ERROR_LOG_ENABLED=true
       - TASK_TIMEOUT_MINUTES=30
+      - TASK_PRICE_PATCH=sd2-c1,sd2-c2,sd2-c3,sd2-c5,sd2-c6,sd2-c7,sd2-c8,sd2-c9,sd2-c10
       - BATCH_UPDATE_ENABLED=true
       - NODE_NAME=new-api-node-1
     depends_on:
