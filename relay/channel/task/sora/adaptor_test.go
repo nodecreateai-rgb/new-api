@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/QuantumNous/new-api/model"
+	relaycommon "github.com/QuantumNous/new-api/relay/common"
 	"github.com/stretchr/testify/require"
 	"github.com/tidwall/gjson"
 )
@@ -34,4 +35,39 @@ func TestNormalizeSoraVideoStatus(t *testing.T) {
 	require.Equal(t, "queued", normalizeSoraVideoStatus("pending"))
 	require.Equal(t, "completed", normalizeSoraVideoStatus("success"))
 	require.Equal(t, "failed", normalizeSoraVideoStatus("cancelled"))
+}
+
+func TestTaskSubmitReqToUpstreamVideoBody(t *testing.T) {
+	body := taskSubmitReqToUpstreamVideoBody(relaycommon.TaskSubmitReq{
+		Prompt:         "hello",
+		Size:           "1080x1920",
+		Seconds:        "8",
+		InputReference: "https://example.com/a.png",
+	}, "seedance2-c1")
+
+	require.Equal(t, "seedance2-c1", body["model"])
+	require.Equal(t, "hello", body["prompt"])
+	require.Equal(t, 8, body["duration"])
+	require.Equal(t, "1080x1920", body["size"])
+	require.Equal(t, "https://example.com/a.png", body["image_url"])
+	require.Equal(t, []string{"https://example.com/a.png"}, body["image_refs"])
+}
+
+func TestTaskSubmitReqToUpstreamVideoBodyKeepsRefsAndInfersPortrait(t *testing.T) {
+	body := taskSubmitReqToUpstreamVideoBody(relaycommon.TaskSubmitReq{
+		Prompt:    "真人实拍，9:16画幅，竖屏短剧。",
+		ImageRefs: []string{"https://example.com/1.png", "https://example.com/2.png"},
+		Images:    []string{"https://example.com/2.png", "https://example.com/3.png"},
+		AudioRefs: []string{"https://example.com/a.mp3"},
+	}, "seedance-2.0")
+
+	require.Equal(t, []string{"https://example.com/1.png", "https://example.com/2.png", "https://example.com/3.png"}, body["image_refs"])
+	require.Equal(t, []string{"https://example.com/a.mp3"}, body["audio_refs"])
+	require.Equal(t, "9:16", body["aspect_ratio"])
+	require.Equal(t, "1080x1920", body["size"])
+}
+
+func TestUpstreamVideoTaskPrefersJSON(t *testing.T) {
+	require.True(t, upstreamVideoTaskPrefersJSON("http://paco-dola2api-er9b9x-dola2api-1:38472"))
+	require.False(t, upstreamVideoTaskPrefersJSON("https://api.openai.com"))
 }

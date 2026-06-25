@@ -167,6 +167,12 @@ func (a *TaskAdaptor) BuildRequestBody(c *gin.Context, info *relaycommon.RelayIn
 	}
 
 	if strings.Contains(contentType, "multipart/form-data") {
+		if upstreamVideoTaskPrefersJSON(a.baseURL) {
+			if newBody, err := buildUpstreamVideoJSONFromMultipart(c, info); err == nil {
+				c.Request.Header.Set("Content-Type", "application/json")
+				return bytes.NewReader(newBody), nil
+			}
+		}
 		formData, err := common.ParseMultipartFormReusable(c)
 		if err != nil {
 			return bytes.NewReader(cachedBody), nil
@@ -383,13 +389,146 @@ func (a *TaskAdaptor) ConvertToOpenAIVideo(task *model.Task) ([]byte, error) {
 	return data, nil
 }
 
+func upstreamVideoTaskPrefersJSON(baseURL string) bool {
+	return !strings.Contains(strings.ToLower(baseURL), "api.openai.com")
+}
+
+func buildUpstreamVideoJSONFromMultipart(c *gin.Context, info *relaycommon.RelayInfo) ([]byte, error) {
+	req, err := relaycommon.GetTaskRequest(c)
+	if err != nil {
+		formData, parseErr := common.ParseMultipartFormReusable(c)
+		if parseErr != nil {
+			return nil, parseErr
+		}
+		req = relaycommon.TaskSubmitReq{
+			Prompt:         firstFormValue(formData.Value, "prompt"),
+			Model:          firstFormValue(formData.Value, "model"),
+			Size:           firstFormValue(formData.Value, "size"),
+			AspectRatio:    firstFormValue(formData.Value, "aspect_ratio"),
+			Seconds:        firstFormValue(formData.Value, "seconds"),
+			Image:          firstFormValue(formData.Value, "image"),
+			InputReference: firstFormValue(formData.Value, "input_reference"),
+		}
+		if duration, convErr := strconv.Atoi(firstFormValue(formData.Value, "duration")); convErr == nil {
+			req.Duration = duration
+		}
+		if images := formData.Value["images"]; len(images) > 0 {
+			req.Images = append([]string(nil), images...)
+		}
+	}
+	bodyMap := taskSubmitReqToUpstreamVideoBody(req, info.UpstreamModelName)
+	normalizeOpenAIVideoAspectBody(bodyMap)
+	return common.Marshal(bodyMap)
+}
+
+func firstFormValue(values map[string][]string, key string) string {
+	if xs := values[key]; len(xs) > 0 {
+		return xs[0]
+	}
+	return ""
+}
+
+func taskSubmitReqToUpstreamVideoBody(req relaycommon.TaskSubmitReq, upstreamModel string) map[string]interface{} {
+	body := map[string]interface{}{
+		"model":  upstreamModel,
+		"prompt": req.Prompt,
+	}
+	if duration := taskSubmitDuration(req); duration > 0 {
+		body["duration"] = duration
+	}
+	if size := strings.TrimSpace(req.Size); size != "" {
+		body["size"] = size
+	}
+	if aspect := strings.TrimSpace(req.AspectRatio); aspect != "" {
+		body["aspect_ratio"] = aspect
+	}
+	if imageRefs := collectUpstreamVideoImageRefs(req); len(imageRefs) > 0 {
+		body["image_refs"] = imageRefs
+		body["image_url"] = imageRefs[0]
+	}
+	if audioRefs := collectUpstreamVideoAudioRefs(req); len(audioRefs) > 0 {
+		body["audio_refs"] = audioRefs
+		body["audio_url"] = audioRefs[0]
+	}
+	normalizeOpenAIVideoAspectBody(body)
+	return body
+}
+
+func taskSubmitDuration(req relaycommon.TaskSubmitReq) int {
+	if req.Duration > 0 {
+		return req.Duration
+	}
+	if seconds, err := strconv.Atoi(strings.TrimSpace(req.Seconds)); err == nil {
+		return seconds
+	}
+	return 0
+}
+
+func collectUpstreamVideoImageRefs(req relaycommon.TaskSubmitReq) []string {
+	seen := make(map[string]struct{})
+	out := make([]string, 0, len(req.Images)+len(req.ImageRefs)+len(req.ImageURLs)+3)
+	add := func(raw string) {
+		raw = strings.TrimSpace(raw)
+		if raw == "" {
+			return
+		}
+		if _, ok := seen[raw]; ok {
+			return
+		}
+		seen[raw] = struct{}{}
+		out = append(out, raw)
+	}
+	add(req.Image)
+	add(req.InputReference)
+	add(req.ReferenceImage)
+	for _, image := range req.ImageRefs {
+		add(image)
+	}
+	for _, image := range req.ImageURLs {
+		add(image)
+	}
+	for _, image := range req.Images {
+		add(image)
+	}
+	return out
+}
+
+func collectUpstreamVideoAudioRefs(req relaycommon.TaskSubmitReq) []string {
+	seen := make(map[string]struct{})
+	out := make([]string, 0, len(req.AudioRefs)+len(req.AudioURLs)+len(req.Audios)+2)
+	add := func(raw string) {
+		raw = strings.TrimSpace(raw)
+		if raw == "" {
+			return
+		}
+		if _, ok := seen[raw]; ok {
+			return
+		}
+		seen[raw] = struct{}{}
+		out = append(out, raw)
+	}
+	add(req.Audio)
+	add(req.ReferenceAudio)
+	for _, audio := range req.AudioRefs {
+		add(audio)
+	}
+	for _, audio := range req.AudioURLs {
+		add(audio)
+	}
+	for _, audio := range req.Audios {
+		add(audio)
+	}
+	return out
+}
+
 func normalizeOpenAIVideoAspectBody(body map[string]interface{}) {
 	if body == nil {
 		return
 	}
 	size, _ := body["size"].(string)
 	aspect, _ := body["aspect_ratio"].(string)
-	aspect, size = normalizeOpenAIVideoAspectValues(aspect, size)
+	prompt, _ := body["prompt"].(string)
+	aspect, size = normalizeOpenAIVideoAspectValuesWithPrompt(aspect, size, prompt)
 	if aspect != "" {
 		body["aspect_ratio"] = aspect
 	}
@@ -410,7 +549,7 @@ func normalizeOpenAIVideoAspectForm(values map[string][]string) map[string][]str
 		}
 		return ""
 	}
-	aspect, size := normalizeOpenAIVideoAspectValues(first("aspect_ratio"), first("size"))
+	aspect, size := normalizeOpenAIVideoAspectValuesWithPrompt(first("aspect_ratio"), first("size"), first("prompt"))
 	if aspect != "" {
 		out["aspect_ratio"] = []string{aspect}
 	}
@@ -421,15 +560,36 @@ func normalizeOpenAIVideoAspectForm(values map[string][]string) map[string][]str
 }
 
 func normalizeOpenAIVideoAspectValues(aspect, size string) (string, string) {
+	return normalizeOpenAIVideoAspectValuesWithPrompt(aspect, size, "")
+}
+
+func normalizeOpenAIVideoAspectValuesWithPrompt(aspect, size, prompt string) (string, string) {
 	aspect = strings.TrimSpace(strings.ToLower(aspect))
 	size = strings.TrimSpace(strings.ToLower(strings.ReplaceAll(size, "*", "x")))
 	if aspect == "" {
 		aspect = aspectFromOpenAIVideoSize(size)
 	}
+	if aspect == "" {
+		aspect = aspectFromPrompt(prompt)
+	}
 	if size == "" || isAspectRatioToken(size) {
 		size = defaultOpenAIVideoSizeForAspect(aspect)
 	}
 	return aspect, size
+}
+
+func aspectFromPrompt(prompt string) string {
+	p := strings.ToLower(strings.TrimSpace(prompt))
+	if p == "" {
+		return ""
+	}
+	if strings.Contains(p, "9:16") || strings.Contains(p, "竖屏") || strings.Contains(p, "纵向") || strings.Contains(p, "vertical") || strings.Contains(p, "portrait") {
+		return "9:16"
+	}
+	if strings.Contains(p, "16:9") || strings.Contains(p, "横屏") || strings.Contains(p, "横向") || strings.Contains(p, "landscape") {
+		return "16:9"
+	}
+	return ""
 }
 
 func isAspectRatioToken(s string) bool {
