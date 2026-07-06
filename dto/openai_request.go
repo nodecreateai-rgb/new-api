@@ -17,6 +17,22 @@ type ResponseFormat struct {
 	JsonSchema json.RawMessage `json:"json_schema,omitempty"`
 }
 
+func (r *ResponseFormat) UnmarshalJSON(data []byte) error {
+	var s string
+	if err := json.Unmarshal(data, &s); err == nil {
+		r.Type = s
+		r.JsonSchema = nil
+		return nil
+	}
+	type alias ResponseFormat
+	var a alias
+	if err := json.Unmarshal(data, &a); err != nil {
+		return err
+	}
+	*r = ResponseFormat(a)
+	return nil
+}
+
 type FormatJsonSchema struct {
 	Description string          `json:"description,omitempty"`
 	Name        string          `json:"name"`

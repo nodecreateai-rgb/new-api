@@ -50,14 +50,19 @@ func RelayImageAsync(c *gin.Context, info *relaycommon.RelayInfo, req *dto.Image
 			return apiErr
 		}
 	}
-	bodyStorage, bodyErr := common.GetBodyStorage(c)
-	if bodyErr != nil {
-		if info.Billing != nil {
-			info.Billing.Refund(c)
+	var bodyBytes []byte
+	contentType := "application/json"
+	var bodyErr error
+	if c.GetBool(contextKeyChatImageCompat) {
+		bodyBytes, bodyErr = common.Marshal(req)
+	} else {
+		bodyStorage, err := common.GetBodyStorage(c)
+		if err != nil {
+			bodyErr = err
+		} else {
+			bodyBytes, contentType, bodyErr = imageAsyncRequestBody(c, bodyStorage)
 		}
-		return types.NewErrorWithStatusCode(bodyErr, types.ErrorCodeReadRequestBodyFailed, http.StatusBadRequest, types.ErrOptionWithSkipRetry())
 	}
-	bodyBytes, contentType, bodyErr := imageAsyncRequestBody(c, bodyStorage)
 	if bodyErr != nil {
 		if info.Billing != nil {
 			info.Billing.Refund(c)
