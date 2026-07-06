@@ -23,6 +23,7 @@ func maybeConvertChatImageCompat(c *gin.Context, relayFormat types.RelayFormat, 
 	if !ok || !common.IsImageGenerationModel(textReq.Model) {
 		return relayFormat, request, nil
 	}
+	textReq.Model = common.MapImageGenerationModelAlias(textReq.Model)
 	imageReq, relayMode, err := chatCompletionToImageRequest(c, textReq)
 	if err != nil {
 		return relayFormat, request, err

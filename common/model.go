@@ -16,6 +16,8 @@ var (
 		"gpt-image-2",
 		"nano-banana-2",
 		"nano-banana-pro",
+		"gemini-3-pro-image-preview",
+		"gemini-3.1-flash-image-preview",
 		"prefix:imagen-",
 		"flux-",
 		"flux.1-",
@@ -36,6 +38,16 @@ func IsOpenAIResponseOnlyModel(modelName string) bool {
 		}
 	}
 	return false
+}
+
+func MapImageGenerationModelAlias(modelName string) string {
+	switch strings.ToLower(strings.TrimSpace(modelName)) {
+	case "gemini-3-pro-image-preview":
+		return "nano-banana-pro"
+	case "gemini-3.1-flash-image-preview":
+		return "nano-banana-2"
+	}
+	return modelName
 }
 
 func IsImageGenerationModel(modelName string) bool {
