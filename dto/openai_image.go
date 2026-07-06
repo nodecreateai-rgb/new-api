@@ -16,6 +16,7 @@ type ImageRequest struct {
 	Prompt            string          `json:"prompt" binding:"required"`
 	N                 *uint           `json:"n,omitempty"`
 	Size              string          `json:"size,omitempty"`
+	AspectRatio       string          `json:"aspect_ratio,omitempty"`
 	Quality           string          `json:"quality,omitempty"`
 	ResponseFormat    string          `json:"response_format,omitempty"`
 	Style             json.RawMessage `json:"style,omitempty"`
@@ -28,9 +29,15 @@ type ImageRequest struct {
 	PartialImages     json.RawMessage `json:"partial_images,omitempty"`
 	Stream            bool            `json:"stream,omitempty"`
 	Images            json.RawMessage `json:"images,omitempty"`
+	ImageURL          json.RawMessage `json:"image_url,omitempty"`
+	ImageURLs         json.RawMessage `json:"image_urls,omitempty"`
 	Mask              json.RawMessage `json:"mask,omitempty"`
 	InputFidelity     json.RawMessage `json:"input_fidelity,omitempty"`
 	Watermark         *bool           `json:"watermark,omitempty"`
+	Async             *bool           `json:"async,omitempty"`
+	AsyncTask         *bool           `json:"async_task,omitempty"`
+	ReturnTaskID      *bool           `json:"return_task_id,omitempty"`
+	CallbackURL       string          `json:"callback_url,omitempty"`
 	// zhipu 4v
 	WatermarkEnabled json.RawMessage `json:"watermark_enabled,omitempty"`
 	UserId           json.RawMessage `json:"user_id,omitempty"`

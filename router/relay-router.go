@@ -81,6 +81,12 @@ func SetRelayRouter(router *gin.Engine) {
 		})
 	}
 	{
+		// image async task polling routes do not need model distribution; they read New-API task state by public task_id.
+		taskFetchRouter := relayV1Router.Group("")
+		taskFetchRouter.GET("/images/generations/:task_id", controller.ImageTaskFetch)
+		taskFetchRouter.GET("/images/edits/:task_id", controller.ImageTaskFetch)
+	}
+	{
 		//http router
 		httpRouter := relayV1Router.Group("")
 		httpRouter.Use(middleware.Distribute())
@@ -113,7 +119,13 @@ func SetRelayRouter(router *gin.Engine) {
 		httpRouter.POST("/images/generations", func(c *gin.Context) {
 			controller.Relay(c, types.RelayFormatOpenAIImage)
 		})
+		httpRouter.POST("/image/generation", func(c *gin.Context) {
+			controller.Relay(c, types.RelayFormatOpenAIImage)
+		})
 		httpRouter.POST("/images/edits", func(c *gin.Context) {
+			controller.Relay(c, types.RelayFormatOpenAIImage)
+		})
+		httpRouter.POST("/image/edit", func(c *gin.Context) {
 			controller.Relay(c, types.RelayFormatOpenAIImage)
 		})
 
@@ -164,6 +176,21 @@ func SetRelayRouter(router *gin.Engine) {
 		httpRouter.POST("/fine-tunes/:id/cancel", controller.RelayNotImplemented)
 		httpRouter.GET("/fine-tunes/:id/events", controller.RelayNotImplemented)
 		httpRouter.DELETE("/models/:model", controller.RelayNotImplemented)
+	}
+
+	imageCompatRouter := router.Group("/image")
+	imageCompatRouter.Use(middleware.RouteTag("relay"))
+	imageCompatRouter.Use(middleware.SystemPerformanceCheck())
+	imageCompatRouter.Use(middleware.TokenAuth())
+	imageCompatRouter.Use(middleware.ModelRequestRateLimit())
+	imageCompatRouter.Use(middleware.Distribute())
+	{
+		imageCompatRouter.POST("/generation", func(c *gin.Context) {
+			controller.Relay(c, types.RelayFormatOpenAIImage)
+		})
+		imageCompatRouter.POST("/edit", func(c *gin.Context) {
+			controller.Relay(c, types.RelayFormatOpenAIImage)
+		})
 	}
 
 	relayMjRouter := router.Group("/mj")

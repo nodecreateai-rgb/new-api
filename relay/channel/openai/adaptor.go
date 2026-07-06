@@ -164,6 +164,12 @@ func (a *Adaptor) GetRequestURL(info *relaycommon.RelayInfo) (string, error) {
 		url = strings.Replace(url, "{model}", info.UpstreamModelName, -1)
 		return url, nil
 	default:
+		if strings.HasPrefix(info.RequestURLPath, "/v1/image/generation") || strings.HasPrefix(info.RequestURLPath, "/image/generation") {
+			return relaycommon.GetFullRequestURL(info.ChannelBaseUrl, "/v1/images/generations", info.ChannelType), nil
+		}
+		if strings.HasPrefix(info.RequestURLPath, "/v1/image/edit") || strings.HasPrefix(info.RequestURLPath, "/image/edit") {
+			return relaycommon.GetFullRequestURL(info.ChannelBaseUrl, "/v1/images/edits", info.ChannelType), nil
+		}
 		if (info.RelayFormat == types.RelayFormatClaude || info.RelayFormat == types.RelayFormatGemini) &&
 			info.RelayMode != relayconstant.RelayModeResponses &&
 			info.RelayMode != relayconstant.RelayModeResponsesCompact {

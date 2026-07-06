@@ -29,6 +29,35 @@ func TestConvertToOpenAIVideoNormalizesProcessingStatus(t *testing.T) {
 	require.Equal(t, "sd2-c2", gjson.GetBytes(body, "model").String())
 }
 
+func TestConvertToOpenAIVideoCompletedUsesAuthenticatedContentProxy(t *testing.T) {
+	task := &model.Task{
+		TaskID:   "task_public",
+		Status:   model.TaskStatusSuccess,
+		Progress: "100%",
+		Data: []byte(`{
+			"id":"upstream",
+			"task_id":"upstream",
+			"object":"video",
+			"model":"seedance2-c1",
+			"status":"completed",
+			"progress":100,
+			"url":"/outputs/task_upstream.mp4",
+			"video_url":"/outputs/task_upstream.mp4",
+			"videos":[{"url":"/outputs/task_upstream.mp4"}]
+		}`),
+		Properties: model.Properties{OriginModelName: "sd2-c7"},
+	}
+
+	body, err := (&TaskAdaptor{}).ConvertToOpenAIVideo(task)
+	require.NoError(t, err)
+	wantURL := "http://localhost:3000/v1/videos/task_public/content"
+	require.Equal(t, wantURL, gjson.GetBytes(body, "url").String())
+	require.Equal(t, wantURL, gjson.GetBytes(body, "video_url").String())
+	require.Equal(t, wantURL, gjson.GetBytes(body, "metadata.url").String())
+	require.Equal(t, wantURL, gjson.GetBytes(body, "videos.0.url").String())
+	require.Equal(t, "sd2-c7", gjson.GetBytes(body, "model").String())
+}
+
 func TestNormalizeSoraVideoStatus(t *testing.T) {
 	require.Equal(t, "in_progress", normalizeSoraVideoStatus("processing"))
 	require.Equal(t, "in_progress", normalizeSoraVideoStatus("running"))
@@ -51,20 +80,6 @@ func TestTaskSubmitReqToUpstreamVideoBody(t *testing.T) {
 	require.Equal(t, "1080x1920", body["size"])
 	require.Equal(t, "https://example.com/a.png", body["image_url"])
 	require.Equal(t, []string{"https://example.com/a.png"}, body["image_refs"])
-}
-
-func TestTaskSubmitReqToUpstreamVideoBodyKeepsRefsAndInfersPortrait(t *testing.T) {
-	body := taskSubmitReqToUpstreamVideoBody(relaycommon.TaskSubmitReq{
-		Prompt:    "真人实拍，9:16画幅，竖屏短剧。",
-		ImageRefs: []string{"https://example.com/1.png", "https://example.com/2.png"},
-		Images:    []string{"https://example.com/2.png", "https://example.com/3.png"},
-		AudioRefs: []string{"https://example.com/a.mp3"},
-	}, "seedance-2.0")
-
-	require.Equal(t, []string{"https://example.com/1.png", "https://example.com/2.png", "https://example.com/3.png"}, body["image_refs"])
-	require.Equal(t, []string{"https://example.com/a.mp3"}, body["audio_refs"])
-	require.Equal(t, "9:16", body["aspect_ratio"])
-	require.Equal(t, "1080x1920", body["size"])
 }
 
 func TestUpstreamVideoTaskPrefersJSON(t *testing.T) {

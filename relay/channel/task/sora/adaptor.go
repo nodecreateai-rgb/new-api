@@ -21,6 +21,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/pkg/errors"
+	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
 )
 
@@ -386,6 +387,42 @@ func (a *TaskAdaptor) ConvertToOpenAIVideo(task *model.Task) ([]byte, error) {
 			return nil, errors.Wrap(err, "set model failed")
 		}
 	}
+	if status == dto.VideoStatusCompleted {
+		if data, err = ensureOpenAIVideoContentURL(data, task); err != nil {
+			return nil, err
+		}
+	}
+	return data, nil
+}
+
+func ensureOpenAIVideoContentURL(data []byte, task *model.Task) ([]byte, error) {
+	if task == nil {
+		return data, nil
+	}
+	contentURL := taskcommon.BuildProxyURL(task.TaskID)
+	if strings.TrimSpace(contentURL) == "" {
+		return data, nil
+	}
+	var err error
+	if data, err = sjson.SetBytes(data, "url", contentURL); err != nil {
+		return nil, errors.Wrap(err, "set url failed")
+	}
+	if data, err = sjson.SetBytes(data, "video_url", contentURL); err != nil {
+		return nil, errors.Wrap(err, "set video_url failed")
+	}
+	if data, err = sjson.SetBytes(data, "metadata.url", contentURL); err != nil {
+		return nil, errors.Wrap(err, "set metadata url failed")
+	}
+	if videos := gjson.GetBytes(data, "videos"); videos.Exists() && videos.IsArray() {
+		videos.ForEach(func(key, _ gjson.Result) bool {
+			path := fmt.Sprintf("videos.%d.url", key.Int())
+			data, err = sjson.SetBytes(data, path, contentURL)
+			return err == nil
+		})
+		if err != nil {
+			return nil, errors.Wrap(err, "set videos url failed")
+		}
+	}
 	return data, nil
 }
 
@@ -446,11 +483,6 @@ func taskSubmitReqToUpstreamVideoBody(req relaycommon.TaskSubmitReq, upstreamMod
 		body["image_refs"] = imageRefs
 		body["image_url"] = imageRefs[0]
 	}
-	if audioRefs := collectUpstreamVideoAudioRefs(req); len(audioRefs) > 0 {
-		body["audio_refs"] = audioRefs
-		body["audio_url"] = audioRefs[0]
-	}
-	normalizeOpenAIVideoAspectBody(body)
 	return body
 }
 
@@ -466,7 +498,7 @@ func taskSubmitDuration(req relaycommon.TaskSubmitReq) int {
 
 func collectUpstreamVideoImageRefs(req relaycommon.TaskSubmitReq) []string {
 	seen := make(map[string]struct{})
-	out := make([]string, 0, len(req.Images)+len(req.ImageRefs)+len(req.ImageURLs)+3)
+	out := make([]string, 0, len(req.Images)+2)
 	add := func(raw string) {
 		raw = strings.TrimSpace(raw)
 		if raw == "" {
@@ -480,43 +512,8 @@ func collectUpstreamVideoImageRefs(req relaycommon.TaskSubmitReq) []string {
 	}
 	add(req.Image)
 	add(req.InputReference)
-	add(req.ReferenceImage)
-	for _, image := range req.ImageRefs {
-		add(image)
-	}
-	for _, image := range req.ImageURLs {
-		add(image)
-	}
 	for _, image := range req.Images {
 		add(image)
-	}
-	return out
-}
-
-func collectUpstreamVideoAudioRefs(req relaycommon.TaskSubmitReq) []string {
-	seen := make(map[string]struct{})
-	out := make([]string, 0, len(req.AudioRefs)+len(req.AudioURLs)+len(req.Audios)+2)
-	add := func(raw string) {
-		raw = strings.TrimSpace(raw)
-		if raw == "" {
-			return
-		}
-		if _, ok := seen[raw]; ok {
-			return
-		}
-		seen[raw] = struct{}{}
-		out = append(out, raw)
-	}
-	add(req.Audio)
-	add(req.ReferenceAudio)
-	for _, audio := range req.AudioRefs {
-		add(audio)
-	}
-	for _, audio := range req.AudioURLs {
-		add(audio)
-	}
-	for _, audio := range req.Audios {
-		add(audio)
 	}
 	return out
 }
@@ -527,8 +524,7 @@ func normalizeOpenAIVideoAspectBody(body map[string]interface{}) {
 	}
 	size, _ := body["size"].(string)
 	aspect, _ := body["aspect_ratio"].(string)
-	prompt, _ := body["prompt"].(string)
-	aspect, size = normalizeOpenAIVideoAspectValuesWithPrompt(aspect, size, prompt)
+	aspect, size = normalizeOpenAIVideoAspectValues(aspect, size)
 	if aspect != "" {
 		body["aspect_ratio"] = aspect
 	}
@@ -549,7 +545,7 @@ func normalizeOpenAIVideoAspectForm(values map[string][]string) map[string][]str
 		}
 		return ""
 	}
-	aspect, size := normalizeOpenAIVideoAspectValuesWithPrompt(first("aspect_ratio"), first("size"), first("prompt"))
+	aspect, size := normalizeOpenAIVideoAspectValues(first("aspect_ratio"), first("size"))
 	if aspect != "" {
 		out["aspect_ratio"] = []string{aspect}
 	}
@@ -560,36 +556,15 @@ func normalizeOpenAIVideoAspectForm(values map[string][]string) map[string][]str
 }
 
 func normalizeOpenAIVideoAspectValues(aspect, size string) (string, string) {
-	return normalizeOpenAIVideoAspectValuesWithPrompt(aspect, size, "")
-}
-
-func normalizeOpenAIVideoAspectValuesWithPrompt(aspect, size, prompt string) (string, string) {
 	aspect = strings.TrimSpace(strings.ToLower(aspect))
 	size = strings.TrimSpace(strings.ToLower(strings.ReplaceAll(size, "*", "x")))
 	if aspect == "" {
 		aspect = aspectFromOpenAIVideoSize(size)
 	}
-	if aspect == "" {
-		aspect = aspectFromPrompt(prompt)
-	}
 	if size == "" || isAspectRatioToken(size) {
 		size = defaultOpenAIVideoSizeForAspect(aspect)
 	}
 	return aspect, size
-}
-
-func aspectFromPrompt(prompt string) string {
-	p := strings.ToLower(strings.TrimSpace(prompt))
-	if p == "" {
-		return ""
-	}
-	if strings.Contains(p, "9:16") || strings.Contains(p, "竖屏") || strings.Contains(p, "纵向") || strings.Contains(p, "vertical") || strings.Contains(p, "portrait") {
-		return "9:16"
-	}
-	if strings.Contains(p, "16:9") || strings.Contains(p, "横屏") || strings.Contains(p, "横向") || strings.Contains(p, "landscape") {
-		return "16:9"
-	}
-	return ""
 }
 
 func isAspectRatioToken(s string) bool {

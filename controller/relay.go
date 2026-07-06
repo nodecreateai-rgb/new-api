@@ -36,7 +36,11 @@ func relayHandler(c *gin.Context, info *relaycommon.RelayInfo) *types.NewAPIErro
 	var err *types.NewAPIError
 	switch info.RelayMode {
 	case relayconstant.RelayModeImagesGenerations, relayconstant.RelayModeImagesEdits:
-		err = relay.ImageHelper(c, info)
+		if imageReq, ok := info.Request.(*dto.ImageRequest); ok && imageAsyncRequested(imageReq) {
+			err = RelayImageAsync(c, info, imageReq)
+		} else {
+			err = relay.ImageHelper(c, info)
+		}
 	case relayconstant.RelayModeAudioSpeech:
 		fallthrough
 	case relayconstant.RelayModeAudioTranslation:
@@ -490,6 +494,19 @@ func RelayTask(c *gin.Context) {
 			Message:    err.Error(),
 			StatusCode: http.StatusInternalServerError,
 		})
+		return
+	}
+
+	if c.GetString("platform") == string(constant.TaskPlatformImage) {
+		var imageReq dto.ImageRequest
+		if err := common.UnmarshalBodyReusable(c, &imageReq); err != nil {
+			respondTaskError(c, service.TaskErrorWrapperLocal(err, "invalid_request", http.StatusBadRequest))
+			return
+		}
+		relayInfo.Request = &imageReq
+		if err := RelayImageAsync(c, relayInfo, &imageReq); err != nil {
+			c.JSON(err.StatusCode, gin.H{"error": err.ToOpenAIError()})
+		}
 		return
 	}
 

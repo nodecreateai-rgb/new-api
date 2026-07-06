@@ -24,6 +24,7 @@ type Pricing struct {
 	QuotaType              int                     `json:"quota_type"`
 	ModelRatio             float64                 `json:"model_ratio"`
 	ModelPrice             float64                 `json:"model_price"`
+	ModelGroupPrice        map[string]float64      `json:"model_group_price,omitempty"`
 	OwnerBy                string                  `json:"owner_by"`
 	CompletionRatio        float64                 `json:"completion_ratio"`
 	CacheRatio             *float64                `json:"cache_ratio,omitempty"`
@@ -313,6 +314,14 @@ func updatePricing() {
 			pricing.ModelRatio = modelRatio
 			pricing.CompletionRatio = ratio_setting.GetCompletionRatio(model)
 			pricing.QuotaType = 0
+		}
+		for _, group := range pricing.EnableGroup {
+			if groupPrice, ok := ratio_setting.GetModelGroupPrice(group, model); ok {
+				if pricing.ModelGroupPrice == nil {
+					pricing.ModelGroupPrice = make(map[string]float64)
+				}
+				pricing.ModelGroupPrice[group] = groupPrice
+			}
 		}
 		if cacheRatio, ok := ratio_setting.GetCacheRatio(model); ok {
 			pricing.CacheRatio = &cacheRatio

@@ -28,9 +28,11 @@ func SetVideoRouter(router *gin.Engine) {
 	// docs: https://platform.openai.com/docs/api-reference/videos/create
 	{
 		videoV1Router.POST("/videos", controller.RelayTask)
-		videoV1Router.GET("/videos/:task_id", controller.RelayTaskFetch)
-		videoV1Router.GET("/tasks/:task_id", controller.RelayTaskFetch)
-		videoV1Router.GET("/task/:task_id", controller.RelayTaskFetch)
+		// Image-model tasks submitted via /v1/videos are stored in New-API as image tasks; fetch them
+		// locally first, then fall through to the upstream video fetcher for real video tasks.
+		videoV1Router.GET("/videos/:task_id", controller.ImageOrRelayTaskFetch)
+		videoV1Router.GET("/tasks/:task_id", controller.ImageOrRelayTaskFetch)
+		videoV1Router.GET("/task/:task_id", controller.ImageOrRelayTaskFetch)
 	}
 
 	klingV1Router := router.Group("/kling/v1")

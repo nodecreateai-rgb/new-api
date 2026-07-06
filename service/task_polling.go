@@ -1,11 +1,15 @@
 package service
 
 import (
+	"bytes"
 	"context"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
@@ -145,6 +149,10 @@ func DispatchPlatformUpdate(platform constant.TaskPlatform, taskChannelM map[int
 		// MJ 轮询由其自身处理，这里预留入口
 	case constant.TaskPlatformSuno:
 		_ = UpdateSunoTasks(context.Background(), taskChannelM, taskM)
+	case constant.TaskPlatformImage:
+		if err := UpdateImageTasks(context.Background(), taskChannelM, taskM); err != nil {
+			common.SysLog(fmt.Sprintf("UpdateImageTasks fail: %s", err))
+		}
 	default:
 		if err := UpdateVideoTasks(context.Background(), platform, taskChannelM, taskM); err != nil {
 			common.SysLog(fmt.Sprintf("UpdateVideoTasks fail: %s", err))
@@ -288,6 +296,11 @@ func taskNeedsUpdate(oldTask *model.Task, newTask dto.SunoDataResponse) bool {
 	return false
 }
 
+// UpdateImageTasks 按渠道更新所有图片异步任务。
+func UpdateImageTasks(ctx context.Context, taskChannelM map[int][]string, taskM map[string]*model.Task) error {
+	return UpdateVideoTasks(ctx, constant.TaskPlatformImage, taskChannelM, taskM)
+}
+
 // UpdateVideoTasks 按渠道更新所有视频任务
 func UpdateVideoTasks(ctx context.Context, platform constant.TaskPlatform, taskChannelM map[int][]string, taskM map[string]*model.Task) error {
 	for channelId, taskIds := range taskChannelM {
@@ -397,6 +410,9 @@ func updateVideoSingleTask(ctx context.Context, adaptor TaskPollingAdaptor, ch *
 		return fmt.Errorf("parseTaskResult failed for task %s: %w", taskId, err)
 	}
 
+	if task.Platform == constant.TaskPlatformImage {
+		responseBody, taskResult.Url = normalizeImageResponseBodyForTask(task.TaskID, responseBody, taskResult.Url)
+	}
 	task.Data = redactVideoResponseBody(responseBody)
 
 	logger.LogDebug(ctx, "updateVideoSingleTask taskResult: %+v", taskResult)
@@ -562,4 +578,113 @@ func settleTaskBillingOnComplete(ctx context.Context, adaptor TaskPollingAdaptor
 		return
 	}
 	// 3. 无调整，保持预扣额度
+}
+
+func normalizeImageResponseBodyForTask(taskID string, body []byte, currentURL string) ([]byte, string) {
+	var payload map[string]any
+	if err := common.Unmarshal(body, &payload); err != nil {
+		return body, currentURL
+	}
+	resultURL := currentURL
+	normalizeData := func(v any) any {
+		arr, ok := v.([]any)
+		if !ok {
+			return v
+		}
+		for i, item := range arr {
+			itemMap, ok := item.(map[string]any)
+			if !ok {
+				continue
+			}
+			if u := firstImageString(itemMap["url"], itemMap["output_url"]); u != "" {
+				delete(itemMap, "b64_json")
+				if resultURL == "" || strings.HasPrefix(resultURL, "data:") {
+					resultURL = u
+				}
+				arr[i] = itemMap
+				continue
+			}
+			if b64 := firstImageString(itemMap["b64_json"]); b64 != "" {
+				if u, err := persistImagePollingOutput(taskID, i, b64); err == nil && u != "" {
+					itemMap["url"] = u
+					delete(itemMap, "b64_json")
+					if resultURL == "" || strings.HasPrefix(resultURL, "data:") {
+						resultURL = u
+					}
+					arr[i] = itemMap
+				}
+			}
+		}
+		return arr
+	}
+	if data, ok := payload["data"]; ok {
+		payload["data"] = normalizeData(data)
+	}
+	if result, ok := payload["result"].(map[string]any); ok {
+		if data, ok := result["data"]; ok {
+			result["data"] = normalizeData(data)
+			payload["result"] = result
+		}
+	}
+	if b, err := common.Marshal(payload); err == nil {
+		body = b
+	}
+	return body, resultURL
+}
+
+func firstImageString(vals ...any) string {
+	for _, v := range vals {
+		if s, ok := v.(string); ok && strings.TrimSpace(s) != "" {
+			return strings.TrimSpace(s)
+		}
+	}
+	return ""
+}
+
+func persistImagePollingOutput(taskID string, index int, b64 string) (string, error) {
+	b64 = strings.TrimSpace(b64)
+	if strings.HasPrefix(b64, "data:") {
+		if comma := strings.IndexByte(b64, ','); comma >= 0 {
+			b64 = b64[comma+1:]
+		}
+	}
+	data, err := base64.StdEncoding.DecodeString(b64)
+	if err != nil {
+		data, err = base64.RawStdEncoding.DecodeString(b64)
+		if err != nil {
+			return "", err
+		}
+	}
+	name := taskID
+	if !strings.HasPrefix(name, "task_") {
+		name = "task_" + name
+	}
+	if index > 0 {
+		name = fmt.Sprintf("%s_%d", name, index+1)
+	}
+	fileName := name + imagePollingOutputExt(data)
+	outputDir := os.Getenv("IMAGE_OUTPUT_DIR")
+	if outputDir == "" {
+		outputDir = "/data/output"
+	}
+	if err := os.MkdirAll(outputDir, 0755); err != nil {
+		return "", err
+	}
+	if err := os.WriteFile(filepath.Join(outputDir, fileName), data, 0644); err != nil {
+		return "", err
+	}
+	return "/output/" + fileName, nil
+}
+
+func imagePollingOutputExt(data []byte) string {
+	if len(data) >= 8 && bytes.Equal(data[:8], []byte{0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n'}) {
+		return ".png"
+	}
+	if len(data) >= 3 && data[0] == 0xff && data[1] == 0xd8 && data[2] == 0xff {
+		return ".jpg"
+	}
+	if len(data) >= 12 && string(data[:4]) == "RIFF" && string(data[8:12]) == "WEBP" {
+		return ".webp"
+	}
+	return ".png"
 }

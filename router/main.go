@@ -17,6 +17,11 @@ func SetRouter(router *gin.Engine, assets ThemeAssets) {
 	SetDashboardRouter(router)
 	SetRelayRouter(router)
 	SetVideoRouter(router)
+	outputDir := os.Getenv("IMAGE_OUTPUT_DIR")
+	if outputDir == "" {
+		outputDir = "/data/output"
+	}
+	router.Static("/output", outputDir)
 	frontendBaseUrl := os.Getenv("FRONTEND_BASE_URL")
 	if common.IsMasterNode && frontendBaseUrl != "" {
 		frontendBaseUrl = ""

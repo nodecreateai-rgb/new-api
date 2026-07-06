@@ -73,6 +73,38 @@ function parseTaskData(data: unknown): unknown[] {
   return []
 }
 
+function parseTaskDataObject(data: unknown): Record<string, unknown> | null {
+  if (data && typeof data === 'object' && !Array.isArray(data)) {
+    return data as Record<string, unknown>
+  }
+  if (typeof data !== 'string') return null
+  try {
+    const parsed = JSON.parse(data)
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+      ? (parsed as Record<string, unknown>)
+      : null
+  } catch {
+    return null
+  }
+}
+
+function getFirstImageUrl(log: TaskLog): string {
+  if (typeof log.result_url === 'string' && log.result_url) return log.result_url
+  const parsed = parseTaskDataObject(log.data)
+  const data = Array.isArray(parsed?.data)
+    ? parsed?.data
+    : parsed?.result &&
+        typeof parsed.result === 'object' &&
+        Array.isArray((parsed.result as Record<string, unknown>).data)
+      ? ((parsed.result as Record<string, unknown>).data as unknown[])
+      : []
+  const first = data.find((item) => item && typeof item === 'object') as
+    | Record<string, unknown>
+    | undefined
+  const url = first?.url || first?.output_url
+  return typeof url === 'string' ? url : ''
+}
+
 function AudioPreviewCell({ log }: { log: TaskLog }) {
   const { t } = useTranslation()
   const [open, setOpen] = useState(false)
@@ -293,9 +325,26 @@ export function useTaskLogsColumns(isAdmin: boolean): ColumnDef<TaskLog>[] {
           log.action === TASK_ACTIONS.REFERENCE_GENERATE ||
           log.action === TASK_ACTIONS.REMIX_GENERATE
         const isSuccess = status === TASK_STATUS.SUCCESS
-        const isUrl = failReason?.startsWith('http')
+        const resultUrl = log.result_url || failReason
+        const isImageTask = log.platform === 'image'
 
-        if (isSuccess && isVideoTask && isUrl) {
+        if (isSuccess && isImageTask) {
+          const imageUrl = getFirstImageUrl(log)
+          if (imageUrl) {
+            return (
+              <a
+                href={imageUrl}
+                target='_blank'
+                rel='noopener noreferrer'
+                className='text-foreground text-xs hover:underline'
+              >
+                {t('Click to preview image')}
+              </a>
+            )
+          }
+        }
+
+        if (isSuccess && isVideoTask && resultUrl) {
           const videoUrl = `/v1/videos/${log.task_id}/content`
           return (
             <a

@@ -159,7 +159,7 @@ func initConstantEnv() {
 	// instead of multiplying their base price by request-derived ratios like seconds
 	// or resolution. Dopio sd2-c* video models are sold per generated item, so keep
 	// them as built-in defaults while still allowing operators to add/override via env.
-	taskPricePatches := []string{"sd2-c1", "sd2-c2", "sd2-c3", "sd2-c5", "sd2-c6", "sd2-c7", "sd2-c8", "sd2-c9", "sd2-c10"}
+	taskPricePatches := []string{"sd2-c1", "sd2-c2", "sd2-c3", "sd2-c5", "sd2-c6", "sd2-c7", "sd2-c8", "sd2-c9", "sd2-c10", "sd2-c11", "sd2-c12"}
 	soraPatchStr := GetEnvOrDefaultString("TASK_PRICE_PATCH", "")
 	if soraPatchStr != "" {
 		taskPricePatches = nil

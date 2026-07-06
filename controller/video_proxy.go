@@ -120,6 +120,8 @@ func VideoProxy(c *gin.Context) {
 	case constant.ChannelTypeOpenAI, constant.ChannelTypeSora:
 		if directURL := getStoredVideoURL(task); directURL != "" {
 			videoURL = directURL
+		} else if channel.Type == constant.ChannelTypeSora && upstreamVideoOutputURL(baseURL, task.GetUpstreamTaskID()) != "" {
+			videoURL = upstreamVideoOutputURL(baseURL, task.GetUpstreamTaskID())
 		} else {
 			videoURL = fmt.Sprintf("%s/v1/videos/%s/content", baseURL, task.GetUpstreamTaskID())
 			req.Header.Set("Authorization", "Bearer "+channel.Key)
@@ -134,6 +136,9 @@ func VideoProxy(c *gin.Context) {
 		videoProxyError(c, http.StatusBadGateway, "server_error", "Failed to fetch video content")
 		return
 	}
+	wasRelativeVideoURL := strings.HasPrefix(videoURL, "/") && !strings.HasPrefix(videoURL, "//")
+	videoURL = resolvePossiblyRelativeVideoURL(videoURL, baseURL)
+	trustedChannelURL := isTrustedChannelVideoURL(videoURL, baseURL)
 
 	if strings.HasPrefix(videoURL, "data:") {
 		if err := writeVideoDataURL(c, videoURL); err != nil {
@@ -143,11 +148,13 @@ func VideoProxy(c *gin.Context) {
 		return
 	}
 
-	fetchSetting := system_setting.GetFetchSetting()
-	if err := common.ValidateURLWithFetchSetting(videoURL, fetchSetting.EnableSSRFProtection, fetchSetting.AllowPrivateIp, fetchSetting.DomainFilterMode, fetchSetting.IpFilterMode, fetchSetting.DomainList, fetchSetting.IpList, fetchSetting.AllowedPorts, fetchSetting.ApplyIPFilterForDomain); err != nil {
-		logger.LogError(c.Request.Context(), fmt.Sprintf("Video URL blocked for task %s: %v", taskID, err))
-		videoProxyError(c, http.StatusForbidden, "server_error", fmt.Sprintf("request blocked: %v", err))
-		return
+	if !wasRelativeVideoURL && !trustedChannelURL {
+		fetchSetting := system_setting.GetFetchSetting()
+		if err := common.ValidateURLWithFetchSetting(videoURL, fetchSetting.EnableSSRFProtection, fetchSetting.AllowPrivateIp, fetchSetting.DomainFilterMode, fetchSetting.IpFilterMode, fetchSetting.DomainList, fetchSetting.IpList, fetchSetting.AllowedPorts, fetchSetting.ApplyIPFilterForDomain); err != nil {
+			logger.LogError(c.Request.Context(), fmt.Sprintf("Video URL blocked for task %s: %v", taskID, err))
+			videoProxyError(c, http.StatusForbidden, "server_error", fmt.Sprintf("request blocked: %v", err))
+			return
+		}
 	}
 
 	req.URL, err = url.Parse(videoURL)
@@ -183,6 +190,40 @@ func VideoProxy(c *gin.Context) {
 	if _, err = io.Copy(c.Writer, resp.Body); err != nil {
 		logger.LogError(c.Request.Context(), fmt.Sprintf("Failed to stream video content: %s", err.Error()))
 	}
+}
+
+func upstreamVideoOutputURL(baseURL, upstreamTaskID string) string {
+	baseURL = strings.TrimRight(strings.TrimSpace(baseURL), "/")
+	upstreamTaskID = strings.TrimSpace(upstreamTaskID)
+	if baseURL == "" || upstreamTaskID == "" || strings.Contains(strings.ToLower(baseURL), "api.openai.com") {
+		return ""
+	}
+	name := upstreamTaskID
+	if !strings.HasPrefix(name, "task_") {
+		name = "task_" + name
+	}
+	return baseURL + "/outputs/" + url.PathEscape(name) + ".mp4"
+}
+
+func isTrustedChannelVideoURL(videoURL, baseURL string) bool {
+	baseURL = strings.TrimRight(strings.TrimSpace(baseURL), "/")
+	videoURL = strings.TrimSpace(videoURL)
+	return baseURL != "" && strings.HasPrefix(videoURL, baseURL+"/")
+}
+
+func resolvePossiblyRelativeVideoURL(rawURL, baseURL string) string {
+	rawURL = strings.TrimSpace(rawURL)
+	if rawURL == "" || strings.HasPrefix(rawURL, "data:") || strings.HasPrefix(rawURL, "http://") || strings.HasPrefix(rawURL, "https://") {
+		return rawURL
+	}
+	if !strings.HasPrefix(rawURL, "/") {
+		return rawURL
+	}
+	baseURL = strings.TrimRight(strings.TrimSpace(baseURL), "/")
+	if baseURL == "" {
+		return rawURL
+	}
+	return baseURL + rawURL
 }
 
 func getStoredVideoURL(task *model.Task) string {

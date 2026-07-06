@@ -121,6 +121,9 @@ func main() {
 
 	// Wire task polling adaptor factory (breaks service -> relay import cycle)
 	service.GetTaskAdaptorFunc = func(platform constant.TaskPlatform) service.TaskPollingAdaptor {
+		if platform == constant.TaskPlatformImage {
+			return controller.NewImageTaskAdaptor()
+		}
 		a := relay.GetTaskAdaptor(platform)
 		if a == nil {
 			return nil
