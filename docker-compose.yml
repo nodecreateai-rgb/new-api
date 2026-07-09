@@ -20,7 +20,7 @@ services:
       - TZ=Asia/Shanghai
       - ERROR_LOG_ENABLED=true
       - TASK_TIMEOUT_MINUTES=30
-      - TASK_PRICE_PATCH=sd2-c1,sd2-c2,sd2-c3,sd2-c5,sd2-c6,sd2-c7,sd2-c8,sd2-c9,sd2-c10
+      - TASK_PRICE_PATCH=sd2-c1,sd2-c2,sd2-c3,sd2-c5,sd2-c6,sd2-c7,sd2-c8,sd2-c9,sd2-c10,sd2-c11,sd2-c12
       - BATCH_UPDATE_ENABLED=true
       - NODE_NAME=new-api-node-1
     depends_on:
@@ -38,6 +38,16 @@ services:
       timeout: 10s
       retries: 3
     labels:
+      - traefik.http.routers.paco-llm-0yit87-3-web.rule=Host(`llm.chre3.com`)
+      - traefik.http.routers.paco-llm-0yit87-3-web.entrypoints=web
+      - traefik.http.services.paco-llm-0yit87-3-web.loadbalancer.server.port=3000
+      - traefik.http.routers.paco-llm-0yit87-3-web.service=paco-llm-0yit87-3-web
+      - traefik.http.routers.paco-llm-0yit87-3-web.middlewares=redirect-to-https@file
+      - traefik.http.routers.paco-llm-0yit87-3-websecure.rule=Host(`llm.chre3.com`)
+      - traefik.http.routers.paco-llm-0yit87-3-websecure.entrypoints=websecure
+      - traefik.http.services.paco-llm-0yit87-3-websecure.loadbalancer.server.port=3000
+      - traefik.http.routers.paco-llm-0yit87-3-websecure.service=paco-llm-0yit87-3-websecure
+      - traefik.http.routers.paco-llm-0yit87-3-websecure.tls.certresolver=letsencrypt
       - traefik.docker.network=dokploy-network
       - traefik.http.routers.paco-llm-0yit87-3-web.rule=Host(`llm.chre3.com`)
       - traefik.http.routers.paco-llm-0yit87-3-web.entrypoints=web

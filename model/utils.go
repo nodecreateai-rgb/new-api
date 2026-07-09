@@ -49,6 +49,14 @@ func addNewRecord(type_ int, id int, value int) {
 	}
 }
 
+// FlushBatchUpdate forces pending in-memory quota/token/channel batch deltas to DB.
+// Admin quota mutations must call this before writing absolute/large balance changes,
+// otherwise an older queued consume/refund delta can be flushed after the admin action
+// and make the visible balance drift from the audit log.
+func FlushBatchUpdate() {
+	batchUpdate()
+}
+
 func batchUpdate() {
 	// check if there's any data to update
 	hasData := false

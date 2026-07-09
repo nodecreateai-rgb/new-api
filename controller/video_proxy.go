@@ -37,23 +37,14 @@ func VideoProxy(c *gin.Context) {
 		return
 	}
 
-	userID := c.GetInt("id")
-	task, exists, err := model.GetByTaskId(userID, taskID)
+	// Public content URLs are intentionally bearer-free. API responses expose
+	// /v1/videos/<task_id>/content as a fetchable artifact URL, so resolve the
+	// task globally instead of requiring the request owner's auth context.
+	task, exists, err := model.GetByOnlyTaskId(taskID)
 	if err != nil {
 		logger.LogError(c.Request.Context(), fmt.Sprintf("Failed to query task %s: %s", taskID, err.Error()))
 		videoProxyError(c, http.StatusInternalServerError, "server_error", "Failed to query task")
 		return
-	}
-	if (!exists || task == nil) && model.IsAdmin(userID) {
-		// Admin console users can inspect task records owned by other users. The
-		// task-log detail preview uses the same video proxy endpoint, so fall back
-		// to a global task lookup only after authenticated admin authorization.
-		task, exists, err = model.GetByOnlyTaskId(taskID)
-		if err != nil {
-			logger.LogError(c.Request.Context(), fmt.Sprintf("Failed to query admin task %s: %s", taskID, err.Error()))
-			videoProxyError(c, http.StatusInternalServerError, "server_error", "Failed to query task")
-			return
-		}
 	}
 	if !exists || task == nil {
 		videoProxyError(c, http.StatusNotFound, "invalid_request_error", "Task not found")

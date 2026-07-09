@@ -7,10 +7,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"mime"
 	"mime/multipart"
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
@@ -26,8 +28,71 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+var imageSensitiveURLPattern = regexp.MustCompile(`(?i)https?://[^\s"'<>]+`)
+var imageSensitivePathPattern = regexp.MustCompile(`(?i)(?:/app/scratch|/tmp|/var/lib/docker|/root)/[^\s"'<>]+`)
+
+const imagePublicUpstreamError = "upstream image service temporarily unavailable, please retry"
+
+func sanitizeImageTaskPublicError(reason string) string {
+	reason = strings.TrimSpace(reason)
+	if reason == "" {
+		return ""
+	}
+	low := strings.ToLower(reason)
+	if strings.Contains(low, "felo.ai") || strings.Contains(low, "file.felo.ai") ||
+		strings.Contains(low, "api-proxy") || strings.Contains(low, "upload image") ||
+		strings.Contains(low, "bad record mac") || strings.Contains(low, "tls:") ||
+		strings.Contains(low, "/app/scratch") || strings.Contains(low, "remote error") ||
+		strings.Contains(low, "client.timeout") || strings.Contains(low, "context deadline exceeded") ||
+		strings.Contains(low, "upstream status=") || strings.Contains(low, "paco-felo2api") {
+		return imagePublicUpstreamError
+	}
+	clean := imageSensitiveURLPattern.ReplaceAllString(reason, "[upstream]")
+	clean = imageSensitivePathPattern.ReplaceAllString(clean, "[file]")
+	low = strings.ToLower(clean)
+	if strings.Contains(low, "felo") || strings.Contains(low, "api-proxy") || strings.Contains(low, "paco-felo2api") {
+		return imagePublicUpstreamError
+	}
+	return clean
+}
+
 func imageAsyncRequested(req *dto.ImageRequest) bool {
 	return req != nil && ((req.Async != nil && *req.Async) || (req.AsyncTask != nil && *req.AsyncTask) || (req.ReturnTaskID != nil && *req.ReturnTaskID))
+}
+
+func imageRequestHasReferences(req *dto.ImageRequest) bool {
+	if req == nil {
+		return false
+	}
+	for _, raw := range []any{req.Images, req.ImageURL, req.ImageURLs, req.Image, req.Mask} {
+		if rawImageFieldHasValue(raw) {
+			return true
+		}
+	}
+	return false
+}
+
+func rawImageFieldHasValue(raw any) bool {
+	switch v := raw.(type) {
+	case nil:
+		return false
+	case []byte:
+		return jsonRawHasValue(v)
+	case string:
+		return strings.TrimSpace(v) != ""
+	default:
+		b, err := common.Marshal(v)
+		return err == nil && jsonRawHasValue(b)
+	}
+}
+
+func jsonRawHasValue(raw []byte) bool {
+	value := strings.TrimSpace(string(raw))
+	return value != "" && value != "null" && value != "[]" && value != "{}" && value != `""`
+}
+
+func shouldRouteImageRequestToFelo(req *dto.ImageRequest) bool {
+	return req != nil && strings.EqualFold(strings.TrimSpace(req.Model), "gpt-image-2") && imageRequestHasReferences(req)
 }
 
 func RelayImageAsync(c *gin.Context, info *relaycommon.RelayInfo, req *dto.ImageRequest) *types.NewAPIError {
@@ -78,7 +143,11 @@ func RelayImageAsync(c *gin.Context, info *relaycommon.RelayInfo, req *dto.Image
 		info.TaskRelayInfo = &relaycommon.TaskRelayInfo{}
 	}
 	info.TaskRelayInfo.PublicTaskID = publicTaskID
+	feloRoute := shouldRouteImageRequestToFelo(req)
 	info.Action = imageActionFromPath(c.Request.URL.Path)
+	if feloRoute {
+		info.Action = "edit_image"
+	}
 	task := model.InitTask(constant.TaskPlatformImage, info)
 	task.Action = info.Action
 	task.Status = model.TaskStatusSubmitted
@@ -100,7 +169,7 @@ func RelayImageAsync(c *gin.Context, info *relaycommon.RelayInfo, req *dto.Image
 	}
 	service.LogTaskConsumption(c, info)
 
-	go runImageAsyncTask(publicTaskID, c.GetInt("channel_id"), common.GetContextKeyString(c, constant.ContextKeyChannelKey), contentType, bodyBytes)
+	go runImageAsyncTask(publicTaskID, c.GetInt("channel_id"), common.GetContextKeyString(c, constant.ContextKeyChannelKey), contentType, bodyBytes, feloRoute)
 	c.JSON(http.StatusAccepted, imageAcceptedTaskResponse(task))
 	return nil
 }
@@ -171,7 +240,7 @@ func imageAcceptedTaskResponse(task *model.Task) map[string]any {
 	return map[string]any{"id": task.TaskID, "task_id": task.TaskID, "taskId": task.TaskID, "object": "task", "kind": imageKindFromAction(task.Action), "status": "queued", "created": task.SubmitTime, "updated": time.Now().Unix(), "task_url": imageTaskURL(task)}
 }
 
-func runImageAsyncTask(publicTaskID string, channelID int, key string, contentType string, requestBody []byte) {
+func runImageAsyncTask(publicTaskID string, channelID int, key string, contentType string, requestBody []byte, routeToFelo bool) {
 	ctx := context.Background()
 	task, exists, err := model.GetByOnlyTaskId(publicTaskID)
 	if err != nil || !exists {
@@ -185,8 +254,13 @@ func runImageAsyncTask(publicTaskID string, channelID int, key string, contentTy
 	}
 	baseURL := ch.GetBaseURL()
 	urlPath := "/v1/images/generations"
-	if task.Action == "edit_image" {
+	if task.Action == "edit_image" && !routeToFelo {
 		urlPath = "/v1/images/edits"
+	}
+	if routeToFelo {
+		baseURL = imageFeloBaseURL()
+		urlPath = "/v1/images/generations"
+		key = ""
 	}
 	upstreamURL := strings.TrimRight(baseURL, "/") + urlPath
 	task.Status = model.TaskStatusInProgress
@@ -194,7 +268,7 @@ func runImageAsyncTask(publicTaskID string, channelID int, key string, contentTy
 	task.StartTime = time.Now().Unix()
 	_, _ = task.UpdateWithStatus(preStatus)
 
-	asyncBody, asyncContentType, err := ensureAsyncPayload(contentType, requestBody)
+	asyncBody, asyncContentType, err := ensureAsyncPayload(contentType, requestBody, routeToFelo)
 	if err != nil {
 		failImageTask(ctx, task, model.TaskStatusInProgress, err.Error())
 		return
@@ -208,7 +282,7 @@ func runImageAsyncTask(publicTaskID string, channelID int, key string, contentTy
 	if key != "" {
 		upReq.Header.Set("Authorization", "Bearer "+key)
 	}
-	resp, err := http.DefaultClient.Do(upReq)
+	resp, err := doImageAsyncSubmit(upReq, routeToFelo)
 	if err != nil {
 		failImageTask(ctx, task, model.TaskStatusInProgress, err.Error())
 		return
@@ -258,8 +332,60 @@ func runImageAsyncTask(publicTaskID string, channelID int, key string, contentTy
 	}
 }
 
-func ensureAsyncPayload(contentType string, body []byte) ([]byte, string, error) {
+func doImageAsyncSubmit(req *http.Request, routeToFelo bool) (*http.Response, error) {
+	attempts := 1
+	if routeToFelo {
+		attempts = 4
+	}
+	var lastErr error
+	for attempt := 1; attempt <= attempts; attempt++ {
+		resp, err := http.DefaultClient.Do(req)
+		if err == nil {
+			return resp, nil
+		}
+		lastErr = err
+		if !routeToFelo || !isRetryableImageSubmitError(err) || attempt == attempts {
+			break
+		}
+		time.Sleep(time.Duration(attempt) * 750 * time.Millisecond)
+	}
+	return nil, lastErr
+}
+
+func isRetryableImageSubmitError(err error) bool {
+	if err == nil {
+		return false
+	}
+	low := strings.ToLower(err.Error())
+	for _, marker := range []string{
+		"lookup ", "server misbehaving", "no such host", "connection refused", "connection reset", "i/o timeout", "timeout", "temporary failure", "bad record mac", "tls:",
+	} {
+		if strings.Contains(low, marker) {
+			return true
+		}
+	}
+	return false
+}
+
+func imageFeloBaseURL() string {
+	if v := strings.TrimSpace(os.Getenv("IMAGE_FELO2API_BASE_URL")); v != "" {
+		return v
+	}
+	return "http://paco-felo2api-yzexs0-felo2api-1:43188"
+}
+
+func imageFeloTaskBaseURL(task *model.Task, fallback string) string {
+	if task != nil && task.PrivateData.UpstreamTaskID != "" && task.Action == "edit_image" {
+		return imageFeloBaseURL()
+	}
+	return fallback
+}
+
+func ensureAsyncPayload(contentType string, body []byte, routeToFelo bool) ([]byte, string, error) {
 	if strings.Contains(strings.ToLower(contentType), "multipart/form-data") {
+		if routeToFelo {
+			return feloJSONPayloadFromMultipart(contentType, body)
+		}
 		return body, contentType, nil
 	}
 	var m map[string]any
@@ -268,15 +394,133 @@ func ensureAsyncPayload(contentType string, body []byte) ([]byte, string, error)
 	}
 	m["async"] = true
 	m["return_task_id"] = true
+	m["response_format"] = "url"
+	if routeToFelo {
+		normalizeFeloImagePayload(m)
+	}
 	out, err := common.Marshal(m)
 	return out, "application/json", err
+}
+
+func normalizeFeloImagePayload(m map[string]any) {
+	if m == nil {
+		return
+	}
+	m["model"] = "gpt-image-2"
+	if _, ok := m["reference_images"]; !ok {
+		for _, key := range []string{"image", "images", "image_url", "image_urls"} {
+			if v, ok := m[key]; ok && rawImageFieldHasValue(v) {
+				m["reference_images"] = normalizeFeloReferenceImages(v)
+				break
+			}
+		}
+	} else {
+		m["reference_images"] = normalizeFeloReferenceImages(m["reference_images"])
+	}
+	delete(m, "image_url")
+	delete(m, "image_urls")
+	delete(m, "mask")
+}
+
+func normalizeFeloReferenceImages(v any) any {
+	if !rawImageFieldHasValue(v) {
+		return nil
+	}
+	switch typed := v.(type) {
+	case []any:
+		return typed
+	case []string:
+		out := make([]any, 0, len(typed))
+		for _, item := range typed {
+			out = append(out, item)
+		}
+		return out
+	case []byte:
+		var parsed any
+		if common.Unmarshal(typed, &parsed) == nil {
+			return normalizeFeloReferenceImages(parsed)
+		}
+		return []any{string(typed)}
+	default:
+		return []any{typed}
+	}
+}
+
+func feloJSONPayloadFromMultipart(contentType string, body []byte) ([]byte, string, error) {
+	_, params, err := mime.ParseMediaType(contentType)
+	if err != nil {
+		return nil, contentType, err
+	}
+	boundary := params["boundary"]
+	if boundary == "" {
+		return nil, contentType, errors.New("multipart boundary missing")
+	}
+	form, err := multipart.NewReader(bytes.NewReader(body), boundary).ReadForm(32 << 20)
+	if err != nil {
+		return nil, contentType, err
+	}
+	defer form.RemoveAll()
+
+	payload := make(map[string]any)
+	if form != nil {
+		for key, values := range form.Value {
+			if len(values) == 0 {
+				continue
+			}
+			if len(values) == 1 {
+				payload[key] = values[0]
+			} else {
+				items := make([]any, 0, len(values))
+				for _, value := range values {
+					items = append(items, value)
+				}
+				payload[key] = items
+			}
+		}
+		var refs []any
+		for _, field := range []string{"image", "image[]", "images", "reference_images"} {
+			for _, fh := range form.File[field] {
+				dataURL, err := multipartFileDataURL(fh)
+				if err != nil {
+					return nil, contentType, err
+				}
+				refs = append(refs, dataURL)
+			}
+		}
+		if len(refs) > 0 {
+			payload["reference_images"] = refs
+		}
+	}
+	normalizeFeloImagePayload(payload)
+	out, err := common.Marshal(payload)
+	return out, "application/json", err
+}
+
+func multipartFileDataURL(fh *multipart.FileHeader) (string, error) {
+	file, err := fh.Open()
+	if err != nil {
+		return "", err
+	}
+	defer file.Close()
+	data, err := io.ReadAll(file)
+	if err != nil {
+		return "", err
+	}
+	mimeType := fh.Header.Get("Content-Type")
+	if mimeType == "" {
+		mimeType = http.DetectContentType(data)
+	}
+	if mimeType == "" {
+		mimeType = "application/octet-stream"
+	}
+	return "data:" + mimeType + ";base64," + base64.StdEncoding.EncodeToString(data), nil
 }
 
 func failImageTask(ctx context.Context, task *model.Task, from model.TaskStatus, reason string) {
 	task.Status = model.TaskStatusFailure
 	task.Progress = "100%"
 	task.FinishTime = time.Now().Unix()
-	task.FailReason = reason
+	task.FailReason = sanitizeImageTaskPublicError(reason)
 	won, err := task.UpdateWithStatus(from)
 	if err != nil || !won {
 		return
@@ -335,7 +579,7 @@ func imageTaskResponse(task *model.Task) map[string]any {
 	}
 	out := map[string]any{"id": task.TaskID, "task_id": task.TaskID, "taskId": task.TaskID, "object": "task", "kind": imageKindFromAction(task.Action), "status": status, "progress": task.Progress, "created": task.SubmitTime, "updated": task.UpdatedAt, "task_url": imageTaskURL(task)}
 	if task.FailReason != "" {
-		out["error"] = task.FailReason
+		out["error"] = sanitizeImageTaskPublicError(task.FailReason)
 	}
 	if task.Status == model.TaskStatusSuccess && len(task.Data) > 0 {
 		var result map[string]any
@@ -392,6 +636,10 @@ func (a *imageTaskAdaptor) FetchTask(baseURL string, key string, body map[string
 	if taskID == "" {
 		taskID = asString(body["id"])
 	}
+	if asString(body["action"]) == "edit_image" {
+		baseURL = imageFeloBaseURL()
+		key = ""
+	}
 	req, err := http.NewRequest(http.MethodGet, strings.TrimRight(baseURL, "/")+"/v1/task/"+taskID, nil)
 	if err != nil {
 		return nil, err
@@ -433,7 +681,7 @@ func (a *imageTaskAdaptor) ParseTaskResult(respBody []byte) (*relaycommon.TaskIn
 			taskInfo.Progress = "100%"
 		}
 	}
-	taskInfo.Reason = firstString(m["error"], m["message"])
+	taskInfo.Reason = sanitizeImageTaskPublicError(firstString(m["error"], m["message"]))
 	if b, err := common.Marshal(m); err == nil {
 		taskInfo.RemoteUrl = string(b)
 	}

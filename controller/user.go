@@ -941,6 +941,12 @@ func ManageUser(c *gin.Context) {
 		}
 		user.Role = common.RoleCommonUser
 	case "add_quota":
+		// Flush pending batched consume/refund deltas before an admin balance change.
+		// Without this, a stale in-memory batch can be applied after add/override and
+		// make the user's balance no longer reconcile with the admin audit log.
+		if common.BatchUpdateEnabled {
+			model.FlushBatchUpdate()
+		}
 		adminName := c.GetString("username")
 		adminId := c.GetInt("id")
 		adminInfo := map[string]interface{}{
@@ -957,6 +963,12 @@ func ManageUser(c *gin.Context) {
 				common.ApiError(c, err)
 				return
 			}
+			if common.BatchUpdateEnabled {
+				model.FlushBatchUpdate()
+			}
+			if err := model.InvalidateUserCache(user.Id); err != nil {
+				common.SysLog(fmt.Sprintf("failed to invalidate user cache for user %d: %s", user.Id, err.Error()))
+			}
 			model.RecordLogWithAdminInfo(user.Id, model.LogTypeManage,
 				fmt.Sprintf("管理员增加用户额度 %s", logger.LogQuota(req.Value)), adminInfo)
 		case "subtract":
@@ -968,6 +980,12 @@ func ManageUser(c *gin.Context) {
 				common.ApiError(c, err)
 				return
 			}
+			if common.BatchUpdateEnabled {
+				model.FlushBatchUpdate()
+			}
+			if err := model.InvalidateUserCache(user.Id); err != nil {
+				common.SysLog(fmt.Sprintf("failed to invalidate user cache for user %d: %s", user.Id, err.Error()))
+			}
 			model.RecordLogWithAdminInfo(user.Id, model.LogTypeManage,
 				fmt.Sprintf("管理员减少用户额度 %s", logger.LogQuota(req.Value)), adminInfo)
 		case "override":
@@ -975,6 +993,12 @@ func ManageUser(c *gin.Context) {
 			if err := model.DB.Model(&model.User{}).Where("id = ?", user.Id).Update("quota", req.Value).Error; err != nil {
 				common.ApiError(c, err)
 				return
+			}
+			if common.BatchUpdateEnabled {
+				model.FlushBatchUpdate()
+			}
+			if err := model.InvalidateUserCache(user.Id); err != nil {
+				common.SysLog(fmt.Sprintf("failed to invalidate user cache for user %d: %s", user.Id, err.Error()))
 			}
 			model.RecordLogWithAdminInfo(user.Id, model.LogTypeManage,
 				fmt.Sprintf("管理员覆盖用户额度从 %s 为 %s", logger.LogQuota(oldQuota), logger.LogQuota(req.Value)), adminInfo)

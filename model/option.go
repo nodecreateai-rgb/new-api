@@ -210,8 +210,8 @@ func ensureDopioRMBPricing() {
 		"sd2-c2":          3,
 		"sd2-c3":          4,
 		"sd2-c5":          5,
-		"sd2-c6":          2,
-		"sd2-c7":          2,
+		"sd2-c6":          0.5,
+		"sd2-c7":          0.5,
 		"sd2-c8":          5,
 		"sd2-c9":          2,
 		"sd2-c10":         4,
@@ -235,14 +235,16 @@ func ensureDopioRMBPricing() {
 	// every sd2 model) rather than multiplicative discounts such as 0.75×.
 	targetModelGroupPrices := map[string]map[string]float64{
 		"default": {
+			"sd2-c6":          0.5,
+			"sd2-c7":          0.5,
 			"gpt-image-2":     0.03,
 			"nano-banana-2":   0.01,
 			"nano-banana-pro": 0.01,
 		},
 		"vip1": {
 			"sd2-c5":          3,
-			"sd2-c6":          1.5,
-			"sd2-c7":          1.5,
+			"sd2-c6":          0.5,
+			"sd2-c7":          0.5,
 			"sd2-c8":          3,
 			"sd2-c9":          1,
 			"sd2-c10":         0.5,
@@ -255,6 +257,8 @@ func ensureDopioRMBPricing() {
 			"sd2-c2":          2,
 			"sd2-c3":          3,
 			"sd2-c5":          4,
+			"sd2-c6":          0.5,
+			"sd2-c7":          0.5,
 			"gpt-image-2":     0.03,
 			"nano-banana-2":   0.01,
 			"nano-banana-pro": 0.01,
@@ -264,11 +268,15 @@ func ensureDopioRMBPricing() {
 			"sd2-c2":          2,
 			"sd2-c3":          2,
 			"sd2-c5":          2,
+			"sd2-c6":          0.5,
+			"sd2-c7":          0.5,
 			"gpt-image-2":     0.03,
 			"nano-banana-2":   0.01,
 			"nano-banana-pro": 0.01,
 		},
 		"vip2": {
+			"sd2-c6":          0.5,
+			"sd2-c7":          0.3,
 			"sd2-c11":         1.5,
 			"sd2-c12":         2,
 			"gpt-image-2":     0.03,
@@ -375,7 +383,7 @@ func ensureDopioRMBPricing() {
 		common.SysLog("failed to enforce Dopio RMB pricing: " + err.Error())
 		return
 	}
-	common.SysLog("enforced Dopio RMB pricing incl banana=0.01, sd2-c11=2.5, sd2-c12=3, vip2 sd2-c11=1.5, vip2 sd2-c12=2, Price=1, USDExchangeRate=1, quota_display_type=CNY")
+	common.SysLog("enforced Dopio RMB pricing incl banana=0.01, sd2-c6=0.5, sd2-c7=0.5, vip2 sd2-c7=0.3, sd2-c11=2.5, sd2-c12=3, vip2 sd2-c11=1.5, vip2 sd2-c12=2, Price=1, USDExchangeRate=1, quota_display_type=CNY")
 }
 
 func SyncOptions(frequency int) {

@@ -132,7 +132,14 @@ func (t *Task) GetResultURL() string {
 	if t.PrivateData.ResultURL != "" {
 		return t.PrivateData.ResultURL
 	}
-	return t.FailReason
+	// Never expose failure text as result_url. Older rows sometimes stored a
+	// successful media URL in FailReason; keep that compatibility only for
+	// successful tasks. Failed tasks must return an empty result_url so provider
+	// hosts, internal container DNS names, and local paths cannot leak.
+	if t.Status == TaskStatusSuccess {
+		return t.FailReason
+	}
+	return ""
 }
 
 // GenerateTaskID 生成对外暴露的 task_xxxx 格式 ID

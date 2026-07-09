@@ -8,10 +8,10 @@ import (
 )
 
 func SetVideoRouter(router *gin.Engine) {
-	// Video proxy: accepts either session auth (dashboard) or token auth (API clients)
+	// Video proxy is public by design: generated task content URLs are returned to
+	// API clients and must be directly fetchable without session/token auth.
 	videoProxyRouter := router.Group("/v1")
 	videoProxyRouter.Use(middleware.RouteTag("relay"))
-	videoProxyRouter.Use(middleware.TokenOrUserAuth())
 	{
 		videoProxyRouter.GET("/videos/:task_id/content", controller.VideoProxy)
 	}
