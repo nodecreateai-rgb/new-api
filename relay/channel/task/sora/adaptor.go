@@ -400,7 +400,10 @@ func (a *TaskAdaptor) ConvertToOpenAIVideo(task *model.Task) ([]byte, error) {
 
 func sanitizeOpenAIVideoTaskData(data []byte) ([]byte, error) {
 	var err error
-	for _, path := range []string{"parent_email", "local_path", "upstream_video_id"} {
+	for _, path := range []string{
+		"parent_email", "local_path", "upstream_video_id", "remote_task_id",
+		"upstream_video_url", "poster", "thumb",
+	} {
 		if gjson.GetBytes(data, path).Exists() {
 			data, err = sjson.DeleteBytes(data, path)
 			if err != nil {

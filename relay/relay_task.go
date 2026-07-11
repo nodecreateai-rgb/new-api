@@ -597,9 +597,9 @@ func sanitizeTaskDtoData(task *model.Task) json.RawMessage {
 
 func scrubTaskPayload(payload map[string]any, publicTaskID string) {
 	for _, key := range []string{
-		"local_path", "parent_email", "upstream_video_id", "video_id",
+		"local_path", "parent_email", "upstream_video_id", "video_id", "remote_task_id",
 		"url", "video_url", "download_url", "no_watermark_url", "watermark_url",
-		"remote_url", "output_url",
+		"remote_url", "output_url", "upstream_video_url", "poster", "thumb",
 	} {
 		delete(payload, key)
 	}
