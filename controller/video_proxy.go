@@ -120,7 +120,13 @@ func VideoProxy(c *gin.Context) {
 			return
 		}
 	case constant.ChannelTypeOpenAI, constant.ChannelTypeSora:
-		if directURL := getStoredVideoURL(task); directURL != "" {
+		if outputURL := upstreamVideoOutputURL(baseURL, task.GetUpstreamTaskID()); outputURL != "" {
+			// Prefer the provider's local /outputs handle over URLs persisted in task.Data.
+			// Some upstream services store a public CDN/domain in their JSON response; those
+			// links can be stale, misconfigured, cached as 404, or leak internal branding.
+			// The upstream task id + channel base URL is the stable, private route.
+			videoURL = outputURL
+		} else if directURL := getStoredVideoURL(task); directURL != "" {
 			videoURL = directURL
 		} else if channel.Type == constant.ChannelTypeSora && upstreamVideoOutputURL(baseURL, task.GetUpstreamTaskID()) != "" {
 			videoURL = upstreamVideoOutputURL(baseURL, task.GetUpstreamTaskID())

@@ -2,6 +2,7 @@ package relay
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -541,6 +542,8 @@ func mapTaskStatusToSimple(status model.TaskStatus) string {
 }
 
 func TaskModel2Dto(task *model.Task) *dto.TaskDto {
+	data := sanitizeTaskDtoData(task)
+	props := sanitizeTaskDtoProperties(task)
 	return &dto.TaskDto{
 		ID:         task.ID,
 		CreatedAt:  task.CreatedAt,
@@ -559,8 +562,72 @@ func TaskModel2Dto(task *model.Task) *dto.TaskDto {
 		StartTime:  task.StartTime,
 		FinishTime: task.FinishTime,
 		Progress:   task.Progress,
-		Properties: task.Properties,
+		Properties: props,
 		Username:   task.Username,
-		Data:       task.Data,
+		Data:       data,
 	}
+}
+
+func sanitizeTaskDtoProperties(task *model.Task) any {
+	if task == nil {
+		return nil
+	}
+	props := task.Properties
+	// Keep origin_model_name for user-visible model identity, but do not expose the
+	// internal model name used by upstream services in admin/user task lists.
+	props.UpstreamModelName = ""
+	return props
+}
+
+func sanitizeTaskDtoData(task *model.Task) json.RawMessage {
+	if task == nil || len(task.Data) == 0 {
+		return task.Data
+	}
+	var payload map[string]any
+	if err := common.Unmarshal(task.Data, &payload); err != nil {
+		return task.Data
+	}
+	scrubTaskPayload(payload, task.TaskID)
+	b, err := common.Marshal(payload)
+	if err != nil {
+		return task.Data
+	}
+	return json.RawMessage(b)
+}
+
+func scrubTaskPayload(payload map[string]any, publicTaskID string) {
+	for _, key := range []string{
+		"local_path", "parent_email", "upstream_video_id", "video_id",
+		"url", "video_url", "download_url", "no_watermark_url", "watermark_url",
+		"remote_url", "output_url",
+	} {
+		delete(payload, key)
+	}
+	if publicTaskID != "" {
+		payload["id"] = publicTaskID
+		payload["task_id"] = publicTaskID
+	}
+	if modelName, ok := payload["model"].(string); ok && shouldHideTaskPayloadModel(modelName) {
+		delete(payload, "model")
+	}
+	for _, value := range payload {
+		if child, ok := value.(map[string]any); ok {
+			scrubTaskPayload(child, publicTaskID)
+		}
+		if list, ok := value.([]any); ok {
+			for _, item := range list {
+				if child, ok := item.(map[string]any); ok {
+					scrubTaskPayload(child, publicTaskID)
+				}
+			}
+		}
+	}
+}
+
+func shouldHideTaskPayloadModel(modelName string) bool {
+	modelName = strings.ToLower(strings.TrimSpace(modelName))
+	return strings.Contains(modelName, "seedance") ||
+		strings.Contains(modelName, "pixverse") ||
+		strings.Contains(modelName, "dola") ||
+		strings.Contains(modelName, "doubao")
 }
