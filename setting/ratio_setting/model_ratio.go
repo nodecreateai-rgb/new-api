@@ -316,9 +316,11 @@ var defaultModelPrice = map[string]float64{
 	"veo-3.1-fast-generate-preview":  0.15,
 	// Dopio Seedance-style video models (sd2-c*) are sold per generated item.
 	// Prices are stored in the display/accounting currency. Dopio runs RMB 1:1.
-	"sd2-c1": 4,
-	"sd2-c2": 3,
-	"sd2-c3": 4,
+	"sd2-c1":                             4,
+	"sd2-c2":                             3,
+	"sd2-c3":                             4,
+	"seedance-video-fast-per-second":     0.2,
+	"seedance-video-standard-per-second": 0.33,
 }
 
 var defaultAudioRatio = map[string]float64{

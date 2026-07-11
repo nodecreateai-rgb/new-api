@@ -195,7 +195,7 @@ func RelayTaskSubmit(c *gin.Context, info *relaycommon.RelayInfo) (*TaskSubmitRe
 	}
 
 	// 6. 将 OtherRatios 应用到基础额度
-	if !common.StringsContains(constant.TaskPricePatches, modelName) {
+	if shouldApplyTaskBillingRatios(adaptor, info, modelName) {
 		for _, ra := range info.PriceData.OtherRatios {
 			if ra != 1.0 {
 				info.PriceData.Quota = int(float64(info.PriceData.Quota) * ra)
@@ -277,6 +277,17 @@ func recalcQuotaFromRatios(info *relaycommon.RelayInfo, ratios map[string]float6
 		}
 	}
 	return int(result)
+}
+
+type taskBillingRatioForcer interface {
+	ForceApplyBillingRatios(info *relaycommon.RelayInfo) bool
+}
+
+func shouldApplyTaskBillingRatios(adaptor channel.TaskAdaptor, info *relaycommon.RelayInfo, modelName string) bool {
+	if forcer, ok := adaptor.(taskBillingRatioForcer); ok && forcer.ForceApplyBillingRatios(info) {
+		return true
+	}
+	return !common.StringsContains(constant.TaskPricePatches, modelName)
 }
 
 var fetchRespBuilders = map[int]func(c *gin.Context) (respBody []byte, taskResp *dto.TaskError){

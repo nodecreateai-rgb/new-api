@@ -130,6 +130,15 @@ func (a *TaskAdaptor) EstimateBilling(c *gin.Context, info *relaycommon.RelayInf
 	return ratios
 }
 
+// ForceApplyBillingRatios lets selected OpenAI-compatible video aliases keep
+// request-derived multipliers (seconds / size) even when the upstream base model
+// remains in TASK_PRICE_PATCH for per-item billing. This supports public aliases
+// that route to the same upstream model but are sold per second.
+func (a *TaskAdaptor) ForceApplyBillingRatios(info *relaycommon.RelayInfo) bool {
+	model := strings.TrimSpace(info.OriginModelName)
+	return model == "seedance-video-fast-per-second" || model == "seedance-video-standard-per-second"
+}
+
 func (a *TaskAdaptor) BuildRequestURL(info *relaycommon.RelayInfo) (string, error) {
 	if info.Action == constant.TaskActionRemix {
 		return fmt.Sprintf("%s/v1/videos/%s/remix", a.baseURL, info.OriginTaskID), nil
