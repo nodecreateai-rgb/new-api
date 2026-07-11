@@ -37,14 +37,25 @@ func VideoProxy(c *gin.Context) {
 		return
 	}
 
-	// Public content URLs are intentionally bearer-free. API responses expose
-	// /v1/videos/<task_id>/content as a fetchable artifact URL, so resolve the
-	// task globally instead of requiring the request owner's auth context.
-	task, exists, err := model.GetByOnlyTaskId(taskID)
+	userID := c.GetInt("id")
+	task, exists, err := model.GetByTaskId(userID, taskID)
 	if err != nil {
 		logger.LogError(c.Request.Context(), fmt.Sprintf("Failed to query task %s: %s", taskID, err.Error()))
 		videoProxyError(c, http.StatusInternalServerError, "server_error", "Failed to query task")
 		return
+	}
+	if !exists || task == nil {
+		// The content URL is returned to API clients as the task result_url. It must
+		// remain dereferenceable even when the downloader does not send the original
+		// API token (browsers, video tags, and some clients follow the URL directly).
+		// Task IDs are high-entropy public handles, so fall back to a global lookup
+		// for this read-only video proxy endpoint. Admin previews also rely on this.
+		task, exists, err = model.GetByOnlyTaskId(taskID)
+		if err != nil {
+			logger.LogError(c.Request.Context(), fmt.Sprintf("Failed to query task by public id %s: %s", taskID, err.Error()))
+			videoProxyError(c, http.StatusInternalServerError, "server_error", "Failed to query task")
+			return
+		}
 	}
 	if !exists || task == nil {
 		videoProxyError(c, http.StatusNotFound, "invalid_request_error", "Task not found")
@@ -162,6 +173,22 @@ func VideoProxy(c *gin.Context) {
 		return
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusNotFound && shouldRetryVideoWithCacheBypass(videoURL, baseURL) {
+		_ = resp.Body.Close()
+		retryURL := addVideoCacheBypass(videoURL, task.UpdatedAt)
+		retryReq := req.Clone(ctx)
+		retryReq.URL, err = url.Parse(retryURL)
+		if err == nil {
+			resp, err = client.Do(retryReq)
+			if err != nil {
+				logger.LogError(c.Request.Context(), fmt.Sprintf("Failed to fetch video from %s: %s", retryURL, err.Error()))
+				videoProxyError(c, http.StatusBadGateway, "server_error", "Failed to fetch video content")
+				return
+			}
+			defer resp.Body.Close()
+			videoURL = retryURL
+		}
+	}
 
 	if resp.StatusCode != http.StatusOK {
 		logger.LogError(c.Request.Context(), fmt.Sprintf("Upstream returned status %d for %s", resp.StatusCode, videoURL))
@@ -202,6 +229,33 @@ func isTrustedChannelVideoURL(videoURL, baseURL string) bool {
 	return baseURL != "" && strings.HasPrefix(videoURL, baseURL+"/")
 }
 
+func shouldRetryVideoWithCacheBypass(videoURL, baseURL string) bool {
+	if !isTrustedChannelVideoURL(videoURL, baseURL) {
+		return false
+	}
+	parsed, err := url.Parse(videoURL)
+	if err != nil {
+		return false
+	}
+	return strings.HasPrefix(parsed.Path, "/outputs/")
+}
+
+func addVideoCacheBypass(videoURL string, updatedAt int64) string {
+	parsed, err := url.Parse(videoURL)
+	if err != nil {
+		return videoURL
+	}
+	if updatedAt <= 0 {
+		updatedAt = time.Now().Unix()
+	}
+	q := parsed.Query()
+	if q.Get("_cb") == "" {
+		q.Set("_cb", fmt.Sprintf("%d", updatedAt))
+	}
+	parsed.RawQuery = q.Encode()
+	return parsed.String()
+}
+
 func resolvePossiblyRelativeVideoURL(rawURL, baseURL string) string {
 	rawURL = strings.TrimSpace(rawURL)
 	if rawURL == "" || strings.HasPrefix(rawURL, "data:") || strings.HasPrefix(rawURL, "http://") || strings.HasPrefix(rawURL, "https://") {
@@ -221,6 +275,9 @@ func getStoredVideoURL(task *model.Task) string {
 	if task == nil {
 		return ""
 	}
+	if rel := storedTaskOutputURL(task); rel != "" {
+		return rel
+	}
 	candidates := []string{task.GetResultURL()}
 	if len(task.Data) > 0 {
 		var payload map[string]any
@@ -236,6 +293,30 @@ func getStoredVideoURL(task *model.Task) string {
 		return candidate
 	}
 	return ""
+}
+
+func storedTaskOutputURL(task *model.Task) string {
+	if task == nil || len(task.Data) == 0 {
+		return ""
+	}
+	var payload map[string]any
+	if err := common.Unmarshal(task.Data, &payload); err != nil {
+		return ""
+	}
+	localPath, _ := payload["local_path"].(string)
+	localPath = strings.TrimSpace(localPath)
+	if localPath == "" {
+		return ""
+	}
+	idx := strings.LastIndex(localPath, "/")
+	name := localPath
+	if idx >= 0 {
+		name = localPath[idx+1:]
+	}
+	if name == "" || name == "." || name == ".." || strings.Contains(name, "/") {
+		return ""
+	}
+	return "/outputs/" + url.PathEscape(name)
 }
 
 func findVideoURLInPayload(payload any) string {

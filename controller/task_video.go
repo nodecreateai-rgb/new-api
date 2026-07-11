@@ -290,6 +290,9 @@ func redactVideoResponseBody(body []byte) []byte {
 	if err := json.Unmarshal(body, &m); err != nil {
 		return body
 	}
+	for _, key := range []string{"parent_email", "local_path", "upstream_video_id"} {
+		delete(m, key)
+	}
 	resp, _ := m["response"].(map[string]any)
 	if resp != nil {
 		delete(resp, "bytesBase64Encoded")

@@ -20,7 +20,7 @@ services:
       - TZ=Asia/Shanghai
       - ERROR_LOG_ENABLED=true
       - TASK_TIMEOUT_MINUTES=30
-      - TASK_PRICE_PATCH=sd2-c1,sd2-c2,sd2-c3,sd2-c5,sd2-c6,sd2-c7,sd2-c8,sd2-c9,sd2-c10,sd2-c11,sd2-c12
+      - TASK_PRICE_PATCH=sd2-c1,sd2-c2,sd2-c3,sd2-c5,sd2-c6,sd2-c7,sd2-c8,sd2-c9,sd2-c10,sd2-c11,sd2-c12,gemini-omni,happy-horse-1.1,kling-v3,kling,可灵,grok-imagine-1.5,grok,seedance-video-fast,seedance-video-standard
       - BATCH_UPDATE_ENABLED=true
       - NODE_NAME=new-api-node-1
     depends_on:
@@ -29,6 +29,7 @@ services:
     networks:
       - new-api-network
       - dokploy-network
+      - video-api-internal
       - default
     healthcheck:
       test:
@@ -88,4 +89,6 @@ networks:
   new-api-network:
     driver: bridge
   dokploy-network:
+    external: true
+  video-api-internal:
     external: true

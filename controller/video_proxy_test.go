@@ -38,3 +38,19 @@ func TestUpstreamVideoOutputURL(t *testing.T) {
 		t.Fatalf("openai base should not map to outputs URL, got %q", got)
 	}
 }
+
+func TestVideoOutputCacheBypass(t *testing.T) {
+	baseURL := "https://sd2-c7.dopio.cyou"
+	videoURL := "https://sd2-c7.dopio.cyou/outputs/task_abc.mp4"
+	if !shouldRetryVideoWithCacheBypass(videoURL, baseURL) {
+		t.Fatal("trusted /outputs video URL should be retried with cache bypass")
+	}
+	if shouldRetryVideoWithCacheBypass("https://other.example/outputs/task_abc.mp4", baseURL) {
+		t.Fatal("untrusted video URL must not be retried with cache bypass")
+	}
+	got := addVideoCacheBypass(videoURL, 1783756372)
+	want := "https://sd2-c7.dopio.cyou/outputs/task_abc.mp4?_cb=1783756372"
+	if got != want {
+		t.Fatalf("got %q want %q", got, want)
+	}
+}

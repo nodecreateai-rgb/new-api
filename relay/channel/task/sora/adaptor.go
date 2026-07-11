@@ -387,9 +387,25 @@ func (a *TaskAdaptor) ConvertToOpenAIVideo(task *model.Task) ([]byte, error) {
 			return nil, errors.Wrap(err, "set model failed")
 		}
 	}
+	if data, err = sanitizeOpenAIVideoTaskData(data); err != nil {
+		return nil, err
+	}
 	if status == dto.VideoStatusCompleted {
 		if data, err = ensureOpenAIVideoContentURL(data, task); err != nil {
 			return nil, err
+		}
+	}
+	return data, nil
+}
+
+func sanitizeOpenAIVideoTaskData(data []byte) ([]byte, error) {
+	var err error
+	for _, path := range []string{"parent_email", "local_path", "upstream_video_id"} {
+		if gjson.GetBytes(data, path).Exists() {
+			data, err = sjson.DeleteBytes(data, path)
+			if err != nil {
+				return nil, errors.Wrapf(err, "delete %s failed", path)
+			}
 		}
 	}
 	return data, nil
