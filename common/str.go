@@ -21,6 +21,19 @@ var (
 	maskApiKeyPattern = regexp.MustCompile(`(['"]?)api_key:([^\s'"]+)(['"]?)`)
 )
 
+var upstreamBrandReplacers = strings.NewReplacer(
+	"pixverse2api", "video service",
+	"Pixverse2api", "Video service",
+	"PixVerse2API", "Video service",
+	"PIXVERSE2API", "VIDEO_SERVICE",
+	"pixverse", "video service",
+	"Pixverse", "Video service",
+	"PixVerse", "Video service",
+	"PIXVERSE", "VIDEO_SERVICE",
+	"paco-pixverse2api-tkpfnf-pixverse2api-1", "video-upstream",
+	"video-render-upstream", "video-upstream",
+)
+
 const LocalLogContentLimit = 2048
 
 // LocalLogPreview limits log-only content unless debug logging is enabled.
@@ -197,6 +210,7 @@ func maskHostForPlainDomain(domain string) string {
 // www.openai.com -> ***.***.com
 // api.openai.com -> ***.***.com
 func MaskSensitiveInfo(str string) string {
+	str = MaskUpstreamProviderInfo(str)
 	// Mask URLs
 	str = maskURLPattern.ReplaceAllStringFunc(str, func(urlStr string) string {
 		u, err := url.Parse(urlStr)
@@ -262,4 +276,12 @@ func MaskSensitiveInfo(str string) string {
 	str = maskApiKeyPattern.ReplaceAllString(str, "${1}api_key:***${3}")
 
 	return str
+}
+
+// MaskUpstreamProviderInfo removes provider/container branding from user-visible text.
+func MaskUpstreamProviderInfo(str string) string {
+	if str == "" {
+		return str
+	}
+	return upstreamBrandReplacers.Replace(str)
 }

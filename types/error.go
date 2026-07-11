@@ -174,7 +174,7 @@ func (e *NewAPIError) MaskSensitiveErrorWithStatusCode() string {
 }
 
 func (e *NewAPIError) SetMessage(message string) {
-	e.Err = errors.New(message)
+	e.Err = errors.New(common.MaskUpstreamProviderInfo(message))
 }
 
 func (e *NewAPIError) ToOpenAIError() OpenAIError {
@@ -203,6 +203,8 @@ func (e *NewAPIError) ToOpenAIError() OpenAIError {
 	}
 	if e.errorCode != ErrorCodeCountTokenFailed {
 		result.Message = common.MaskSensitiveInfo(result.Message)
+	} else {
+		result.Message = common.MaskUpstreamProviderInfo(result.Message)
 	}
 	if result.Message == "" {
 		result.Message = string(e.errorType)
@@ -232,6 +234,8 @@ func (e *NewAPIError) ToClaudeError() ClaudeError {
 	}
 	if e.errorCode != ErrorCodeCountTokenFailed {
 		result.Message = common.MaskSensitiveInfo(result.Message)
+	} else {
+		result.Message = common.MaskUpstreamProviderInfo(result.Message)
 	}
 	if result.Message == "" {
 		result.Message = string(e.errorType)
