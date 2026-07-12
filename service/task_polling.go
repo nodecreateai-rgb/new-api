@@ -4,16 +4,20 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/abema/go-mp4"
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/constant"
@@ -456,6 +460,28 @@ func updateVideoSingleTask(ctx context.Context, adaptor TaskPollingAdaptor, ch *
 			task.StartTime = now
 		}
 	case model.TaskStatusSuccess:
+		if task.Platform != constant.TaskPlatformImage {
+			if err := validateCompletedVideo(ctx, ch, task, taskResult); err != nil {
+				if errors.Is(err, errVideoValidationInconclusive) {
+					return fmt.Errorf("video validation inconclusive for task %s: %w", task.TaskID, err)
+				}
+				taskResult.Status = string(model.TaskStatusFailure)
+				taskResult.Progress = taskcommon.ProgressComplete
+				taskResult.Reason = "视频文件无效或时长为0秒"
+				task.Status = model.TaskStatusFailure
+				task.Progress = taskcommon.ProgressComplete
+				task.FailReason = taskResult.Reason
+				task.PrivateData.ResultURL = ""
+				if task.FinishTime == 0 {
+					task.FinishTime = now
+				}
+				logger.LogWarn(ctx, fmt.Sprintf("Task %s returned invalid video, mark failed and refund: %v", task.TaskID, err))
+				if quota != 0 {
+					shouldRefund = true
+				}
+				break
+			}
+		}
 		task.Progress = taskcommon.ProgressComplete
 		if task.FinishTime == 0 {
 			task.FinishTime = now
@@ -520,6 +546,113 @@ func updateVideoSingleTask(ctx context.Context, adaptor TaskPollingAdaptor, ch *
 	}
 
 	return nil
+}
+
+const maxVideoValidationBytes int64 = 64 << 20
+
+var errVideoValidationInconclusive = errors.New("video validation inconclusive")
+
+func validateCompletedVideo(ctx context.Context, ch *model.Channel, task *model.Task, taskResult *relaycommon.TaskInfo) error {
+	videoURL := strings.TrimSpace(taskResult.Url)
+	if videoURL == "" {
+		baseURL := strings.TrimRight(strings.TrimSpace(ch.GetBaseURL()), "/")
+		upstreamTaskID := strings.TrimSpace(task.GetUpstreamTaskID())
+		if baseURL == "" || upstreamTaskID == "" {
+			return errors.New("video URL is empty")
+		}
+		name := upstreamTaskID
+		if !strings.HasPrefix(name, "task_") {
+			name = "task_" + name
+		}
+		videoURL = baseURL + "/outputs/" + url.PathEscape(name) + ".mp4"
+	}
+
+	if strings.HasPrefix(videoURL, "data:") {
+		return nil
+	}
+	if strings.HasPrefix(videoURL, "/") {
+		baseURL := strings.TrimRight(strings.TrimSpace(ch.GetBaseURL()), "/")
+		if baseURL == "" {
+			return errors.New("relative video URL without channel base URL")
+		}
+		videoURL = baseURL + videoURL
+	}
+
+	client, err := GetHttpClientWithProxy(ch.GetSetting().Proxy)
+	if err != nil {
+		return fmt.Errorf("%w: create client: %v", errVideoValidationInconclusive, err)
+	}
+	requestCtx, cancel := context.WithTimeout(ctx, 60*time.Second)
+	defer cancel()
+	req, err := http.NewRequestWithContext(requestCtx, http.MethodGet, videoURL, nil)
+	if err != nil {
+		return fmt.Errorf("create video validation request: %w", err)
+	}
+	if ch.Type == constant.ChannelTypeOpenAI || ch.Type == constant.ChannelTypeSora {
+		key := strings.TrimSpace(task.PrivateData.Key)
+		if key == "" {
+			key = strings.TrimSpace(ch.Key)
+		}
+		if key != "" {
+			req.Header.Set("Authorization", "Bearer "+key)
+		}
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("%w: download failed: %v", errVideoValidationInconclusive, err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("%w: HTTP %d", errVideoValidationInconclusive, resp.StatusCode)
+	}
+	if resp.ContentLength > maxVideoValidationBytes {
+		return fmt.Errorf("video exceeds validation limit: %d bytes", resp.ContentLength)
+	}
+	body, err := io.ReadAll(io.LimitReader(resp.Body, maxVideoValidationBytes+1))
+	if err != nil {
+		return fmt.Errorf("read video for validation: %w", err)
+	}
+	if int64(len(body)) > maxVideoValidationBytes {
+		return fmt.Errorf("video exceeds validation limit")
+	}
+	if !hasTopLevelMP4Box(body, "moov") {
+		return errors.New("MP4 metadata box moov is missing")
+	}
+	info, err := mp4.Probe(bytes.NewReader(body))
+	if err != nil {
+		return fmt.Errorf("probe MP4: %w", err)
+	}
+	if info.Timescale == 0 || info.Duration == 0 {
+		return fmt.Errorf("zero duration: duration=%d timescale=%d", info.Duration, info.Timescale)
+	}
+	if info.Duration <= uint64(info.Timescale)/10 {
+		return fmt.Errorf("zero duration: duration=%d timescale=%d", info.Duration, info.Timescale)
+	}
+	return nil
+}
+
+func hasTopLevelMP4Box(body []byte, want string) bool {
+	for offset := 0; offset+8 <= len(body); {
+		size := uint64(binary.BigEndian.Uint32(body[offset : offset+4]))
+		headerSize := uint64(8)
+		if size == 1 {
+			if offset+16 > len(body) {
+				return false
+			}
+			size = binary.BigEndian.Uint64(body[offset+8 : offset+16])
+			headerSize = 16
+		} else if size == 0 {
+			size = uint64(len(body) - offset)
+		}
+		if size < headerSize || size > uint64(len(body)-offset) {
+			return false
+		}
+		if string(body[offset+4:offset+8]) == want {
+			return true
+		}
+		offset += int(size)
+	}
+	return false
 }
 
 func redactVideoResponseBody(body []byte) []byte {
