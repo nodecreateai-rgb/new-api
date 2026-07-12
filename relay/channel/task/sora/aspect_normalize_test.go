@@ -1,6 +1,10 @@
 package sora
 
-import "testing"
+import (
+	"testing"
+
+	relaycommon "github.com/QuantumNous/new-api/relay/common"
+)
 
 func TestNormalizeOpenAIVideoAspectValues(t *testing.T) {
 	cases := []struct {
@@ -27,6 +31,15 @@ func TestNormalizeOpenAIVideoAspectValues(t *testing.T) {
 
 func TestNormalizeOpenAIVideoAspectBody(t *testing.T) {
 	body := map[string]interface{}{"model": "sd2-c1", "size": "1080x1920"}
+	normalizeOpenAIVideoAspectBody(body)
+	if body["aspect_ratio"] != "9:16" || body["size"] != "1080x1920" {
+		t.Fatalf("body=%v", body)
+	}
+}
+
+func TestTaskSubmitReqToUpstreamVideoBodyAcceptsRatioAlias(t *testing.T) {
+	req := relaycommon.TaskSubmitReq{Model: "seedance-video-standard", Ratio: "9:16"}
+	body := taskSubmitReqToUpstreamVideoBody(req, "seedance-2.0-standard")
 	normalizeOpenAIVideoAspectBody(body)
 	if body["aspect_ratio"] != "9:16" || body["size"] != "1080x1920" {
 		t.Fatalf("body=%v", body)
