@@ -92,7 +92,11 @@ func validateMultipartTaskRequest(c *gin.Context, info *RelayInfo, action string
 		Image:       formData.Get("image"),
 		Size:        formData.Get("size"),
 		AspectRatio: formData.Get("aspect_ratio"),
+		Ratio:       formData.Get("ratio"),
 		Metadata:    make(map[string]interface{}),
+	}
+	if strings.TrimSpace(req.AspectRatio) == "" {
+		req.AspectRatio = strings.TrimSpace(req.Ratio)
 	}
 
 	if durationStr := formData.Get("seconds"); durationStr != "" {
