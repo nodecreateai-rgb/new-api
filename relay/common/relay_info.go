@@ -688,6 +688,8 @@ type TaskSubmitReq struct {
 	Image          string                 `json:"image,omitempty"`
 	Images         []string               `json:"images,omitempty"`
 	Size           string                 `json:"size,omitempty"`
+	Resolution     string                 `json:"resolution,omitempty"`
+	Aspect         string                 `json:"aspect,omitempty"`
 	AspectRatio    string                 `json:"aspect_ratio,omitempty"`
 	Ratio          string                 `json:"ratio,omitempty"`
 	Duration       int                    `json:"duration,omitempty"`
@@ -750,6 +752,9 @@ func (t *TaskSubmitReq) UnmarshalJSON(data []byte) error {
 	}
 	if strings.TrimSpace(t.AspectRatio) == "" {
 		t.AspectRatio = strings.TrimSpace(t.Ratio)
+	}
+	if strings.TrimSpace(t.AspectRatio) == "" {
+		t.AspectRatio = strings.TrimSpace(t.Aspect)
 	}
 
 	return nil

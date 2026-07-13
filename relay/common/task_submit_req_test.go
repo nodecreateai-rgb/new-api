@@ -25,3 +25,21 @@ func TestTaskSubmitReqAspectRatioTakesPrecedence(t *testing.T) {
 		t.Fatalf("aspect_ratio=%q", req.AspectRatio)
 	}
 }
+
+func TestTaskSubmitReqAcceptsResolutionAndAspectAliases(t *testing.T) {
+	var byResolution TaskSubmitReq
+	if err := basecommon.Unmarshal([]byte(`{"model":"seedance-video-fast","resolution":"1920x1080"}`), &byResolution); err != nil {
+		t.Fatal(err)
+	}
+	if byResolution.Resolution != "1920x1080" {
+		t.Fatalf("resolution=%q", byResolution.Resolution)
+	}
+
+	var byAspect TaskSubmitReq
+	if err := basecommon.Unmarshal([]byte(`{"model":"seedance-video-fast","aspect":"16:9"}`), &byAspect); err != nil {
+		t.Fatal(err)
+	}
+	if byAspect.AspectRatio != "16:9" || byAspect.Aspect != "16:9" {
+		t.Fatalf("aspect=%q aspect_ratio=%q", byAspect.Aspect, byAspect.AspectRatio)
+	}
+}

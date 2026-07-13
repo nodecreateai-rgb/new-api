@@ -473,6 +473,8 @@ func buildUpstreamVideoJSONFromMultipart(c *gin.Context, info *relaycommon.Relay
 			Prompt:         firstFormValue(formData.Value, "prompt"),
 			Model:          firstFormValue(formData.Value, "model"),
 			Size:           firstFormValue(formData.Value, "size"),
+			Resolution:     firstFormValue(formData.Value, "resolution"),
+			Aspect:         firstFormValue(formData.Value, "aspect"),
 			AspectRatio:    firstFormValue(formData.Value, "aspect_ratio"),
 			Ratio:          firstFormValue(formData.Value, "ratio"),
 			Seconds:        firstFormValue(formData.Value, "seconds"),
@@ -506,12 +508,19 @@ func taskSubmitReqToUpstreamVideoBody(req relaycommon.TaskSubmitReq, upstreamMod
 	if duration := taskSubmitDuration(req); duration > 0 {
 		body["duration"] = duration
 	}
-	if size := strings.TrimSpace(req.Size); size != "" {
+	size := strings.TrimSpace(req.Size)
+	if size == "" {
+		size = strings.TrimSpace(req.Resolution)
+	}
+	if size != "" {
 		body["size"] = size
 	}
 	aspect := strings.TrimSpace(req.AspectRatio)
 	if aspect == "" {
 		aspect = strings.TrimSpace(req.Ratio)
+	}
+	if aspect == "" {
+		aspect = strings.TrimSpace(req.Aspect)
 	}
 	if aspect != "" {
 		body["aspect_ratio"] = aspect
@@ -560,7 +569,16 @@ func normalizeOpenAIVideoAspectBody(body map[string]interface{}) {
 		return
 	}
 	size, _ := body["size"].(string)
+	if strings.TrimSpace(size) == "" {
+		size, _ = body["resolution"].(string)
+	}
 	aspect, _ := body["aspect_ratio"].(string)
+	if strings.TrimSpace(aspect) == "" {
+		aspect, _ = body["ratio"].(string)
+	}
+	if strings.TrimSpace(aspect) == "" {
+		aspect, _ = body["aspect"].(string)
+	}
 	aspect, size = normalizeOpenAIVideoAspectValues(aspect, size)
 	if aspect != "" {
 		body["aspect_ratio"] = aspect

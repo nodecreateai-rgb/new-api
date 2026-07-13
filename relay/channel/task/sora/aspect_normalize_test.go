@@ -45,3 +45,40 @@ func TestTaskSubmitReqToUpstreamVideoBodyAcceptsRatioAlias(t *testing.T) {
 		t.Fatalf("body=%v", body)
 	}
 }
+
+func TestTaskSubmitReqToUpstreamVideoBodyAcceptsResolutionAlias(t *testing.T) {
+	req := relaycommon.TaskSubmitReq{Model: "seedance-video-fast", Resolution: "1920x1080"}
+	body := taskSubmitReqToUpstreamVideoBody(req, "seedance-2.0-fast")
+	normalizeOpenAIVideoAspectBody(body)
+	if body["aspect_ratio"] != "16:9" || body["size"] != "1920x1080" {
+		t.Fatalf("body=%v", body)
+	}
+}
+
+func TestTaskSubmitReqToUpstreamVideoBodyAcceptsAspectAlias(t *testing.T) {
+	req := relaycommon.TaskSubmitReq{Model: "seedance-video-fast", Aspect: "16:9"}
+	body := taskSubmitReqToUpstreamVideoBody(req, "seedance-2.0-fast")
+	normalizeOpenAIVideoAspectBody(body)
+	if body["aspect_ratio"] != "16:9" || body["size"] != "1920x1080" {
+		t.Fatalf("body=%v", body)
+	}
+}
+
+func TestNormalizeOpenAIVideoAspectBodyAcceptsAliases(t *testing.T) {
+	tests := []struct {
+		name string
+		body map[string]interface{}
+	}{
+		{name: "aspect alias", body: map[string]interface{}{"aspect": "16:9"}},
+		{name: "ratio alias", body: map[string]interface{}{"ratio": "16:9"}},
+		{name: "resolution alias", body: map[string]interface{}{"resolution": "1920x1080"}},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			normalizeOpenAIVideoAspectBody(tc.body)
+			if tc.body["aspect_ratio"] != "16:9" || tc.body["size"] != "1920x1080" {
+				t.Fatalf("body=%v", tc.body)
+			}
+		})
+	}
+}
