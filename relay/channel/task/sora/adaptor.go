@@ -150,6 +150,10 @@ func (a *TaskAdaptor) BuildRequestURL(info *relaycommon.RelayInfo) (string, erro
 func (a *TaskAdaptor) BuildRequestHeader(c *gin.Context, req *http.Request, info *relaycommon.RelayInfo) error {
 	req.Header.Set("Authorization", "Bearer "+a.apiKey)
 	req.Header.Set("Content-Type", c.Request.Header.Get("Content-Type"))
+	// Forward the authenticated New-API identity so private upstream account
+	// pools can enforce per-user routing without exposing it to clients.
+	req.Header.Set("X-New-API-User-ID", fmt.Sprintf("%d", info.UserId))
+	req.Header.Set("X-New-API-Username", common.GetContextKeyString(c, constant.ContextKeyUserName))
 	return nil
 }
 
