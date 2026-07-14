@@ -682,20 +682,41 @@ type TaskRelayInfo struct {
 }
 
 type TaskSubmitReq struct {
-	Prompt         string                 `json:"prompt"`
-	Model          string                 `json:"model,omitempty"`
-	Mode           string                 `json:"mode,omitempty"`
-	Image          string                 `json:"image,omitempty"`
-	Images         []string               `json:"images,omitempty"`
-	Size           string                 `json:"size,omitempty"`
-	Resolution     string                 `json:"resolution,omitempty"`
-	Aspect         string                 `json:"aspect,omitempty"`
-	AspectRatio    string                 `json:"aspect_ratio,omitempty"`
-	Ratio          string                 `json:"ratio,omitempty"`
-	Duration       int                    `json:"duration,omitempty"`
-	Seconds        string                 `json:"seconds,omitempty"`
-	InputReference string                 `json:"input_reference,omitempty"`
-	Metadata       map[string]interface{} `json:"metadata,omitempty"`
+	Prompt          string                 `json:"prompt"`
+	Model           string                 `json:"model,omitempty"`
+	Mode            string                 `json:"mode,omitempty"`
+	Image           string                 `json:"image,omitempty"`
+	ImageURL        string                 `json:"image_url,omitempty"`
+	ReferenceImage  string                 `json:"reference_image,omitempty"`
+	ImageRefs       []string               `json:"image_refs,omitempty"`
+	ImageURLs       []string               `json:"image_urls,omitempty"`
+	Images          []string               `json:"images,omitempty"`
+	ReferenceImages []string               `json:"reference_images,omitempty"`
+	ExtraImages     []string               `json:"extra_images,omitempty"`
+	Video           string                 `json:"video,omitempty"`
+	VideoURL        string                 `json:"video_url,omitempty"`
+	ReferenceVideo  string                 `json:"reference_video,omitempty"`
+	VideoRefs       []string               `json:"video_refs,omitempty"`
+	VideoURLs       []string               `json:"video_urls,omitempty"`
+	Videos          []string               `json:"videos,omitempty"`
+	ReferenceVideos []string               `json:"reference_videos,omitempty"`
+	ExtraVideos     []string               `json:"extra_videos,omitempty"`
+	AudioURL        string                 `json:"audio_url,omitempty"`
+	ReferenceAudio  string                 `json:"reference_audio,omitempty"`
+	AudioRefs       []string               `json:"audio_refs,omitempty"`
+	AudioURLs       []string               `json:"audio_urls,omitempty"`
+	Audios          []string               `json:"audios,omitempty"`
+	ReferenceAudios []string               `json:"reference_audios,omitempty"`
+	ExtraAudios     []string               `json:"extra_audios,omitempty"`
+	Size            string                 `json:"size,omitempty"`
+	Resolution      string                 `json:"resolution,omitempty"`
+	Aspect          string                 `json:"aspect,omitempty"`
+	AspectRatio     string                 `json:"aspect_ratio,omitempty"`
+	Ratio           string                 `json:"ratio,omitempty"`
+	Duration        int                    `json:"duration,omitempty"`
+	Seconds         string                 `json:"seconds,omitempty"`
+	InputReference  string                 `json:"input_reference,omitempty"`
+	Metadata        map[string]interface{} `json:"metadata,omitempty"`
 }
 
 func (t *TaskSubmitReq) GetPrompt() string {
@@ -703,7 +724,20 @@ func (t *TaskSubmitReq) GetPrompt() string {
 }
 
 func (t *TaskSubmitReq) HasImage() bool {
-	return len(t.Images) > 0
+	return strings.TrimSpace(t.Image) != "" || strings.TrimSpace(t.ImageURL) != "" ||
+		strings.TrimSpace(t.ReferenceImage) != "" || strings.TrimSpace(t.InputReference) != "" ||
+		len(t.ImageRefs)+len(t.ImageURLs)+len(t.Images)+len(t.ReferenceImages)+len(t.ExtraImages) > 0
+}
+
+func (t *TaskSubmitReq) HasVideo() bool {
+	return strings.TrimSpace(t.Video) != "" || strings.TrimSpace(t.VideoURL) != "" ||
+		strings.TrimSpace(t.ReferenceVideo) != "" ||
+		len(t.VideoRefs)+len(t.VideoURLs)+len(t.Videos)+len(t.ReferenceVideos)+len(t.ExtraVideos) > 0
+}
+
+func (t *TaskSubmitReq) HasAudioReference() bool {
+	return strings.TrimSpace(t.AudioURL) != "" || strings.TrimSpace(t.ReferenceAudio) != "" ||
+		len(t.AudioRefs)+len(t.AudioURLs)+len(t.Audios)+len(t.ReferenceAudios)+len(t.ExtraAudios) > 0
 }
 
 func (t *TaskSubmitReq) UnmarshalJSON(data []byte) error {

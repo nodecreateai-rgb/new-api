@@ -148,14 +148,17 @@ func ValidateMultipartDirect(c *gin.Context, info *RelayInfo) *dto.TaskError {
 		seconds = req.Duration
 	}
 	if req.InputReference != "" {
-		req.Images = []string{req.InputReference}
+		req.Images = append(req.Images, req.InputReference)
 	}
 
 	if strings.TrimSpace(req.Model) == "" {
 		return createTaskError(fmt.Errorf("model field is required"), "missing_model", http.StatusBadRequest, true)
 	}
 
-	if req.HasImage() {
+	if req.HasAudioReference() {
+		return createTaskError(fmt.Errorf("audio reference is not supported for this video model"), "unsupported_audio_reference", http.StatusBadRequest, true)
+	}
+	if req.HasImage() || req.HasVideo() {
 		hasInputReference = true
 	}
 

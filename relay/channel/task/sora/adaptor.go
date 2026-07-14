@@ -547,6 +547,14 @@ func taskSubmitReqToUpstreamVideoBody(req relaycommon.TaskSubmitReq, upstreamMod
 		body["image_refs"] = imageRefs
 		body["image_url"] = imageRefs[0]
 	}
+	if videoRefs := collectUpstreamVideoVideoRefs(req); len(videoRefs) > 0 {
+		body["video_refs"] = videoRefs
+		body["video_urls"] = videoRefs
+		body["videos"] = videoRefs
+		body["reference_videos"] = videoRefs
+		body["video_url"] = videoRefs[0]
+		body["reference_video"] = videoRefs[0]
+	}
 	return body
 }
 
@@ -561,8 +569,22 @@ func taskSubmitDuration(req relaycommon.TaskSubmitReq) int {
 }
 
 func collectUpstreamVideoImageRefs(req relaycommon.TaskSubmitReq) []string {
+	return collectUpstreamVideoRefs(
+		[]string{req.Image, req.InputReference, req.ImageURL, req.ReferenceImage},
+		req.ImageRefs, req.ImageURLs, req.Images, req.ReferenceImages, req.ExtraImages,
+	)
+}
+
+func collectUpstreamVideoVideoRefs(req relaycommon.TaskSubmitReq) []string {
+	return collectUpstreamVideoRefs(
+		[]string{req.Video, req.VideoURL, req.ReferenceVideo},
+		req.VideoRefs, req.VideoURLs, req.Videos, req.ReferenceVideos, req.ExtraVideos,
+	)
+}
+
+func collectUpstreamVideoRefs(singles []string, groups ...[]string) []string {
 	seen := make(map[string]struct{})
-	out := make([]string, 0, len(req.Images)+2)
+	out := make([]string, 0)
 	add := func(raw string) {
 		raw = strings.TrimSpace(raw)
 		if raw == "" {
@@ -574,10 +596,13 @@ func collectUpstreamVideoImageRefs(req relaycommon.TaskSubmitReq) []string {
 		seen[raw] = struct{}{}
 		out = append(out, raw)
 	}
-	add(req.Image)
-	add(req.InputReference)
-	for _, image := range req.Images {
-		add(image)
+	for _, raw := range singles {
+		add(raw)
+	}
+	for _, group := range groups {
+		for _, raw := range group {
+			add(raw)
+		}
 	}
 	return out
 }
