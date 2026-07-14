@@ -11,6 +11,20 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestShouldApplyTaskBillingRatiosForFixedPriceSeedanceModels(t *testing.T) {
+	savedPatches := append([]string(nil), constant.TaskPricePatches...)
+	t.Cleanup(func() { constant.TaskPricePatches = savedPatches })
+	constant.TaskPricePatches = []string{
+		"seedance-2.0-fast-720p", "seedance-2.0-720p", "seedance-2.0-1080p",
+	}
+
+	adaptor := &sora.TaskAdaptor{}
+	for _, modelName := range constant.TaskPricePatches {
+		info := &relaycommon.RelayInfo{OriginModelName: modelName}
+		require.False(t, shouldApplyTaskBillingRatios(adaptor, info, modelName), modelName)
+	}
+}
+
 func TestShouldApplyTaskBillingRatiosForSeedancePerSecondAlias(t *testing.T) {
 	savedPatches := append([]string(nil), constant.TaskPricePatches...)
 	t.Cleanup(func() { constant.TaskPricePatches = savedPatches })
