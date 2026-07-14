@@ -1,6 +1,7 @@
 package sora
 
 import (
+	"strings"
 	"testing"
 
 	relaycommon "github.com/QuantumNous/new-api/relay/common"
@@ -80,5 +81,19 @@ func TestNormalizeOpenAIVideoAspectBodyAcceptsAliases(t *testing.T) {
 				t.Fatalf("body=%v", tc.body)
 			}
 		})
+	}
+}
+
+func TestSanitizeOpenAIVideoTaskDataRecursive(t *testing.T) {
+	data := []byte(`{"id":"upstream-id","video_url":"https://cdn.oreateai.com/x.mp4","local_path":"/app/outputs/x.mp4","nested":{"account_email":"user@example.com","chat_id":"secret","message":"OreateAI failed at https://cdn.oreateai.com/x"},"videos":[{"url":"https://cdn.oreateai.com/x.mp4","poster":"https://cdn.oreateai.com/p.jpg"}]}`)
+	got, err := sanitizeOpenAIVideoTaskData(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	lower := strings.ToLower(string(got))
+	for _, forbidden := range []string{"oreate", "cdn.oreateai.com", "local_path", "account_email", "chat_id", "poster", "video_url"} {
+		if strings.Contains(lower, forbidden) {
+			t.Fatalf("leaked %q in %s", forbidden, got)
+		}
 	}
 }

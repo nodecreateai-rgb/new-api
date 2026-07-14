@@ -567,8 +567,8 @@ func TaskModel2Dto(task *model.Task) *dto.TaskDto {
 		Quota:      task.Quota,
 		Action:     task.Action,
 		Status:     string(task.Status),
-		FailReason: task.FailReason,
-		ResultURL:  task.GetResultURL(),
+		FailReason: sanitizeTaskPublicText(task.FailReason),
+		ResultURL:  taskPublicResultURL(task),
 		SubmitTime: task.SubmitTime,
 		StartTime:  task.StartTime,
 		FinishTime: task.FinishTime,
@@ -577,6 +577,21 @@ func TaskModel2Dto(task *model.Task) *dto.TaskDto {
 		Username:   task.Username,
 		Data:       data,
 	}
+}
+
+func sanitizeTaskPublicText(value string) string {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return ""
+	}
+	return common.MaskSensitiveInfo(value)
+}
+
+func taskPublicResultURL(task *model.Task) string {
+	if task == nil || task.Status != model.TaskStatusSuccess || task.TaskID == "" {
+		return ""
+	}
+	return taskcommon.BuildProxyURL(task.TaskID)
 }
 
 func sanitizeTaskDtoProperties(task *model.Task) any {
@@ -608,7 +623,8 @@ func sanitizeTaskDtoData(task *model.Task) json.RawMessage {
 
 func scrubTaskPayload(payload map[string]any, publicTaskID string) {
 	for _, key := range []string{
-		"local_path", "parent_email", "upstream_video_id", "video_id", "remote_task_id",
+		"local_path", "parent_email", "account_email", "upstream_video_id", "video_id", "remote_task_id",
+		"upstream_task_id", "chat_id", "chatId", "log_id", "logId", "conversation_id",
 		"url", "video_url", "download_url", "no_watermark_url", "watermark_url",
 		"remote_url", "output_url", "upstream_video_url", "poster", "thumb",
 	} {

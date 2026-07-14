@@ -412,19 +412,37 @@ func (a *TaskAdaptor) ConvertToOpenAIVideo(task *model.Task) ([]byte, error) {
 }
 
 func sanitizeOpenAIVideoTaskData(data []byte) ([]byte, error) {
-	var err error
-	for _, path := range []string{
-		"parent_email", "local_path", "upstream_video_id", "remote_task_id",
-		"upstream_video_url", "poster", "thumb",
+	var payload map[string]any
+	if err := common.Unmarshal(data, &payload); err != nil {
+		return nil, errors.Wrap(err, "unmarshal video task data failed")
+	}
+	scrubOpenAIVideoPayload(payload)
+	return common.Marshal(payload)
+}
+
+func scrubOpenAIVideoPayload(payload map[string]any) {
+	for _, key := range []string{
+		"parent_email", "account_email", "local_path", "upstream_video_id", "video_id", "remote_task_id",
+		"upstream_task_id", "chat_id", "chatId", "log_id", "logId", "conversation_id",
+		"url", "video_url", "public_url", "download_url", "no_watermark_url", "watermark_url",
+		"remote_url", "output_url", "upstream_video_url", "poster", "thumb",
 	} {
-		if gjson.GetBytes(data, path).Exists() {
-			data, err = sjson.DeleteBytes(data, path)
-			if err != nil {
-				return nil, errors.Wrapf(err, "delete %s failed", path)
+		delete(payload, key)
+	}
+	for key, value := range payload {
+		switch typed := value.(type) {
+		case string:
+			payload[key] = common.MaskUpstreamProviderInfo(typed)
+		case map[string]any:
+			scrubOpenAIVideoPayload(typed)
+		case []any:
+			for _, item := range typed {
+				if child, ok := item.(map[string]any); ok {
+					scrubOpenAIVideoPayload(child)
+				}
 			}
 		}
 	}
-	return data, nil
 }
 
 func ensureOpenAIVideoContentURL(data []byte, task *model.Task) ([]byte, error) {

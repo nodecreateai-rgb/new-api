@@ -32,6 +32,18 @@ var upstreamBrandReplacers = strings.NewReplacer(
 	"PIXVERSE", "VIDEO_SERVICE",
 	"paco-pixverse2api-tkpfnf-pixverse2api-1", "video-upstream",
 	"video-render-upstream", "video-upstream",
+	"oreateai2api", "video service",
+	"OreateAI2API", "Video service",
+	"OREATEAI2API", "VIDEO_SERVICE",
+	"oreateai", "video service",
+	"OreateAI", "Video service",
+	"OREATEAI", "VIDEO_SERVICE",
+	"oreate", "video service",
+	"Oreate", "Video service",
+	"OREATE", "VIDEO_SERVICE",
+	"generation-upstream", "video-upstream",
+	"cdn.oreateai.com", "video-upstream",
+	"sd2-c13.dopio.cyou", "video-upstream",
 )
 
 const LocalLogContentLimit = 2048
