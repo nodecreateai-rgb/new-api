@@ -308,6 +308,8 @@ func ensureDopioRMBPricing() {
 			"nano-banana-pro":                    0.01,
 		},
 		"vip3": {
+			"seedance-video-fast":                3,
+			"seedance-video-standard":            5,
 			"seedance-video-fast-per-second":     0.2,
 			"seedance-video-standard-per-second": 0.33,
 		},
