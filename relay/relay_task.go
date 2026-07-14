@@ -283,7 +283,14 @@ type taskBillingRatioForcer interface {
 	ForceApplyBillingRatios(info *relaycommon.RelayInfo) bool
 }
 
+type taskBillingRatioPolicy interface {
+	UseRequestBillingRatios(info *relaycommon.RelayInfo) bool
+}
+
 func shouldApplyTaskBillingRatios(adaptor channel.TaskAdaptor, info *relaycommon.RelayInfo, modelName string) bool {
+	if policy, ok := adaptor.(taskBillingRatioPolicy); ok && !policy.UseRequestBillingRatios(info) {
+		return false
+	}
 	if forcer, ok := adaptor.(taskBillingRatioForcer); ok && forcer.ForceApplyBillingRatios(info) {
 		return true
 	}

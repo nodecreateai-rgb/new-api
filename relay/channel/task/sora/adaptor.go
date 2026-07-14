@@ -139,6 +139,18 @@ func (a *TaskAdaptor) ForceApplyBillingRatios(info *relaycommon.RelayInfo) bool 
 	return model == "seedance-video-fast-per-second" || model == "seedance-video-standard-per-second"
 }
 
+// UseRequestBillingRatios declares whether request-derived duration/size ratios
+// should modify the configured per-item model price. Public Seedance 2.0 model
+// IDs are fixed-price per generated video, independent of requested duration.
+func (a *TaskAdaptor) UseRequestBillingRatios(info *relaycommon.RelayInfo) bool {
+	switch strings.TrimSpace(info.OriginModelName) {
+	case "seedance-2.0-fast-720p", "seedance-2.0-720p", "seedance-2.0-1080p":
+		return false
+	default:
+		return true
+	}
+}
+
 func (a *TaskAdaptor) BuildRequestURL(info *relaycommon.RelayInfo) (string, error) {
 	if info.Action == constant.TaskActionRemix {
 		return fmt.Sprintf("%s/v1/videos/%s/remix", a.baseURL, info.OriginTaskID), nil
