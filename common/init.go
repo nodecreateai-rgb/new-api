@@ -129,6 +129,24 @@ func InitEnv() {
 	initConstantEnv()
 }
 
+func resolveTaskPricePatches(raw string) []string {
+	defaults := []string{
+		"sd2-c1", "sd2-c2", "sd2-c3", "sd2-c5", "sd2-c6", "sd2-c7",
+		"sd2-c8", "sd2-c9", "sd2-c10", "sd2-c11", "sd2-c12",
+		"seedance-2.0-fast-720p", "seedance-2.0-720p", "seedance-2.0-1080p",
+	}
+	if strings.TrimSpace(raw) == "" {
+		return defaults
+	}
+	patches := make([]string, 0)
+	for _, patch := range strings.Split(raw, ",") {
+		if trimmed := strings.TrimSpace(patch); trimmed != "" {
+			patches = append(patches, trimmed)
+		}
+	}
+	return patches
+}
+
 func initConstantEnv() {
 	constant.StreamingTimeout = GetEnvOrDefault("STREAMING_TIMEOUT", 300)
 	constant.DifyDebug = GetEnvOrDefaultBool("DIFY_DEBUG", true)
@@ -160,23 +178,7 @@ func initConstantEnv() {
 	// or resolution. Dopio sd2-c* aliases and the public Seedance model IDs are sold
 	// per generated item, so keep both sets as built-in defaults while still allowing
 	// operators to add/override via env.
-	taskPricePatches := []string{
-		"sd2-c1", "sd2-c2", "sd2-c3", "sd2-c5", "sd2-c6", "sd2-c7",
-		"sd2-c8", "sd2-c9", "sd2-c10", "sd2-c11", "sd2-c12",
-		"seedance-2.0-fast-720p", "seedance-2.0-720p", "seedance-2.0-1080p",
-	}
-	soraPatchStr := GetEnvOrDefaultString("TASK_PRICE_PATCH", "")
-	if soraPatchStr != "" {
-		taskPricePatches = nil
-		soraPatches := strings.Split(soraPatchStr, ",")
-		for _, patch := range soraPatches {
-			trimmedPatch := strings.TrimSpace(patch)
-			if trimmedPatch != "" {
-				taskPricePatches = append(taskPricePatches, trimmedPatch)
-			}
-		}
-	}
-	constant.TaskPricePatches = taskPricePatches
+	constant.TaskPricePatches = resolveTaskPricePatches(GetEnvOrDefaultString("TASK_PRICE_PATCH", ""))
 
 	// Initialize trusted redirect domains for URL validation
 	trustedDomainsStr := GetEnvOrDefaultString("TRUSTED_REDIRECT_DOMAINS", "")
