@@ -192,12 +192,8 @@ func TaskErrorWrapperLocal(err error, code string, statusCode int) *dto.TaskErro
 
 func TaskErrorWrapper(err error, code string, statusCode int) *dto.TaskError {
 	text := err.Error()
-	lowerText := strings.ToLower(text)
-	if strings.Contains(lowerText, "post") || strings.Contains(lowerText, "dial") || strings.Contains(lowerText, "http") {
-		common.SysLog(fmt.Sprintf("error: %s", text))
-		//text = "请求上游地址失败"
-		text = common.MaskSensitiveInfo(text)
-	}
+	common.SysLog(fmt.Sprintf("error: %s", text))
+	text = common.MaskSensitiveInfo(text)
 	//避免暴露内部错误
 	taskError := &dto.TaskError{
 		Code:       code,

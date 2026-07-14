@@ -470,7 +470,7 @@ func updateVideoSingleTask(ctx context.Context, adaptor TaskPollingAdaptor, ch *
 				taskResult.Reason = "视频文件无效或时长为0秒"
 				task.Status = model.TaskStatusFailure
 				task.Progress = taskcommon.ProgressComplete
-				task.FailReason = taskResult.Reason
+				task.FailReason = common.MaskSensitiveInfo(taskResult.Reason)
 				task.PrivateData.ResultURL = ""
 				if task.FinishTime == 0 {
 					task.FinishTime = now
@@ -656,32 +656,41 @@ func hasTopLevelMP4Box(body []byte, want string) bool {
 }
 
 func redactVideoResponseBody(body []byte) []byte {
-	var m map[string]any
-	if err := common.Unmarshal(body, &m); err != nil {
-		return body
+	var payload map[string]any
+	if err := common.Unmarshal(body, &payload); err != nil {
+		return []byte(`{}`)
 	}
-	for _, key := range []string{"parent_email", "local_path", "upstream_video_id"} {
-		delete(m, key)
+	scrubVideoResponsePayload(payload)
+	b, err := common.Marshal(payload)
+	if err != nil {
+		return []byte(`{}`)
 	}
-	resp, _ := m["response"].(map[string]any)
-	if resp != nil {
-		delete(resp, "bytesBase64Encoded")
-		if v, ok := resp["video"].(string); ok {
-			resp["video"] = truncateBase64(v)
-		}
-		if vs, ok := resp["videos"].([]any); ok {
-			for i := range vs {
-				if vm, ok := vs[i].(map[string]any); ok {
-					delete(vm, "bytesBase64Encoded")
+	return b
+}
+
+func scrubVideoResponsePayload(payload map[string]any) {
+	for _, key := range []string{
+		"parent_email", "account_email", "local_path", "upstream_video_id", "video_id", "remote_task_id",
+		"upstream_task_id", "chat_id", "chatId", "log_id", "logId", "conversation_id",
+		"url", "video_url", "public_url", "download_url", "no_watermark_url", "watermark_url",
+		"remote_url", "output_url", "upstream_video_url", "poster", "thumb", "bytesBase64Encoded",
+	} {
+		delete(payload, key)
+	}
+	for key, value := range payload {
+		switch typed := value.(type) {
+		case string:
+			payload[key] = common.MaskSensitiveInfo(typed)
+		case map[string]any:
+			scrubVideoResponsePayload(typed)
+		case []any:
+			for _, item := range typed {
+				if child, ok := item.(map[string]any); ok {
+					scrubVideoResponsePayload(child)
 				}
 			}
 		}
 	}
-	b, err := common.Marshal(m)
-	if err != nil {
-		return body
-	}
-	return b
 }
 
 func truncateBase64(s string) string {
