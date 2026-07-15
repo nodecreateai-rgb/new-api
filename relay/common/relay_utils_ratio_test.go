@@ -30,6 +30,24 @@ func TestValidateMultipartTaskRequestAcceptsRatioAlias(t *testing.T) {
 	}
 }
 
+func TestSupportsAudioReferenceOnlyForPixVerseAliases(t *testing.T) {
+	for _, model := range []string{
+		"seedance-video-fast",
+		"seedance-video-standard",
+		"seedance-video-fast-per-second",
+		"seedance-video-standard-per-second",
+	} {
+		if !supportsAudioReference(model) {
+			t.Fatalf("expected %q to support audio references", model)
+		}
+	}
+	for _, model := range []string{"sora-2", "sd2-c7", "seedance-2.0-standard", ""} {
+		if supportsAudioReference(model) {
+			t.Fatalf("expected %q to reject audio references", model)
+		}
+	}
+}
+
 func TestValidateMultipartTaskRequestAspectRatioWins(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	c, _ := gin.CreateTestContext(httptest.NewRecorder())

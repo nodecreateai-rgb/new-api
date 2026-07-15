@@ -567,6 +567,14 @@ func taskSubmitReqToUpstreamVideoBody(req relaycommon.TaskSubmitReq, upstreamMod
 		body["video_url"] = videoRefs[0]
 		body["reference_video"] = videoRefs[0]
 	}
+	if audioRefs := collectUpstreamVideoAudioRefs(req); len(audioRefs) > 0 {
+		body["audio_refs"] = audioRefs
+		body["audio_urls"] = audioRefs
+		body["audios"] = audioRefs
+		body["reference_audios"] = audioRefs
+		body["audio_url"] = audioRefs[0]
+		body["reference_audio"] = audioRefs[0]
+	}
 	return body
 }
 
@@ -591,6 +599,13 @@ func collectUpstreamVideoVideoRefs(req relaycommon.TaskSubmitReq) []string {
 	return collectUpstreamVideoRefs(
 		[]string{req.Video, req.VideoURL, req.ReferenceVideo},
 		req.VideoRefs, req.VideoURLs, req.Videos, req.ReferenceVideos, req.ExtraVideos,
+	)
+}
+
+func collectUpstreamVideoAudioRefs(req relaycommon.TaskSubmitReq) []string {
+	return collectUpstreamVideoRefs(
+		[]string{req.AudioURL, req.ReferenceAudio},
+		req.AudioRefs, req.AudioURLs, req.Audios, req.ReferenceAudios, req.ExtraAudios,
 	)
 }
 

@@ -155,7 +155,7 @@ func ValidateMultipartDirect(c *gin.Context, info *RelayInfo) *dto.TaskError {
 		return createTaskError(fmt.Errorf("model field is required"), "missing_model", http.StatusBadRequest, true)
 	}
 
-	if req.HasAudioReference() {
+	if req.HasAudioReference() && !supportsAudioReference(info.OriginModelName) {
 		return createTaskError(fmt.Errorf("audio reference is not supported for this video model"), "unsupported_audio_reference", http.StatusBadRequest, true)
 	}
 	if req.HasImage() || req.HasVideo() {
@@ -192,6 +192,16 @@ func ValidateMultipartDirect(c *gin.Context, info *RelayInfo) *dto.TaskError {
 	storeTaskRequest(c, info, action, req)
 
 	return nil
+}
+
+func supportsAudioReference(model string) bool {
+	switch strings.TrimSpace(model) {
+	case "seedance-video-fast", "seedance-video-standard",
+		"seedance-video-fast-per-second", "seedance-video-standard-per-second":
+		return true
+	default:
+		return false
+	}
 }
 
 func isKnownTaskField(field string) bool {

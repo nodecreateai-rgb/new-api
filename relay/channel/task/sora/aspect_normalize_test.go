@@ -98,6 +98,24 @@ func TestSanitizeOpenAIVideoTaskDataRecursive(t *testing.T) {
 	}
 }
 
+func TestTaskSubmitReqToUpstreamVideoBodyAcceptsAudioRefs(t *testing.T) {
+	req := relaycommon.TaskSubmitReq{
+		AudioURL:        "https://assets.example/audio.mp3",
+		ReferenceAudios: []string{"https://assets.example/audio2.wav"},
+	}
+	body := taskSubmitReqToUpstreamVideoBody(req, "seedance-2.0-standard")
+	audios, ok := body["audio_refs"].([]string)
+	if !ok || len(audios) != 2 || body["audio_url"] != audios[0] || body["reference_audio"] != audios[0] {
+		t.Fatalf("audios body=%v", body)
+	}
+	for _, key := range []string{"audio_urls", "audios", "reference_audios"} {
+		refs, ok := body[key].([]string)
+		if !ok || len(refs) != 2 {
+			t.Fatalf("%s body=%v", key, body)
+		}
+	}
+}
+
 func TestTaskSubmitReqToUpstreamVideoBodyAcceptsImageAndVideoRefs(t *testing.T) {
 	req := relaycommon.TaskSubmitReq{
 		ImageURL:        "https://assets.example/image.png",
