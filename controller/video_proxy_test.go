@@ -56,8 +56,8 @@ func TestVideoOutputCacheBypass(t *testing.T) {
 }
 
 func TestPrivateVideoContentURL(t *testing.T) {
-	got := privateVideoContentURL("http://mediaio-generation-upstream:38983", "task_abc")
-	want := "http://mediaio-generation-upstream:38983/v1/videos/task/task_abc/content"
+	got := privateVideoContentURL("http://video-generation-upstream:38983", "task_abc")
+	want := "http://video-generation-upstream:38983/v1/videos/task/task_abc/content"
 	if got != want {
 		t.Fatalf("got %q want %q", got, want)
 	}

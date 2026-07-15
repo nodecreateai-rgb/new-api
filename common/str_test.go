@@ -16,7 +16,7 @@ func TestMaskUpstreamProviderInfoOreate(t *testing.T) {
 }
 
 func TestMaskUpstreamProviderInfoMediaIO(t *testing.T) {
-	got := MaskUpstreamProviderInfo("MediaIO2API mediaio-generation-upstream paco-mediaio2api-sjfrbl-mediaio2api-1")
+	got := MaskUpstreamProviderInfo("MediaIO2API mediaio-generation-upstream video-generation-upstream paco-mediaio2api-sjfrbl-mediaio2api-1")
 	lower := strings.ToLower(got)
 	for _, forbidden := range []string{"mediaio", "mediaio-generation-upstream", "paco-mediaio2api"} {
 		if strings.Contains(lower, forbidden) {

@@ -221,7 +221,7 @@ func VideoProxy(c *gin.Context) {
 func privateVideoContentURL(baseURL, upstreamTaskID string) string {
 	baseURL = strings.TrimRight(strings.TrimSpace(baseURL), "/")
 	upstreamTaskID = strings.TrimPrefix(strings.TrimSpace(upstreamTaskID), "task_")
-	if baseURL == "" || upstreamTaskID == "" || !strings.Contains(strings.ToLower(baseURL), "mediaio-generation-upstream") {
+	if baseURL == "" || upstreamTaskID == "" || !strings.Contains(strings.ToLower(baseURL), "video-generation-upstream") {
 		return ""
 	}
 	return baseURL + "/v1/videos/task/task_" + url.PathEscape(upstreamTaskID) + "/content"
