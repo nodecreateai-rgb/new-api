@@ -15,7 +15,7 @@ func TestShouldApplyTaskBillingRatiosForFixedPriceSeedanceModels(t *testing.T) {
 	savedPatches := append([]string(nil), constant.TaskPricePatches...)
 	t.Cleanup(func() { constant.TaskPricePatches = savedPatches })
 	constant.TaskPricePatches = []string{
-		"seedance-2.0-fast-720p", "seedance-2.0-720p", "seedance-2.0-1080p",
+		"seedance-2.0-fast-720p", "seedance-2.0-720p", "seedance-2.0-1080p", "seedance-2.0-4k",
 	}
 
 	adaptor := &sora.TaskAdaptor{}

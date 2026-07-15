@@ -11,6 +11,7 @@ func TestResolveTaskPricePatchesIncludesFixedPriceSeedanceModels(t *testing.T) {
 	require.Contains(t, patches, "seedance-2.0-fast-720p")
 	require.Contains(t, patches, "seedance-2.0-720p")
 	require.Contains(t, patches, "seedance-2.0-1080p")
+	require.Contains(t, patches, "seedance-2.0-4k")
 }
 
 func TestResolveTaskPricePatchesEnvOverridesDefaults(t *testing.T) {

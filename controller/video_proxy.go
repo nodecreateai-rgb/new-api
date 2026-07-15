@@ -120,7 +120,10 @@ func VideoProxy(c *gin.Context) {
 			return
 		}
 	case constant.ChannelTypeOpenAI, constant.ChannelTypeSora:
-		if outputURL := upstreamVideoOutputURL(baseURL, task.GetUpstreamTaskID()); outputURL != "" {
+		if contentURL := privateVideoContentURL(baseURL, task.GetUpstreamTaskID()); contentURL != "" {
+			videoURL = contentURL
+			req.Header.Set("Authorization", "Bearer "+channel.Key)
+		} else if outputURL := upstreamVideoOutputURL(baseURL, task.GetUpstreamTaskID()); outputURL != "" {
 			// Prefer the provider's local /outputs handle over URLs persisted in task.Data.
 			// Some upstream services store a public CDN/domain in their JSON response; those
 			// links can be stale, misconfigured, cached as 404, or leak internal branding.
@@ -213,6 +216,15 @@ func VideoProxy(c *gin.Context) {
 	if _, err = io.Copy(c.Writer, resp.Body); err != nil {
 		logger.LogError(c.Request.Context(), fmt.Sprintf("Failed to stream video content: %s", err.Error()))
 	}
+}
+
+func privateVideoContentURL(baseURL, upstreamTaskID string) string {
+	baseURL = strings.TrimRight(strings.TrimSpace(baseURL), "/")
+	upstreamTaskID = strings.TrimPrefix(strings.TrimSpace(upstreamTaskID), "task_")
+	if baseURL == "" || upstreamTaskID == "" || !strings.Contains(strings.ToLower(baseURL), "mediaio-generation-upstream") {
+		return ""
+	}
+	return baseURL + "/v1/videos/task/task_" + url.PathEscape(upstreamTaskID) + "/content"
 }
 
 func upstreamVideoOutputURL(baseURL, upstreamTaskID string) string {

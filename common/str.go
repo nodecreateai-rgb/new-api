@@ -44,6 +44,13 @@ var upstreamBrandReplacers = strings.NewReplacer(
 	"generation-upstream", "video-upstream",
 	"cdn.oreateai.com", "video-upstream",
 	"sd2-c13.dopio.cyou", "video-upstream",
+	"paco-mediaio2api-sjfrbl-mediaio2api-1", "video-upstream",
+	"mediaio-generation-upstream", "video-upstream",
+	"mediaio2api", "video service",
+	"MediaIO2API", "Video service",
+	"MEDIAIO2API", "VIDEO_SERVICE",
+	"Media.io", "Video service",
+	"mediaio", "video service",
 )
 
 const LocalLogContentLimit = 2048

@@ -133,7 +133,7 @@ func resolveTaskPricePatches(raw string) []string {
 	defaults := []string{
 		"sd2-c1", "sd2-c2", "sd2-c3", "sd2-c5", "sd2-c6", "sd2-c7",
 		"sd2-c8", "sd2-c9", "sd2-c10", "sd2-c11", "sd2-c12",
-		"seedance-2.0-fast-720p", "seedance-2.0-720p", "seedance-2.0-1080p",
+		"seedance-2.0-fast-720p", "seedance-2.0-720p", "seedance-2.0-1080p", "seedance-2.0-4k",
 	}
 	if strings.TrimSpace(raw) == "" {
 		return defaults
