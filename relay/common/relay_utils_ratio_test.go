@@ -36,12 +36,16 @@ func TestSupportsAudioReferenceOnlyForPixVerseAliases(t *testing.T) {
 		"seedance-video-standard",
 		"seedance-video-fast-per-second",
 		"seedance-video-standard-per-second",
+		"seedance-2.0-fast-720p",
+		"seedance-2.0-720p",
+		"seedance-2.0-1080p",
+		"seedance-2.0-4k",
 	} {
 		if !supportsAudioReference(model) {
 			t.Fatalf("expected %q to support audio references", model)
 		}
 	}
-	for _, model := range []string{"sora-2", "sd2-c7", "seedance-2.0-standard", ""} {
+	for _, model := range []string{"sora-2", "sd2-c7", "seedance-2.0-standard", "seedance-2.0", ""} {
 		if supportsAudioReference(model) {
 			t.Fatalf("expected %q to reject audio references", model)
 		}
