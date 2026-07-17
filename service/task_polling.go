@@ -96,10 +96,12 @@ func sweepTimedOutTasks(ctx context.Context) {
 	}
 }
 
-// TaskPollingLoop 主轮询循环，每 15 秒检查一次未完成的任务
+const taskPollingInterval = 3 * time.Second
+
+// TaskPollingLoop 主轮询循环，每 3 秒检查一次未完成的任务
 func TaskPollingLoop() {
 	for {
-		time.Sleep(time.Duration(15) * time.Second)
+		time.Sleep(taskPollingInterval)
 		common.SysLog("任务进度轮询开始")
 		ctx := context.TODO()
 		sweepTimedOutTasks(ctx)
@@ -108,40 +110,47 @@ func TaskPollingLoop() {
 		for _, t := range allTasks {
 			platformTask[t.Platform] = append(platformTask[t.Platform], t)
 		}
+		var platformWG sync.WaitGroup
 		for platform, tasks := range platformTask {
 			if len(tasks) == 0 {
 				continue
 			}
-			taskChannelM := make(map[int][]string)
-			taskM := make(map[string]*model.Task)
-			nullTaskIds := make([]int64, 0)
-			for _, task := range tasks {
-				upstreamID := task.GetUpstreamTaskID()
-				if upstreamID == "" {
-					// 统计失败的未完成任务
-					nullTaskIds = append(nullTaskIds, task.ID)
-					continue
+			platform, tasks := platform, tasks
+			platformWG.Add(1)
+			go func() {
+				defer platformWG.Done()
+				taskChannelM := make(map[int][]string)
+				taskM := make(map[string]*model.Task)
+				nullTaskIds := make([]int64, 0)
+				for _, task := range tasks {
+					upstreamID := task.GetUpstreamTaskID()
+					if upstreamID == "" {
+						// 统计失败的未完成任务
+						nullTaskIds = append(nullTaskIds, task.ID)
+						continue
+					}
+					taskM[upstreamID] = task
+					taskChannelM[task.ChannelId] = append(taskChannelM[task.ChannelId], upstreamID)
 				}
-				taskM[upstreamID] = task
-				taskChannelM[task.ChannelId] = append(taskChannelM[task.ChannelId], upstreamID)
-			}
-			if len(nullTaskIds) > 0 {
-				err := model.TaskBulkUpdateByID(nullTaskIds, map[string]any{
-					"status":   "FAILURE",
-					"progress": "100%",
-				})
-				if err != nil {
-					logger.LogError(ctx, fmt.Sprintf("Fix null task_id task error: %v", err))
-				} else {
-					logger.LogInfo(ctx, fmt.Sprintf("Fix null task_id task success: %v", nullTaskIds))
+				if len(nullTaskIds) > 0 {
+					err := model.TaskBulkUpdateByID(nullTaskIds, map[string]any{
+						"status":   "FAILURE",
+						"progress": "100%",
+					})
+					if err != nil {
+						logger.LogError(ctx, fmt.Sprintf("Fix null task_id task error: %v", err))
+					} else {
+						logger.LogInfo(ctx, fmt.Sprintf("Fix null task_id task success: %v", nullTaskIds))
+					}
 				}
-			}
-			if len(taskChannelM) == 0 {
-				continue
-			}
+				if len(taskChannelM) == 0 {
+					return
+				}
 
-			DispatchPlatformUpdate(platform, taskChannelM, taskM)
+				DispatchPlatformUpdate(platform, taskChannelM, taskM)
+			}()
 		}
+		platformWG.Wait()
 		common.SysLog("任务进度轮询完成")
 	}
 }
@@ -307,11 +316,18 @@ func UpdateImageTasks(ctx context.Context, taskChannelM map[int][]string, taskM 
 
 // UpdateVideoTasks 按渠道更新所有视频任务
 func UpdateVideoTasks(ctx context.Context, platform constant.TaskPlatform, taskChannelM map[int][]string, taskM map[string]*model.Task) error {
+	var wg sync.WaitGroup
 	for channelId, taskIds := range taskChannelM {
-		if err := updateVideoTasks(ctx, platform, channelId, taskIds, taskM); err != nil {
-			logger.LogError(ctx, fmt.Sprintf("Channel #%d failed to update video async tasks: %s", channelId, err.Error()))
-		}
+		channelId, taskIds := channelId, taskIds
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if err := updateVideoTasks(ctx, platform, channelId, taskIds, taskM); err != nil {
+				logger.LogError(ctx, fmt.Sprintf("Channel #%d failed to update video async tasks: %s", channelId, err.Error()))
+			}
+		}()
 	}
+	wg.Wait()
 	return nil
 }
 

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/QuantumNous/new-api/common"
@@ -166,6 +167,12 @@ func memoryRateLimitHandler(duration int64, totalMaxCount, successMaxCount int) 
 // ModelRequestRateLimit 模型请求限流中间件
 func ModelRequestRateLimit() func(c *gin.Context) {
 	return func(c *gin.Context) {
+		// Async video APIs must forward immediately without request-count admission limits.
+		path := c.Request.URL.Path
+		if strings.HasPrefix(path, "/v1/videos") || strings.HasPrefix(path, "/v1/tasks") || strings.HasPrefix(path, "/v1/task") || strings.HasPrefix(path, "/v1/video/generations") {
+			c.Next()
+			return
+		}
 		// 在每个请求时检查是否启用限流
 		if !setting.ModelRequestRateLimitEnabled {
 			c.Next()
