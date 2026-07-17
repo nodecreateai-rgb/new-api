@@ -134,17 +134,35 @@ func resolveTaskPricePatches(raw string) []string {
 		"sd2-c1", "sd2-c2", "sd2-c3", "sd2-c5", "sd2-c6", "sd2-c7",
 		"sd2-c8", "sd2-c9", "sd2-c10", "sd2-c11", "sd2-c12",
 		"seedance-2.0-fast-720p", "seedance-2.0-720p", "seedance-2.0-1080p", "seedance-2.0-4k",
+		"seedance-video-fast", "seedance-video-standard",
+		"gemini-omni", "happy-horse-1.1", "kling-v3", "kling", "可灵",
+		"grok-imagine-1.5", "grok", "sora-2-pro", "sora2", "Sora", "Sora 2",
 	}
-	if strings.TrimSpace(raw) == "" {
-		return defaults
+	// Environment values extend the built-in fixed-price policy. They must not
+	// replace it: an older Dokploy TASK_PRICE_PATCH omitted newly-added aliases
+	// and silently restored duration multiplication after a container restart.
+	patches := append([]string(nil), defaults...)
+	seen := make(map[string]struct{}, len(patches))
+	for _, patch := range patches {
+		seen[patch] = struct{}{}
 	}
-	patches := make([]string, 0)
 	for _, patch := range strings.Split(raw, ",") {
 		if trimmed := strings.TrimSpace(patch); trimmed != "" {
-			patches = append(patches, trimmed)
+			if _, exists := seen[trimmed]; !exists {
+				patches = append(patches, trimmed)
+				seen[trimmed] = struct{}{}
+			}
 		}
 	}
 	return patches
+}
+
+// IsPerSecondTaskModel is the single exception to Dopio's asynchronous-task
+// pricing rule. Model-square prices are RMB per generated item unless the
+// public model ID explicitly identifies itself as a per-second product.
+func IsPerSecondTaskModel(model string) bool {
+	model = strings.ToLower(strings.TrimSpace(model))
+	return strings.Contains(model, "per-second") || strings.Contains(model, "per_second") || strings.Contains(model, "按秒")
 }
 
 func initConstantEnv() {

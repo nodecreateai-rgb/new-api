@@ -39,6 +39,25 @@ func TestShouldApplyTaskBillingRatiosForSeedancePerSecondAlias(t *testing.T) {
 	require.True(t, shouldApplyTaskBillingRatios(adaptor, perSecond, perSecond.OriginModelName))
 }
 
+func TestFixedPriceModelDoesNotMultiplyEightYuanByTenSeconds(t *testing.T) {
+	adaptor := &sora.TaskAdaptor{}
+	info := &relaycommon.RelayInfo{
+		OriginModelName: "seedance-2.0-4k",
+		PriceData: types.PriceData{
+			Quota:       int(8 * common.QuotaPerUnit),
+			OtherRatios: map[string]float64{"seconds": 10},
+		},
+	}
+	require.False(t, shouldApplyTaskBillingRatios(adaptor, info, info.OriginModelName))
+	require.Equal(t, int(8*common.QuotaPerUnit), info.PriceData.Quota)
+}
+
+func TestUnknownAsyncModelDefaultsToPerItem(t *testing.T) {
+	adaptor := &sora.TaskAdaptor{}
+	info := &relaycommon.RelayInfo{OriginModelName: "future-video-model"}
+	require.False(t, shouldApplyTaskBillingRatios(adaptor, info, info.OriginModelName))
+}
+
 func TestRecalcQuotaFromRatiosUsesSecondsForSeedancePerSecond(t *testing.T) {
 	info := &relaycommon.RelayInfo{
 		PriceData: types.PriceData{

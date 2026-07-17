@@ -288,13 +288,20 @@ type taskBillingRatioPolicy interface {
 }
 
 func shouldApplyTaskBillingRatios(adaptor channel.TaskAdaptor, info *relaycommon.RelayInfo, modelName string) bool {
+	// Dopio sells asynchronous model-square entries per generated item. Request
+	// duration/size ratios are only pricing multipliers for explicitly named
+	// per-second products; otherwise an ¥8/item model with seconds=10 becomes an
+	// incorrect ¥80 pre-charge.
+	if common.IsPerSecondTaskModel(info.OriginModelName) || common.IsPerSecondTaskModel(modelName) {
+		return true
+	}
 	if policy, ok := adaptor.(taskBillingRatioPolicy); ok && !policy.UseRequestBillingRatios(info) {
 		return false
 	}
 	if forcer, ok := adaptor.(taskBillingRatioForcer); ok && forcer.ForceApplyBillingRatios(info) {
 		return true
 	}
-	return !common.StringsContains(constant.TaskPricePatches, modelName)
+	return false
 }
 
 var fetchRespBuilders = map[int]func(c *gin.Context) (respBody []byte, taskResp *dto.TaskError){
