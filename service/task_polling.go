@@ -98,6 +98,19 @@ func sweepTimedOutTasks(ctx context.Context) {
 
 const taskPollingInterval = 3 * time.Second
 
+var taskPollingJobs sync.Map
+
+func startTaskPollingJob(key string, job func()) bool {
+	if _, loaded := taskPollingJobs.LoadOrStore(key, struct{}{}); loaded {
+		return false
+	}
+	go func() {
+		defer taskPollingJobs.Delete(key)
+		job()
+	}()
+	return true
+}
+
 // TaskPollingLoop 主轮询循环，每 3 秒检查一次未完成的任务
 func TaskPollingLoop() {
 	for {
@@ -176,10 +189,12 @@ func DispatchPlatformUpdate(platform constant.TaskPlatform, taskChannelM map[int
 // UpdateSunoTasks 按渠道更新所有 Suno 任务
 func UpdateSunoTasks(ctx context.Context, taskChannelM map[int][]string, taskM map[string]*model.Task) error {
 	for channelId, taskIds := range taskChannelM {
-		err := updateSunoTasks(ctx, channelId, taskIds, taskM)
-		if err != nil {
-			logger.LogError(ctx, fmt.Sprintf("渠道 #%d 更新异步任务失败: %s", channelId, err.Error()))
-		}
+		channelId, taskIds := channelId, taskIds
+		startTaskPollingJob(fmt.Sprintf("suno:%d", channelId), func() {
+			if err := updateSunoTasks(ctx, channelId, taskIds, taskM); err != nil {
+				logger.LogError(ctx, fmt.Sprintf("渠道 #%d 更新异步任务失败: %s", channelId, err.Error()))
+			}
+		})
 	}
 	return nil
 }
@@ -316,18 +331,14 @@ func UpdateImageTasks(ctx context.Context, taskChannelM map[int][]string, taskM 
 
 // UpdateVideoTasks 按渠道更新所有视频任务
 func UpdateVideoTasks(ctx context.Context, platform constant.TaskPlatform, taskChannelM map[int][]string, taskM map[string]*model.Task) error {
-	var wg sync.WaitGroup
 	for channelId, taskIds := range taskChannelM {
 		channelId, taskIds := channelId, taskIds
-		wg.Add(1)
 		go func() {
-			defer wg.Done()
 			if err := updateVideoTasks(ctx, platform, channelId, taskIds, taskM); err != nil {
 				logger.LogError(ctx, fmt.Sprintf("Channel #%d failed to update video async tasks: %s", channelId, err.Error()))
 			}
 		}()
 	}
-	wg.Wait()
 	return nil
 }
 
@@ -356,11 +367,10 @@ func updateVideoTasks(ctx context.Context, platform constant.TaskPlatform, chann
 		return fmt.Errorf("CacheGetChannel failed: %w", err)
 	}
 
-	var wg sync.WaitGroup
 	for _, taskId := range taskIds {
-		wg.Add(1)
-		go func(taskId string) {
-			defer wg.Done()
+		taskId := taskId
+		jobKey := fmt.Sprintf("video:%s:%d:%s", platform, channelId, taskId)
+		startTaskPollingJob(jobKey, func() {
 			adaptor := GetTaskAdaptorFunc(platform)
 			if adaptor == nil {
 				logger.LogError(ctx, fmt.Sprintf("Failed to update video task %s: video adaptor not found", taskId))
@@ -373,9 +383,8 @@ func updateVideoTasks(ctx context.Context, platform constant.TaskPlatform, chann
 			if err := updateVideoSingleTask(ctx, adaptor, cacheGetChannel, taskId, taskM); err != nil {
 				logger.LogError(ctx, fmt.Sprintf("Failed to update video task %s: %s", taskId, err.Error()))
 			}
-		}(taskId)
+		})
 	}
-	wg.Wait()
 	return nil
 }
 
