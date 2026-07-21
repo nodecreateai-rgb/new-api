@@ -217,8 +217,6 @@ func ensureDopioRMBPricing() {
 		"sd2-c10":                            4,
 		"sd2-c11":                            2.5,
 		"sd2-c12":                            3,
-		"seedance-video-fast":                3,
-		"seedance-video-standard":            5,
 		"seedance-2.0-720p":                  3,
 		"seedance-2.0-fast-720p":             2,
 		"seedance-2.0-1080p":                 4,

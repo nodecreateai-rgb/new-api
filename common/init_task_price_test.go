@@ -24,7 +24,7 @@ func TestResolveTaskPricePatchesIncludesFixedPriceMyEditModels(t *testing.T) {
 func TestResolveTaskPricePatchesEnvExtendsDefaults(t *testing.T) {
 	patches := resolveTaskPricePatches(" custom-a, custom-b, seedance-2.0-4k ")
 	require.Contains(t, patches, "seedance-2.0-4k")
-	require.Contains(t, patches, "seedance-video-fast")
+	require.NotContains(t, patches, "seedance-video-fast")
 	require.Contains(t, patches, "sora-2-pro")
 	require.Contains(t, patches, "custom-a")
 	require.Contains(t, patches, "custom-b")
