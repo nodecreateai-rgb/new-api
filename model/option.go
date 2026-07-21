@@ -210,7 +210,7 @@ func ensureDopioRMBPricing() {
 		"sd2-c2":                             3,
 		"sd2-c3":                             4,
 		"sd2-c5":                             5,
-		"sd2-c6":                             0.5,
+		"sd2-c6":                             1,
 		"sd2-c7":                             0.5,
 		"sd2-c8":                             5,
 		"sd2-c9":                             2,
@@ -266,7 +266,7 @@ func ensureDopioRMBPricing() {
 			"happyhorse-1.1-720p": 0.5, "happyhorse-1.1-1080p": 1,
 			"sora-2-720p": 0.5, "sora-2-1080p": 1, "sora-2-pro-720p": 5, "sora-2-pro-1080p": 8,
 			"kling-v3-720p": 0.5, "kling-v3-1080p": 1, "kling-v3-4k": 2,
-			"sd2-c6":          0.5,
+			"sd2-c6":          1,
 			"sd2-c7":          0.5,
 			"gpt-image-2":     0.03,
 			"nano-banana-2":   0.01,
@@ -281,7 +281,7 @@ func ensureDopioRMBPricing() {
 			"seedance-video-fast-per-second":     0.2,
 			"seedance-video-standard-per-second": 0.33,
 			"sd2-c5":                             3,
-			"sd2-c6":                             0.5,
+			"sd2-c6":                             1,
 			"sd2-c7":                             0.5,
 			"sd2-c8":                             3,
 			"sd2-c9":                             1,
@@ -302,7 +302,7 @@ func ensureDopioRMBPricing() {
 			"sd2-c2":                             2,
 			"sd2-c3":                             3,
 			"sd2-c5":                             4,
-			"sd2-c6":                             0.5,
+			"sd2-c6":                             1,
 			"sd2-c7":                             0.5,
 			"gpt-image-2":                        0.03,
 			"nano-banana-2":                      0.01,
@@ -320,7 +320,7 @@ func ensureDopioRMBPricing() {
 			"sd2-c2":                             2,
 			"sd2-c3":                             2,
 			"sd2-c5":                             2,
-			"sd2-c6":                             0.5,
+			"sd2-c6":                             1,
 			"sd2-c7":                             0.5,
 			"gpt-image-2":                        0.03,
 			"nano-banana-2":                      0.01,
@@ -339,7 +339,7 @@ func ensureDopioRMBPricing() {
 			"happyhorse-1.1-720p": 0.5, "happyhorse-1.1-1080p": 1,
 			"sora-2-720p": 0.5, "sora-2-1080p": 1, "sora-2-pro-720p": 5, "sora-2-pro-1080p": 8,
 			"kling-v3-720p": 0.5, "kling-v3-1080p": 1, "kling-v3-4k": 2,
-			"sd2-c6":          0.5,
+			"sd2-c6":          1,
 			"sd2-c7":          0.3,
 			"sd2-c11":         1.5,
 			"sd2-c12":         2,
@@ -485,7 +485,7 @@ func ensureDopioRMBPricing() {
 		common.SysLog("failed to enforce Dopio RMB pricing: " + err.Error())
 		return
 	}
-	common.SysLog("enforced Dopio RMB pricing incl banana=0.01, sd2-c6=0.5, sd2-c7=0.5, vip2 sd2-c7=0.3, sd2-c11=2.5, sd2-c12=3, vip2 sd2-c11=1.5, vip2 sd2-c12=2, Price=1, USDExchangeRate=1, quota_display_type=CNY")
+	common.SysLog("enforced Dopio RMB pricing incl banana=0.01, sd2-c6=1, sd2-c7=0.5, vip2 sd2-c7=0.3, sd2-c11=2.5, sd2-c12=3, vip2 sd2-c11=1.5, vip2 sd2-c12=2, Price=1, USDExchangeRate=1, quota_display_type=CNY")
 }
 
 func SyncOptions(frequency int) {
