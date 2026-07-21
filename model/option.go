@@ -221,9 +221,25 @@ func ensureDopioRMBPricing() {
 		"seedance-video-standard":            5,
 		"seedance-2.0-720p":                  3,
 		"seedance-2.0-1080p":                 5,
-		"seedance-2.0-4k":                    8,
 		"seedance-video-fast-per-second":     0.2,
 		"seedance-video-standard-per-second": 0.33,
+		"wan2.7":                             5,
+		"wan2.7-720p":                        3,
+		"wan2.7-1080p":                       5,
+		"viduq3":                             5,
+		"viduq3-turbo-720p":                  3,
+		"viduq3-turbo-1080p":                 5,
+		"viduq3-pro-1080p":                   8,
+		"happyhorse-1.1":                     5,
+		"happyhorse-1.1-720p":                3,
+		"happyhorse-1.1-1080p":               5,
+		"sora-2-720p":                        3,
+		"sora-2-1080p":                       5,
+		"sora-2-pro-720p":                    5,
+		"sora-2-pro-1080p":                   8,
+		"kling-v3-720p":                      3,
+		"kling-v3-1080p":                     5,
+		"kling-v3-4k":                        8,
 		"kling-3-pro":                        1,
 		"gpt-image-2":                        0.03,
 		"nano-banana-2":                      0.01,
@@ -246,21 +262,24 @@ func ensureDopioRMBPricing() {
 			"seedance-video-standard":            5,
 			"seedance-2.0-720p":                  3,
 			"seedance-2.0-1080p":                 5,
-			"seedance-2.0-4k":                    8,
 			"seedance-video-fast-per-second":     0.2,
 			"seedance-video-standard-per-second": 0.33,
-			"sd2-c6":                             0.5,
-			"sd2-c7":                             0.5,
-			"gpt-image-2":                        0.03,
-			"nano-banana-2":                      0.01,
-			"nano-banana-pro":                    0.01,
+			"wan2.7":                             5, "wan2.7-720p": 3, "wan2.7-1080p": 5,
+			"viduq3": 5, "viduq3-turbo-720p": 3, "viduq3-turbo-1080p": 5, "viduq3-pro-1080p": 8,
+			"happyhorse-1.1": 5, "happyhorse-1.1-720p": 3, "happyhorse-1.1-1080p": 5,
+			"sora-2-720p": 3, "sora-2-1080p": 5, "sora-2-pro-720p": 5, "sora-2-pro-1080p": 8,
+			"kling-v3-720p": 3, "kling-v3-1080p": 5, "kling-v3-4k": 8,
+			"sd2-c6":          0.5,
+			"sd2-c7":          0.5,
+			"gpt-image-2":     0.03,
+			"nano-banana-2":   0.01,
+			"nano-banana-pro": 0.01,
 		},
 		"vip1": {
 			"seedance-video-fast":                3,
 			"seedance-video-standard":            5,
 			"seedance-2.0-720p":                  3,
 			"seedance-2.0-1080p":                 5,
-			"seedance-2.0-4k":                    8,
 			"seedance-video-fast-per-second":     0.2,
 			"seedance-video-standard-per-second": 0.33,
 			"sd2-c5":                             3,
@@ -278,7 +297,6 @@ func ensureDopioRMBPricing() {
 			"seedance-video-standard":            5,
 			"seedance-2.0-720p":                  3,
 			"seedance-2.0-1080p":                 5,
-			"seedance-2.0-4k":                    8,
 			"seedance-video-fast-per-second":     0.2,
 			"seedance-video-standard-per-second": 0.33,
 			"sd2-c1":                             3,
@@ -296,7 +314,6 @@ func ensureDopioRMBPricing() {
 			"seedance-video-standard":            5,
 			"seedance-2.0-720p":                  3,
 			"seedance-2.0-1080p":                 5,
-			"seedance-2.0-4k":                    8,
 			"seedance-video-fast-per-second":     0.2,
 			"seedance-video-standard-per-second": 0.33,
 			"sd2-c1":                             2,
@@ -314,23 +331,26 @@ func ensureDopioRMBPricing() {
 			"seedance-video-standard":            5,
 			"seedance-2.0-720p":                  3,
 			"seedance-2.0-1080p":                 5,
-			"seedance-2.0-4k":                    8,
 			"seedance-video-fast-per-second":     0.2,
 			"seedance-video-standard-per-second": 0.33,
-			"sd2-c6":                             0.5,
-			"sd2-c7":                             0.3,
-			"sd2-c11":                            1.5,
-			"sd2-c12":                            2,
-			"gpt-image-2":                        0.03,
-			"nano-banana-2":                      0.01,
-			"nano-banana-pro":                    0.01,
+			"wan2.7":                             5, "wan2.7-720p": 3, "wan2.7-1080p": 5,
+			"viduq3": 5, "viduq3-turbo-720p": 3, "viduq3-turbo-1080p": 5, "viduq3-pro-1080p": 8,
+			"happyhorse-1.1": 5, "happyhorse-1.1-720p": 3, "happyhorse-1.1-1080p": 5,
+			"sora-2-720p": 3, "sora-2-1080p": 5, "sora-2-pro-720p": 5, "sora-2-pro-1080p": 8,
+			"kling-v3-720p": 3, "kling-v3-1080p": 5, "kling-v3-4k": 8,
+			"sd2-c6":          0.5,
+			"sd2-c7":          0.3,
+			"sd2-c11":         1.5,
+			"sd2-c12":         2,
+			"gpt-image-2":     0.03,
+			"nano-banana-2":   0.01,
+			"nano-banana-pro": 0.01,
 		},
 		"vip3": {
 			"seedance-video-fast":                3,
 			"seedance-video-standard":            5,
 			"seedance-2.0-720p":                  3,
 			"seedance-2.0-1080p":                 5,
-			"seedance-2.0-4k":                    8,
 			"seedance-video-fast-per-second":     0.2,
 			"seedance-video-standard-per-second": 0.33,
 		},
@@ -364,6 +384,10 @@ func ensureDopioRMBPricing() {
 		}
 	}
 	changed := false
+	if _, exists := prices["seedance-2.0-4k"]; exists {
+		delete(prices, "seedance-2.0-4k")
+		changed = true
+	}
 	for model, price := range targetModelPrices {
 		if prices[model] != price {
 			prices[model] = price
@@ -408,6 +432,19 @@ func ensureDopioRMBPricing() {
 		}
 	}
 	changed = false
+	for group, groupPrices := range modelGroupPrices {
+		if _, exists := groupPrices["seedance-2.0-4k"]; exists {
+			delete(groupPrices, "seedance-2.0-4k")
+			changed = true
+		}
+		for model, price := range targetModelPrices {
+			if groupPrices[model] != price {
+				groupPrices[model] = price
+				changed = true
+			}
+		}
+		modelGroupPrices[group] = groupPrices
+	}
 	for group, targetPrices := range targetModelGroupPrices {
 		if modelGroupPrices[group] == nil {
 			modelGroupPrices[group] = map[string]float64{}

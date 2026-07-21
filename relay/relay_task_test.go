@@ -11,11 +11,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestShouldApplyTaskBillingRatiosForFixedPriceSeedanceModels(t *testing.T) {
+func TestShouldApplyTaskBillingRatiosForFixedPriceMyEditModels(t *testing.T) {
 	savedPatches := append([]string(nil), constant.TaskPricePatches...)
 	t.Cleanup(func() { constant.TaskPricePatches = savedPatches })
 	constant.TaskPricePatches = []string{
-		"seedance-2.0-fast-720p", "seedance-2.0-720p", "seedance-2.0-1080p", "seedance-2.0-4k",
+		"seedance-2.0-fast-720p", "seedance-2.0-720p", "seedance-2.0-1080p",
+		"wan2.7-720p", "viduq3-turbo-1080p", "happyhorse-1.1-1080p", "sora-2-1080p", "kling-v3-4k",
 	}
 
 	adaptor := &sora.TaskAdaptor{}

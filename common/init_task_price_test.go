@@ -6,12 +6,16 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestResolveTaskPricePatchesIncludesFixedPriceSeedanceModels(t *testing.T) {
+func TestResolveTaskPricePatchesIncludesFixedPriceMyEditModels(t *testing.T) {
 	patches := resolveTaskPricePatches("")
-	require.Contains(t, patches, "seedance-2.0-fast-720p")
-	require.Contains(t, patches, "seedance-2.0-720p")
-	require.Contains(t, patches, "seedance-2.0-1080p")
-	require.Contains(t, patches, "seedance-2.0-4k")
+	for _, model := range []string{
+		"seedance-2.0-fast-720p", "seedance-2.0-720p", "seedance-2.0-1080p",
+		"wan2.7-720p", "wan2.7-1080p", "viduq3-turbo-720p", "viduq3-pro-1080p",
+		"happyhorse-1.1-1080p", "sora-2-1080p", "kling-v3-4k",
+	} {
+		require.Contains(t, patches, model)
+	}
+	require.NotContains(t, patches, "seedance-2.0-4k")
 }
 
 func TestResolveTaskPricePatchesEnvExtendsDefaults(t *testing.T) {
