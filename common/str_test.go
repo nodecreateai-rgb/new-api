@@ -24,3 +24,13 @@ func TestMaskUpstreamProviderInfoMediaIO(t *testing.T) {
 		}
 	}
 }
+
+func TestMaskUpstreamProviderInfoMyEdit(t *testing.T) {
+	got := MaskUpstreamProviderInfo("MyEdit2API myedit-generation-upstream myedit.online CyberLink cyberlink.com")
+	lower := strings.ToLower(got)
+	for _, forbidden := range []string{"myedit", "cyberlink"} {
+		if strings.Contains(lower, forbidden) {
+			t.Fatalf("leaked %q in %q", forbidden, got)
+		}
+	}
+}

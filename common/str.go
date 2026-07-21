@@ -22,6 +22,16 @@ var (
 )
 
 var upstreamBrandReplacers = strings.NewReplacer(
+	"myedit2api", "video service",
+	"MyEdit2API", "Video service",
+	"MYEDIT2API", "VIDEO_SERVICE",
+	"myedit-generation-upstream", "video-upstream",
+	"myedit.online", "video-upstream",
+	"MyEdit", "Video service",
+	"myedit", "video service",
+	"cyberlink.com", "video-upstream",
+	"CyberLink", "Video service",
+	"cyberlink", "video service",
 	"pixverse2api", "video service",
 	"Pixverse2api", "Video service",
 	"PixVerse2API", "Video service",

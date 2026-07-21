@@ -651,7 +651,11 @@ func scrubTaskPayload(payload map[string]any, publicTaskID string) {
 	if modelName, ok := payload["model"].(string); ok && shouldHideTaskPayloadModel(modelName) {
 		delete(payload, "model")
 	}
-	for _, value := range payload {
+	for key, value := range payload {
+		if text, ok := value.(string); ok {
+			payload[key] = common.MaskUpstreamProviderInfo(text)
+			continue
+		}
 		if child, ok := value.(map[string]any); ok {
 			scrubTaskPayload(child, publicTaskID)
 		}
