@@ -220,7 +220,8 @@ func ensureDopioRMBPricing() {
 		"seedance-video-fast":                3,
 		"seedance-video-standard":            5,
 		"seedance-2.0-720p":                  3,
-		"seedance-2.0-1080p":                 5,
+		"seedance-2.0-fast-720p":             2,
+		"seedance-2.0-1080p":                 4,
 		"seedance-video-fast-per-second":     0.2,
 		"seedance-video-standard-per-second": 0.33,
 		"wan2.7":                             5,
@@ -230,7 +231,6 @@ func ensureDopioRMBPricing() {
 		"viduq3-turbo-720p":                  3,
 		"viduq3-turbo-1080p":                 5,
 		"viduq3-pro-1080p":                   8,
-		"happyhorse-1.1":                     5,
 		"happyhorse-1.1-720p":                3,
 		"happyhorse-1.1-1080p":               5,
 		"sora-2-720p":                        3,
@@ -261,12 +261,13 @@ func ensureDopioRMBPricing() {
 			"seedance-video-fast":                3,
 			"seedance-video-standard":            5,
 			"seedance-2.0-720p":                  3,
-			"seedance-2.0-1080p":                 5,
+			"seedance-2.0-fast-720p":             2,
+			"seedance-2.0-1080p":                 4,
 			"seedance-video-fast-per-second":     0.2,
 			"seedance-video-standard-per-second": 0.33,
 			"wan2.7":                             5, "wan2.7-720p": 3, "wan2.7-1080p": 5,
 			"viduq3": 5, "viduq3-turbo-720p": 3, "viduq3-turbo-1080p": 5, "viduq3-pro-1080p": 8,
-			"happyhorse-1.1": 5, "happyhorse-1.1-720p": 3, "happyhorse-1.1-1080p": 5,
+			"happyhorse-1.1-720p": 3, "happyhorse-1.1-1080p": 5,
 			"sora-2-720p": 3, "sora-2-1080p": 5, "sora-2-pro-720p": 5, "sora-2-pro-1080p": 8,
 			"kling-v3-720p": 3, "kling-v3-1080p": 5, "kling-v3-4k": 8,
 			"sd2-c6":          0.5,
@@ -279,7 +280,8 @@ func ensureDopioRMBPricing() {
 			"seedance-video-fast":                3,
 			"seedance-video-standard":            5,
 			"seedance-2.0-720p":                  3,
-			"seedance-2.0-1080p":                 5,
+			"seedance-2.0-fast-720p":             2,
+			"seedance-2.0-1080p":                 4,
 			"seedance-video-fast-per-second":     0.2,
 			"seedance-video-standard-per-second": 0.33,
 			"sd2-c5":                             3,
@@ -296,7 +298,8 @@ func ensureDopioRMBPricing() {
 			"seedance-video-fast":                3,
 			"seedance-video-standard":            5,
 			"seedance-2.0-720p":                  3,
-			"seedance-2.0-1080p":                 5,
+			"seedance-2.0-fast-720p":             2,
+			"seedance-2.0-1080p":                 4,
 			"seedance-video-fast-per-second":     0.2,
 			"seedance-video-standard-per-second": 0.33,
 			"sd2-c1":                             3,
@@ -313,7 +316,8 @@ func ensureDopioRMBPricing() {
 			"seedance-video-fast":                3,
 			"seedance-video-standard":            5,
 			"seedance-2.0-720p":                  3,
-			"seedance-2.0-1080p":                 5,
+			"seedance-2.0-fast-720p":             2,
+			"seedance-2.0-1080p":                 4,
 			"seedance-video-fast-per-second":     0.2,
 			"seedance-video-standard-per-second": 0.33,
 			"sd2-c1":                             2,
@@ -330,12 +334,13 @@ func ensureDopioRMBPricing() {
 			"seedance-video-fast":                3,
 			"seedance-video-standard":            5,
 			"seedance-2.0-720p":                  3,
-			"seedance-2.0-1080p":                 5,
+			"seedance-2.0-fast-720p":             2,
+			"seedance-2.0-1080p":                 4,
 			"seedance-video-fast-per-second":     0.2,
 			"seedance-video-standard-per-second": 0.33,
 			"wan2.7":                             5, "wan2.7-720p": 3, "wan2.7-1080p": 5,
 			"viduq3": 5, "viduq3-turbo-720p": 3, "viduq3-turbo-1080p": 5, "viduq3-pro-1080p": 8,
-			"happyhorse-1.1": 5, "happyhorse-1.1-720p": 3, "happyhorse-1.1-1080p": 5,
+			"happyhorse-1.1-720p": 3, "happyhorse-1.1-1080p": 5,
 			"sora-2-720p": 3, "sora-2-1080p": 5, "sora-2-pro-720p": 5, "sora-2-pro-1080p": 8,
 			"kling-v3-720p": 3, "kling-v3-1080p": 5, "kling-v3-4k": 8,
 			"sd2-c6":          0.5,
@@ -350,7 +355,8 @@ func ensureDopioRMBPricing() {
 			"seedance-video-fast":                3,
 			"seedance-video-standard":            5,
 			"seedance-2.0-720p":                  3,
-			"seedance-2.0-1080p":                 5,
+			"seedance-2.0-fast-720p":             2,
+			"seedance-2.0-1080p":                 4,
 			"seedance-video-fast-per-second":     0.2,
 			"seedance-video-standard-per-second": 0.33,
 		},
@@ -384,6 +390,12 @@ func ensureDopioRMBPricing() {
 		}
 	}
 	changed := false
+	for _, staleModel := range []string{"happy-horse-1.1", "happyhorse-1.1"} {
+		if _, exists := prices[staleModel]; exists {
+			delete(prices, staleModel)
+			changed = true
+		}
+	}
 	if _, exists := prices["seedance-2.0-4k"]; exists {
 		delete(prices, "seedance-2.0-4k")
 		changed = true
@@ -433,6 +445,12 @@ func ensureDopioRMBPricing() {
 	}
 	changed = false
 	for group, groupPrices := range modelGroupPrices {
+		for _, staleModel := range []string{"happy-horse-1.1", "happyhorse-1.1"} {
+			if _, exists := groupPrices[staleModel]; exists {
+				delete(groupPrices, staleModel)
+				changed = true
+			}
+		}
 		if _, exists := groupPrices["seedance-2.0-4k"]; exists {
 			delete(groupPrices, "seedance-2.0-4k")
 			changed = true
