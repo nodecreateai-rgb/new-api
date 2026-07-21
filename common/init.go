@@ -138,7 +138,7 @@ func resolveTaskPricePatches(raw string) []string {
 		"gemini-omni", "happyhorse-1.1-720p", "happyhorse-1.1-1080p",
 		"wan2.7", "wan2.7-720p", "wan2.7-1080p",
 		"viduq3", "viduq3-turbo-720p", "viduq3-turbo-1080p", "viduq3-pro-1080p",
-		"kling-v3", "kling-v3-720p", "kling-v3-1080p", "kling-v3-4k", "kling", "可灵",
+		"kling-v3-720p", "kling-v3-1080p", "kling-v3-4k", "kling", "可灵",
 		"grok-imagine-1.5", "grok", "sora-2-720p", "sora-2-1080p", "sora-2-pro", "sora-2-pro-720p", "sora-2-pro-1080p", "sora2", "Sora", "Sora 2",
 	}
 	// Environment values extend the built-in fixed-price policy. They must not
