@@ -19,6 +19,8 @@ func TestResolveTaskPricePatchesIncludesFixedPriceMyEditModels(t *testing.T) {
 	require.NotContains(t, patches, "happy-horse-1.1")
 	require.NotContains(t, patches, "happyhorse-1.1")
 	require.NotContains(t, patches, "kling-v3")
+	require.NotContains(t, patches, "wan2.7")
+	require.NotContains(t, patches, "viduq3")
 }
 
 func TestResolveTaskPricePatchesEnvExtendsDefaults(t *testing.T) {

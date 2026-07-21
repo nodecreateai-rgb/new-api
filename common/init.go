@@ -135,8 +135,8 @@ func resolveTaskPricePatches(raw string) []string {
 		"sd2-c8", "sd2-c9", "sd2-c10", "sd2-c11", "sd2-c12",
 		"seedance-2.0-fast-720p", "seedance-2.0-720p", "seedance-2.0-1080p",
 		"gemini-omni", "happyhorse-1.1-720p", "happyhorse-1.1-1080p",
-		"wan2.7", "wan2.7-720p", "wan2.7-1080p",
-		"viduq3", "viduq3-turbo-720p", "viduq3-turbo-1080p", "viduq3-pro-1080p",
+		"wan2.7-720p", "wan2.7-1080p",
+		"viduq3-turbo-720p", "viduq3-turbo-1080p", "viduq3-pro-1080p",
 		"kling-v3-720p", "kling-v3-1080p", "kling-v3-4k", "kling", "可灵",
 		"grok-imagine-1.5", "grok", "sora-2-720p", "sora-2-1080p", "sora-2-pro", "sora-2-pro-720p", "sora-2-pro-1080p", "sora2", "Sora", "Sora 2",
 	}
