@@ -1,6 +1,7 @@
 package channel
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -537,22 +538,56 @@ func DoTaskApiRequest(a TaskAdaptor, c *gin.Context, info *common.RelayInfo, req
 	if err != nil {
 		return nil, err
 	}
-	req, err := http.NewRequest(c.Request.Method, fullRequestURL, requestBody)
+	body, err := io.ReadAll(requestBody)
 	if err != nil {
-		return nil, fmt.Errorf("new request failed: %w", err)
+		return nil, fmt.Errorf("read request body failed: %w", err)
 	}
-	applyUpstreamContentLength(req, info)
-	req.GetBody = func() (io.ReadCloser, error) {
-		return io.NopCloser(requestBody), nil
+	const maxAttempts = 10
+	for attempt := 1; attempt <= maxAttempts; attempt++ {
+		req, reqErr := http.NewRequest(c.Request.Method, fullRequestURL, bytes.NewReader(body))
+		if reqErr != nil {
+			return nil, fmt.Errorf("new request failed: %w", reqErr)
+		}
+		applyUpstreamContentLength(req, info)
+		req.GetBody = func() (io.ReadCloser, error) {
+			return io.NopCloser(bytes.NewReader(body)), nil
+		}
+		if err = a.BuildRequestHeader(c, req, info); err != nil {
+			return nil, fmt.Errorf("setup request header failed: %w", err)
+		}
+		resp, doErr := doRequest(c, req, info)
+		if doErr == nil {
+			return resp, nil
+		}
+		if attempt >= maxAttempts || !isRestartWindowTransportError(doErr) {
+			return nil, fmt.Errorf("do request failed: %w", doErr)
+		}
+		delay := time.Duration(attempt) * time.Second
+		logger.LogError(c, fmt.Sprintf("task upstream unavailable during restart window; retry %d/%d in %s: %v", attempt, maxAttempts, delay, doErr))
+		select {
+		case <-c.Request.Context().Done():
+			return nil, fmt.Errorf("do request failed: %w", c.Request.Context().Err())
+		case <-time.After(delay):
+		}
 	}
+	return nil, fmt.Errorf("do request failed after restart-window retries")
+}
 
-	err = a.BuildRequestHeader(c, req, info)
-	if err != nil {
-		return nil, fmt.Errorf("setup request header failed: %w", err)
+func isRestartWindowTransportError(err error) bool {
+	if err == nil {
+		return false
 	}
-	resp, err := doRequest(c, req, info)
-	if err != nil {
-		return nil, fmt.Errorf("do request failed: %w", err)
+	for current := err; current != nil; current = errors.Unwrap(current) {
+		msg := strings.ToLower(current.Error())
+		if strings.Contains(msg, "connection refused") ||
+			strings.Contains(msg, "connection reset by peer") ||
+			strings.Contains(msg, "connect: connection reset") ||
+			strings.Contains(msg, "server misbehaving") ||
+			strings.Contains(msg, "temporary failure in name resolution") ||
+			strings.Contains(msg, "unexpected eof") ||
+			strings.HasSuffix(msg, ": eof") {
+			return true
+		}
 	}
-	return resp, nil
+	return false
 }
