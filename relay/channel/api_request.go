@@ -542,7 +542,7 @@ func DoTaskApiRequest(a TaskAdaptor, c *gin.Context, info *common.RelayInfo, req
 	if err != nil {
 		return nil, fmt.Errorf("read request body failed: %w", err)
 	}
-	const maxAttempts = 10
+	const maxAttempts = 15
 	for attempt := 1; attempt <= maxAttempts; attempt++ {
 		req, reqErr := http.NewRequest(c.Request.Method, fullRequestURL, bytes.NewReader(body))
 		if reqErr != nil {
