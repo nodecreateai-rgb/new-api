@@ -184,6 +184,14 @@ func (a *TaskAdaptor) BuildRequestBody(c *gin.Context, info *relaycommon.RelayIn
 		var bodyMap map[string]interface{}
 		if err := common.Unmarshal(cachedBody, &bodyMap); err == nil {
 			bodyMap["model"] = info.UpstreamModelName
+			// Re-apply parsed compatibility fields at the final JSON boundary. The
+			// public decoder accepts legacy/string forms (for example
+			// compliance_enabled="true"), but forwarding the original body map
+			// would leak that string to strict Go upstream DTOs and cause an
+			// immediate 400 before a task is persisted.
+			if parsed, reqErr := relaycommon.GetTaskRequest(c); reqErr == nil {
+				applyCanonicalVideoControls(bodyMap, parsed)
+			}
 			normalizeOpenAIVideoAspectBody(bodyMap)
 			if newBody, err := common.Marshal(bodyMap); err == nil {
 				return bytes.NewReader(newBody), nil
@@ -256,6 +264,20 @@ func (a *TaskAdaptor) BuildRequestBody(c *gin.Context, info *relaycommon.RelayIn
 // DoRequest delegates to common helper.
 func (a *TaskAdaptor) DoRequest(c *gin.Context, info *relaycommon.RelayInfo, requestBody io.Reader) (*http.Response, error) {
 	return channel.DoTaskApiRequest(a, c, info, requestBody)
+}
+
+func applyCanonicalVideoControls(body map[string]interface{}, req relaycommon.TaskSubmitReq) {
+	if body == nil {
+		return
+	}
+	if req.ComplianceEnabled != nil {
+		body["compliance_enabled"] = *req.ComplianceEnabled
+	}
+	if mode := strings.TrimSpace(req.ComplianceMode); mode != "" {
+		body["compliance_mode"] = mode
+	}
+	delete(body, "eye_mask_enabled")
+	delete(body, "eye_mask_mode")
 }
 
 func normalizeSoraVideoStatus(status string) string {

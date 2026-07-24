@@ -87,6 +87,23 @@ func TestTaskSubmitReqToUpstreamVideoBody(t *testing.T) {
 	require.Equal(t, "colored-pencil", body["compliance_mode"])
 }
 
+func TestApplyCanonicalVideoControlsConvertsStringBooleanBeforeUpstream(t *testing.T) {
+	enabled := true
+	body := map[string]interface{}{
+		"compliance_enabled": "true",
+		"eye_mask_enabled":   "true",
+		"eye_mask_mode":      "grid",
+	}
+	applyCanonicalVideoControls(body, relaycommon.TaskSubmitReq{
+		ComplianceEnabled: &enabled,
+		ComplianceMode:    "colored-pencil",
+	})
+	require.Equal(t, true, body["compliance_enabled"])
+	require.Equal(t, "colored-pencil", body["compliance_mode"])
+	require.NotContains(t, body, "eye_mask_enabled")
+	require.NotContains(t, body, "eye_mask_mode")
+}
+
 func TestUpstreamVideoTaskPrefersJSON(t *testing.T) {
 	require.True(t, upstreamVideoTaskPrefersJSON("http://paco-dola2api-er9b9x-dola2api-1:38472"))
 	require.False(t, upstreamVideoTaskPrefersJSON("https://api.openai.com"))
