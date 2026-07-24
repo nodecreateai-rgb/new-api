@@ -67,11 +67,14 @@ func TestNormalizeSoraVideoStatus(t *testing.T) {
 }
 
 func TestTaskSubmitReqToUpstreamVideoBody(t *testing.T) {
+	enabled := false
 	body := taskSubmitReqToUpstreamVideoBody(relaycommon.TaskSubmitReq{
-		Prompt:         "hello",
-		Size:           "1080x1920",
-		Seconds:        "8",
-		InputReference: "https://example.com/a.png",
+		Prompt:            "hello",
+		Size:              "1080x1920",
+		Seconds:           "8",
+		InputReference:    "https://example.com/a.png",
+		ComplianceEnabled: &enabled,
+		ComplianceMode:    "colored-pencil",
 	}, "seedance2-c1")
 
 	require.Equal(t, "seedance2-c1", body["model"])
@@ -80,6 +83,8 @@ func TestTaskSubmitReqToUpstreamVideoBody(t *testing.T) {
 	require.Equal(t, "1080x1920", body["size"])
 	require.Equal(t, "https://example.com/a.png", body["image_url"])
 	require.Equal(t, []string{"https://example.com/a.png"}, body["image_refs"])
+	require.Equal(t, false, body["compliance_enabled"])
+	require.Equal(t, "colored-pencil", body["compliance_mode"])
 }
 
 func TestUpstreamVideoTaskPrefersJSON(t *testing.T) {

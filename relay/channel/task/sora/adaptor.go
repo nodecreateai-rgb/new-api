@@ -510,6 +510,12 @@ func buildUpstreamVideoJSONFromMultipart(c *gin.Context, info *relaycommon.Relay
 			Seconds:        firstFormValue(formData.Value, "seconds"),
 			Image:          firstFormValue(formData.Value, "image"),
 			InputReference: firstFormValue(formData.Value, "input_reference"),
+			ComplianceMode: firstFormValue(formData.Value, "compliance_mode"),
+		}
+		if raw := strings.TrimSpace(firstFormValue(formData.Value, "compliance_enabled")); raw != "" {
+			if enabled, convErr := strconv.ParseBool(raw); convErr == nil {
+				req.ComplianceEnabled = &enabled
+			}
 		}
 		if duration, convErr := strconv.Atoi(firstFormValue(formData.Value, "duration")); convErr == nil {
 			req.Duration = duration
@@ -554,6 +560,12 @@ func taskSubmitReqToUpstreamVideoBody(req relaycommon.TaskSubmitReq, upstreamMod
 	}
 	if aspect != "" {
 		body["aspect_ratio"] = aspect
+	}
+	if req.ComplianceEnabled != nil {
+		body["compliance_enabled"] = *req.ComplianceEnabled
+	}
+	if complianceMode := strings.TrimSpace(req.ComplianceMode); complianceMode != "" {
+		body["compliance_mode"] = complianceMode
 	}
 	if imageRefs := collectUpstreamVideoImageRefs(req); len(imageRefs) > 0 {
 		body["image_refs"] = imageRefs

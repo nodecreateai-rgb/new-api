@@ -30,6 +30,31 @@ func TestValidateMultipartTaskRequestAcceptsRatioAlias(t *testing.T) {
 	}
 }
 
+func TestValidateMultipartTaskRequestAcceptsComplianceParams(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	c, _ := gin.CreateTestContext(httptest.NewRecorder())
+	var body bytes.Buffer
+	w := multipart.NewWriter(&body)
+	_ = w.WriteField("prompt", "test")
+	_ = w.WriteField("model", "seedance-video-standard")
+	_ = w.WriteField("compliance_enabled", "false")
+	_ = w.WriteField("compliance_mode", "colored-pencil")
+	_ = w.Close()
+	c.Request = httptest.NewRequest("POST", "/v1/videos", &body)
+	c.Request.Header.Set("Content-Type", w.FormDataContentType())
+
+	req, err := validateMultipartTaskRequest(c, &RelayInfo{}, "textGenerate")
+	if err != nil {
+		t.Fatalf("validate request: %v", err)
+	}
+	if req.ComplianceEnabled == nil || *req.ComplianceEnabled {
+		t.Fatalf("compliance_enabled=%v", req.ComplianceEnabled)
+	}
+	if req.ComplianceMode != "colored-pencil" {
+		t.Fatalf("compliance_mode=%q", req.ComplianceMode)
+	}
+}
+
 func TestSupportsAudioReferenceOnlyForPixVerseAliases(t *testing.T) {
 	for _, model := range []string{
 		"seedance-video-fast",

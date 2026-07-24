@@ -43,3 +43,16 @@ func TestTaskSubmitReqAcceptsResolutionAndAspectAliases(t *testing.T) {
 		t.Fatalf("aspect=%q aspect_ratio=%q", byAspect.Aspect, byAspect.AspectRatio)
 	}
 }
+
+func TestTaskSubmitReqAcceptsComplianceParams(t *testing.T) {
+	var req TaskSubmitReq
+	if err := basecommon.Unmarshal([]byte(`{"compliance_enabled":true,"compliance_mode":"colored-pencil"}`), &req); err != nil {
+		t.Fatal(err)
+	}
+	if req.ComplianceEnabled == nil || !*req.ComplianceEnabled {
+		t.Fatalf("compliance_enabled=%v", req.ComplianceEnabled)
+	}
+	if req.ComplianceMode != "colored-pencil" {
+		t.Fatalf("compliance_mode=%q", req.ComplianceMode)
+	}
+}

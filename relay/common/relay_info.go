@@ -682,41 +682,45 @@ type TaskRelayInfo struct {
 }
 
 type TaskSubmitReq struct {
-	Prompt          string                 `json:"prompt"`
-	Model           string                 `json:"model,omitempty"`
-	Mode            string                 `json:"mode,omitempty"`
-	Image           string                 `json:"image,omitempty"`
-	ImageURL        string                 `json:"image_url,omitempty"`
-	ReferenceImage  string                 `json:"reference_image,omitempty"`
-	ImageRefs       []string               `json:"image_refs,omitempty"`
-	ImageURLs       []string               `json:"image_urls,omitempty"`
-	Images          []string               `json:"images,omitempty"`
-	ReferenceImages []string               `json:"reference_images,omitempty"`
-	ExtraImages     []string               `json:"extra_images,omitempty"`
-	Video           string                 `json:"video,omitempty"`
-	VideoURL        string                 `json:"video_url,omitempty"`
-	ReferenceVideo  string                 `json:"reference_video,omitempty"`
-	VideoRefs       []string               `json:"video_refs,omitempty"`
-	VideoURLs       []string               `json:"video_urls,omitempty"`
-	Videos          []string               `json:"videos,omitempty"`
-	ReferenceVideos []string               `json:"reference_videos,omitempty"`
-	ExtraVideos     []string               `json:"extra_videos,omitempty"`
-	AudioURL        string                 `json:"audio_url,omitempty"`
-	ReferenceAudio  string                 `json:"reference_audio,omitempty"`
-	AudioRefs       []string               `json:"audio_refs,omitempty"`
-	AudioURLs       []string               `json:"audio_urls,omitempty"`
-	Audios          []string               `json:"audios,omitempty"`
-	ReferenceAudios []string               `json:"reference_audios,omitempty"`
-	ExtraAudios     []string               `json:"extra_audios,omitempty"`
-	Size            string                 `json:"size,omitempty"`
-	Resolution      string                 `json:"resolution,omitempty"`
-	Aspect          string                 `json:"aspect,omitempty"`
-	AspectRatio     string                 `json:"aspect_ratio,omitempty"`
-	Ratio           string                 `json:"ratio,omitempty"`
-	Duration        int                    `json:"duration,omitempty"`
-	Seconds         string                 `json:"seconds,omitempty"`
-	InputReference  string                 `json:"input_reference,omitempty"`
-	Metadata        map[string]interface{} `json:"metadata,omitempty"`
+	Prompt            string                 `json:"prompt"`
+	Model             string                 `json:"model,omitempty"`
+	Mode              string                 `json:"mode,omitempty"`
+	Image             string                 `json:"image,omitempty"`
+	ImageURL          string                 `json:"image_url,omitempty"`
+	ReferenceImage    string                 `json:"reference_image,omitempty"`
+	ImageRefs         []string               `json:"image_refs,omitempty"`
+	ImageURLs         []string               `json:"image_urls,omitempty"`
+	Images            []string               `json:"images,omitempty"`
+	ReferenceImages   []string               `json:"reference_images,omitempty"`
+	ExtraImages       []string               `json:"extra_images,omitempty"`
+	Video             string                 `json:"video,omitempty"`
+	VideoURL          string                 `json:"video_url,omitempty"`
+	ReferenceVideo    string                 `json:"reference_video,omitempty"`
+	VideoRefs         []string               `json:"video_refs,omitempty"`
+	VideoURLs         []string               `json:"video_urls,omitempty"`
+	Videos            []string               `json:"videos,omitempty"`
+	ReferenceVideos   []string               `json:"reference_videos,omitempty"`
+	ExtraVideos       []string               `json:"extra_videos,omitempty"`
+	AudioURL          string                 `json:"audio_url,omitempty"`
+	ReferenceAudio    string                 `json:"reference_audio,omitempty"`
+	AudioRefs         []string               `json:"audio_refs,omitempty"`
+	AudioURLs         []string               `json:"audio_urls,omitempty"`
+	Audios            []string               `json:"audios,omitempty"`
+	ReferenceAudios   []string               `json:"reference_audios,omitempty"`
+	ExtraAudios       []string               `json:"extra_audios,omitempty"`
+	Size              string                 `json:"size,omitempty"`
+	Resolution        string                 `json:"resolution,omitempty"`
+	Aspect            string                 `json:"aspect,omitempty"`
+	AspectRatio       string                 `json:"aspect_ratio,omitempty"`
+	Ratio             string                 `json:"ratio,omitempty"`
+	Duration          int                    `json:"duration,omitempty"`
+	Seconds           string                 `json:"seconds,omitempty"`
+	InputReference    string                 `json:"input_reference,omitempty"`
+	ComplianceEnabled *bool                  `json:"compliance_enabled,omitempty"`
+	ComplianceMode    string                 `json:"compliance_mode,omitempty"`
+	EyeMaskEnabled    *bool                  `json:"eye_mask_enabled,omitempty"`
+	EyeMaskMode       string                 `json:"eye_mask_mode,omitempty"`
+	Metadata          map[string]interface{} `json:"metadata,omitempty"`
 }
 
 func (t *TaskSubmitReq) GetPrompt() string {
@@ -789,6 +793,12 @@ func (t *TaskSubmitReq) UnmarshalJSON(data []byte) error {
 	}
 	if strings.TrimSpace(t.AspectRatio) == "" {
 		t.AspectRatio = strings.TrimSpace(t.Aspect)
+	}
+	if t.ComplianceEnabled == nil {
+		t.ComplianceEnabled = t.EyeMaskEnabled
+	}
+	if strings.TrimSpace(t.ComplianceMode) == "" {
+		t.ComplianceMode = strings.TrimSpace(t.EyeMaskMode)
 	}
 
 	return nil

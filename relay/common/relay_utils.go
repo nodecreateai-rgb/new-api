@@ -86,16 +86,22 @@ func validateMultipartTaskRequest(c *gin.Context, info *RelayInfo, action string
 
 	formData := c.Request.PostForm
 	req = TaskSubmitReq{
-		Prompt:      formData.Get("prompt"),
-		Model:       formData.Get("model"),
-		Mode:        formData.Get("mode"),
-		Image:       formData.Get("image"),
-		Size:        formData.Get("size"),
-		Resolution:  formData.Get("resolution"),
-		Aspect:      formData.Get("aspect"),
-		AspectRatio: formData.Get("aspect_ratio"),
-		Ratio:       formData.Get("ratio"),
-		Metadata:    make(map[string]interface{}),
+		Prompt:         formData.Get("prompt"),
+		Model:          formData.Get("model"),
+		Mode:           formData.Get("mode"),
+		Image:          formData.Get("image"),
+		Size:           formData.Get("size"),
+		Resolution:     formData.Get("resolution"),
+		Aspect:         formData.Get("aspect"),
+		AspectRatio:    formData.Get("aspect_ratio"),
+		Ratio:          formData.Get("ratio"),
+		ComplianceMode: formData.Get("compliance_mode"),
+		Metadata:       make(map[string]interface{}),
+	}
+	if raw := strings.TrimSpace(formData.Get("compliance_enabled")); raw != "" {
+		if enabled, err := strconv.ParseBool(raw); err == nil {
+			req.ComplianceEnabled = &enabled
+		}
 	}
 	if strings.TrimSpace(req.AspectRatio) == "" {
 		req.AspectRatio = strings.TrimSpace(req.Ratio)
@@ -208,18 +214,20 @@ func supportsAudioReference(model string) bool {
 
 func isKnownTaskField(field string) bool {
 	knownFields := map[string]bool{
-		"prompt":          true,
-		"model":           true,
-		"mode":            true,
-		"image":           true,
-		"images":          true,
-		"size":            true,
-		"resolution":      true,
-		"aspect":          true,
-		"aspect_ratio":    true,
-		"ratio":           true,
-		"duration":        true,
-		"input_reference": true, // Sora 特有字段
+		"prompt":             true,
+		"model":              true,
+		"mode":               true,
+		"image":              true,
+		"images":             true,
+		"size":               true,
+		"resolution":         true,
+		"aspect":             true,
+		"aspect_ratio":       true,
+		"ratio":              true,
+		"duration":           true,
+		"input_reference":    true, // Sora 特有字段
+		"compliance_enabled": true,
+		"compliance_mode":    true,
 	}
 	return knownFields[field]
 }
