@@ -747,8 +747,9 @@ func (t *TaskSubmitReq) HasAudioReference() bool {
 func (t *TaskSubmitReq) UnmarshalJSON(data []byte) error {
 	type Alias TaskSubmitReq
 	aux := &struct {
-		Metadata json.RawMessage `json:"metadata,omitempty"`
-		Duration json.RawMessage `json:"duration,omitempty"`
+		Metadata          json.RawMessage `json:"metadata,omitempty"`
+		Duration          json.RawMessage `json:"duration,omitempty"`
+		ComplianceEnabled json.RawMessage `json:"compliance_enabled,omitempty"`
 		*Alias
 	}{
 		Alias: (*Alias)(t),
@@ -769,6 +770,26 @@ func (t *TaskSubmitReq) UnmarshalJSON(data []byte) error {
 					t.Duration = v
 				}
 			}
+		}
+	}
+	if len(aux.ComplianceEnabled) > 0 {
+		var enabled bool
+		if err := common.Unmarshal(aux.ComplianceEnabled, &enabled); err == nil {
+			t.ComplianceEnabled = &enabled
+		} else {
+			var raw string
+			if err := common.Unmarshal(aux.ComplianceEnabled, &raw); err != nil {
+				return fmt.Errorf("invalid compliance_enabled: must be a boolean or boolean string")
+			}
+			switch strings.ToLower(strings.TrimSpace(raw)) {
+			case "true", "1", "yes", "on":
+				enabled = true
+			case "false", "0", "no", "off":
+				enabled = false
+			default:
+				return fmt.Errorf("invalid compliance_enabled %q: must be true or false", raw)
+			}
+			t.ComplianceEnabled = &enabled
 		}
 	}
 

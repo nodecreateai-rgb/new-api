@@ -56,3 +56,16 @@ func TestTaskSubmitReqAcceptsComplianceParams(t *testing.T) {
 		t.Fatalf("compliance_mode=%q", req.ComplianceMode)
 	}
 }
+
+func TestTaskSubmitReqAcceptsComplianceBooleanStrings(t *testing.T) {
+	for raw, want := range map[string]bool{"true": true, "false": false} {
+		var req TaskSubmitReq
+		body := []byte(`{"compliance_enabled":"` + raw + `"}`)
+		if err := basecommon.Unmarshal(body, &req); err != nil {
+			t.Fatal(err)
+		}
+		if req.ComplianceEnabled == nil || *req.ComplianceEnabled != want {
+			t.Fatalf("raw=%q compliance_enabled=%v want=%v", raw, req.ComplianceEnabled, want)
+		}
+	}
+}
