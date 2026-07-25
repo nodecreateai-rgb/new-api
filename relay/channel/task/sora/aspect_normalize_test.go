@@ -125,8 +125,11 @@ func TestTaskSubmitReqToUpstreamVideoBodyAcceptsImageAndVideoRefs(t *testing.T) 
 	}
 	body := taskSubmitReqToUpstreamVideoBody(req, "seedance-2.0")
 	images, ok := body["image_refs"].([]string)
-	if !ok || len(images) != 2 || body["image_url"] != images[0] {
+	if !ok || len(images) != 2 {
 		t.Fatalf("images body=%v", body)
+	}
+	if _, exists := body["image_url"]; exists {
+		t.Fatalf("multi-reference body must not duplicate the first image in image_url: %v", body)
 	}
 	videos, ok := body["video_refs"].([]string)
 	if !ok || len(videos) != 2 || body["video_url"] != videos[0] || body["reference_video"] != videos[0] {
