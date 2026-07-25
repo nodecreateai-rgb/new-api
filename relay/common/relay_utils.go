@@ -1,7 +1,10 @@
 package common
 
 import (
+	"encoding/base64"
 	"fmt"
+	"io"
+	"mime/multipart"
 	"net/http"
 	"strconv"
 	"strings"
@@ -80,7 +83,8 @@ func validatePrompt(prompt string) *dto.TaskError {
 
 func validateMultipartTaskRequest(c *gin.Context, info *RelayInfo, action string) (TaskSubmitReq, error) {
 	var req TaskSubmitReq
-	if _, err := c.MultipartForm(); err != nil {
+	form, err := c.MultipartForm()
+	if err != nil {
 		return req, err
 	}
 
@@ -119,6 +123,15 @@ func validateMultipartTaskRequest(c *gin.Context, info *RelayInfo, action string
 	if images := formData["images"]; len(images) > 0 {
 		req.Images = images
 	}
+	for _, field := range []string{"image", "image[]", "images", "image_refs", "image_urls", "reference_images", "extra_images", "input_reference"} {
+		for _, fileHeader := range form.File[field] {
+			dataURL, err := taskMultipartFileDataURL(fileHeader)
+			if err != nil {
+				return req, fmt.Errorf("read multipart %s: %w", field, err)
+			}
+			req.Images = append(req.Images, dataURL)
+		}
+	}
 
 	for key, values := range formData {
 		if len(values) > 0 && !isKnownTaskField(key) {
@@ -132,6 +145,23 @@ func validateMultipartTaskRequest(c *gin.Context, info *RelayInfo, action string
 		}
 	}
 	return req, nil
+}
+
+func taskMultipartFileDataURL(fileHeader *multipart.FileHeader) (string, error) {
+	file, err := fileHeader.Open()
+	if err != nil {
+		return "", err
+	}
+	defer file.Close()
+	data, err := io.ReadAll(file)
+	if err != nil {
+		return "", err
+	}
+	contentType := strings.TrimSpace(fileHeader.Header.Get("Content-Type"))
+	if contentType == "" || contentType == "application/octet-stream" {
+		contentType = http.DetectContentType(data)
+	}
+	return "data:" + contentType + ";base64," + base64.StdEncoding.EncodeToString(data), nil
 }
 
 func ValidateMultipartDirect(c *gin.Context, info *RelayInfo) *dto.TaskError {
@@ -241,10 +271,11 @@ func ValidateBasicTaskRequest(c *gin.Context, info *RelayInfo, action string) *d
 		if err != nil {
 			return createTaskError(err, "invalid_multipart_form", http.StatusBadRequest, true)
 		}
-	}
-	// 为了metadata字段的兼容性，统一UnmarshalBodyReusable
-	if err := common.UnmarshalBodyReusable(c, &req); err != nil {
-		return createTaskError(err, "invalid_request", http.StatusBadRequest, true)
+	} else {
+		// 为了metadata字段的兼容性，统一UnmarshalBodyReusable
+		if err := common.UnmarshalBodyReusable(c, &req); err != nil {
+			return createTaskError(err, "invalid_request", http.StatusBadRequest, true)
+		}
 	}
 
 	if taskErr := validatePrompt(req.Prompt); taskErr != nil {

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"mime/multipart"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -96,5 +97,46 @@ func TestValidateMultipartTaskRequestAspectRatioWins(t *testing.T) {
 	}
 	if req.AspectRatio != "16:9" {
 		t.Fatalf("aspect_ratio=%q", req.AspectRatio)
+	}
+}
+
+func TestValidateMultipartTaskRequestKeepsAllImageFiles(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	c, _ := gin.CreateTestContext(httptest.NewRecorder())
+	var body bytes.Buffer
+	w := multipart.NewWriter(&body)
+	_ = w.WriteField("prompt", "use every image")
+	for _, item := range []struct {
+		field string
+		name  string
+		data  string
+	}{
+		{field: "image", name: "one.png", data: "first-image"},
+		{field: "image[]", name: "two.png", data: "second-image"},
+		{field: "reference_images", name: "three.png", data: "third-image"},
+	} {
+		part, err := w.CreateFormFile(item.field, item.name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := part.Write([]byte(item.data)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	_ = w.Close()
+	c.Request = httptest.NewRequest("POST", "/v1/videos", &body)
+	c.Request.Header.Set("Content-Type", w.FormDataContentType())
+
+	req, err := validateMultipartTaskRequest(c, &RelayInfo{}, "generate")
+	if err != nil {
+		t.Fatalf("validate request: %v", err)
+	}
+	if len(req.Images) != 3 {
+		t.Fatalf("images=%d want=3", len(req.Images))
+	}
+	for i, ref := range req.Images {
+		if !strings.HasPrefix(ref, "data:") || !strings.Contains(ref, ";base64,") {
+			t.Fatalf("image %d is not a data URL: %q", i, ref)
+		}
 	}
 }
