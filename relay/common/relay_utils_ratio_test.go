@@ -100,6 +100,46 @@ func TestValidateMultipartTaskRequestAspectRatioWins(t *testing.T) {
 	}
 }
 
+func TestValidateMultipartDirectKeepsAllImageFiles(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	c, _ := gin.CreateTestContext(httptest.NewRecorder())
+	var body bytes.Buffer
+	w := multipart.NewWriter(&body)
+	_ = w.WriteField("prompt", "use every image")
+	_ = w.WriteField("model", "seedance-video-fast")
+	for _, item := range []struct {
+		field string
+		name  string
+		data  string
+	}{
+		{field: "image", name: "one.png", data: "first-image"},
+		{field: "image[]", name: "two.png", data: "second-image"},
+		{field: "reference_images", name: "three.png", data: "third-image"},
+	} {
+		part, err := w.CreateFormFile(item.field, item.name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := part.Write([]byte(item.data)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	_ = w.Close()
+	c.Request = httptest.NewRequest("POST", "/v1/videos", &body)
+	c.Request.Header.Set("Content-Type", w.FormDataContentType())
+
+	if taskErr := ValidateMultipartDirect(c, &RelayInfo{TaskRelayInfo: &TaskRelayInfo{}}); taskErr != nil {
+		t.Fatalf("validate request: %v", taskErr)
+	}
+	req, err := GetTaskRequest(c)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(req.Images) != 3 {
+		t.Fatalf("images=%d want=3", len(req.Images))
+	}
+}
+
 func TestValidateMultipartTaskRequestKeepsAllImageFiles(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	c, _ := gin.CreateTestContext(httptest.NewRecorder())
