@@ -247,6 +247,10 @@ func ensureDopioRMBPricing() {
 		"vip":     1,
 		"svip":    1,
 		"vip2":    1,
+		"vip6":    1,
+	}
+	targetUserUsableGroups := map[string]string{
+		"vip6": "VIP6分组",
 	}
 	// Fixed per-group RMB prices for Dopio video aliases. ModelGroupPrice
 	// overrides ModelPrice and resets group ratio to 1 during billing, which is
@@ -356,6 +360,10 @@ func ensureDopioRMBPricing() {
 			"seedance-video-fast-per-second":     0.2,
 			"seedance-video-standard-per-second": 0.33,
 		},
+		"vip6": {
+			"seedance-2.0-fast-720p": 1.5,
+			"seedance-2.0-720p":      2.5,
+		},
 	}
 
 	updates := map[string]string{}
@@ -366,6 +374,7 @@ func ensureDopioRMBPricing() {
 	currentModelPrice := common.OptionMap["ModelPrice"]
 	currentGroupRatio := common.OptionMap["GroupRatio"]
 	currentModelGroupPrice := common.OptionMap["ModelGroupPrice"]
+	currentUserUsableGroups := common.OptionMap["UserUsableGroups"]
 	common.OptionMapRWMutex.RUnlock()
 
 	if currentPrice != targetPrice {
@@ -432,6 +441,28 @@ func ensureDopioRMBPricing() {
 		}
 	}
 
+	userUsableGroups := map[string]string{}
+	if currentUserUsableGroups != "" {
+		if err := json.Unmarshal([]byte(currentUserUsableGroups), &userUsableGroups); err != nil {
+			common.SysLog("failed to parse UserUsableGroups while enforcing Dopio RMB pricing: " + err.Error())
+			userUsableGroups = map[string]string{}
+		}
+	}
+	changed = false
+	for group, description := range targetUserUsableGroups {
+		if userUsableGroups[group] != description {
+			userUsableGroups[group] = description
+			changed = true
+		}
+	}
+	if changed {
+		if b, err := json.Marshal(userUsableGroups); err == nil {
+			updates["UserUsableGroups"] = string(b)
+		} else {
+			common.SysLog("failed to marshal UserUsableGroups while enforcing Dopio RMB pricing: " + err.Error())
+		}
+	}
+
 	modelGroupPrices := map[string]map[string]float64{}
 	if currentModelGroupPrice != "" {
 		if err := json.Unmarshal([]byte(currentModelGroupPrice), &modelGroupPrices); err != nil {
@@ -485,7 +516,34 @@ func ensureDopioRMBPricing() {
 		common.SysLog("failed to enforce Dopio RMB pricing: " + err.Error())
 		return
 	}
-	common.SysLog("enforced Dopio RMB pricing incl banana=0.01, sd2-c6=1, sd2-c7=0.5, vip2 sd2-c7=0.3, sd2-c11=2.5, sd2-c12=3, vip2 sd2-c11=1.5, vip2 sd2-c12=2, Price=1, USDExchangeRate=1, quota_display_type=CNY")
+	if err := ensureChannelGroupAbilities(15, "vip6"); err != nil {
+		common.SysLog("failed to ensure vip6 channel abilities: " + err.Error())
+		return
+	}
+	common.SysLog("enforced Dopio RMB pricing incl vip6 Seedance 720p fast=1.5/full=2.5, banana=0.01, sd2-c6=1, sd2-c7=0.5, vip2 sd2-c7=0.3, sd2-c11=2.5, sd2-c12=3, vip2 sd2-c11=1.5, vip2 sd2-c12=2, Price=1, USDExchangeRate=1, quota_display_type=CNY")
+}
+
+func ensureChannelGroupAbilities(channelID int, group string) error {
+	var channel Channel
+	if err := DB.First(&channel, channelID).Error; err != nil {
+		return err
+	}
+	groups := strings.Split(channel.Group, ",")
+	found := false
+	for _, existingGroup := range groups {
+		if strings.TrimSpace(existingGroup) == group {
+			found = true
+			break
+		}
+	}
+	if !found {
+		groups = append(groups, group)
+		channel.Group = strings.Join(groups, ",")
+		if err := DB.Model(&Channel{}).Where("id = ?", channelID).Update("group", channel.Group).Error; err != nil {
+			return err
+		}
+	}
+	return channel.AddAbilities(nil)
 }
 
 func SyncOptions(frequency int) {
