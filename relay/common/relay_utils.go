@@ -109,8 +109,11 @@ func validateMultipartTaskRequest(c *gin.Context, info *RelayInfo, action string
 	req.ImageURLs = append([]string(nil), formData["image_urls"]...)
 	// Some clients submit several references as repeated historically singular
 	// fields. Keep the scalar first item for compatibility, and also preserve the
-	// complete repeated list so the outbound canonical image_refs array is not
-	// silently truncated to one image.
+	// complete repeated lists so the outbound canonical image_refs array is not
+	// silently truncated to one image. This applies to every singular alias, not
+	// only image_url: production clients also repeat image/input_reference.
+	req.Images = append(req.Images, formData["image"]...)
+	req.Images = append(req.Images, formData["input_reference"]...)
 	req.ImageURLs = append(req.ImageURLs, formData["image_url"]...)
 	req.ReferenceImages = append([]string(nil), formData["reference_images"]...)
 	req.ReferenceImages = append(req.ReferenceImages, formData["reference_image"]...)

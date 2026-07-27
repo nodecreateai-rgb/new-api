@@ -1,6 +1,8 @@
 package sora
 
 import (
+	"fmt"
+	"strings"
 	"testing"
 
 	relaycommon "github.com/QuantumNous/new-api/relay/common"
@@ -37,6 +39,19 @@ func TestCanonicalizeDoesNotRewriteOutOfRangeReference(t *testing.T) {
 	got := canonicalizeImageReferencePrompt("参考图 2 环绕镜头", 1)
 	if got != "参考图 2 环绕镜头" {
 		t.Fatalf("prompt=%q", got)
+	}
+}
+
+func TestCanonicalizeImageReferencePromptBindsEveryReceivedImage(t *testing.T) {
+	got := canonicalizeImageReferencePrompt("人物参考@图片1，场景自然展开", 4)
+	for i := 1; i <= 4; i++ {
+		want := fmt.Sprintf("@Image%d", i)
+		if !strings.Contains(got, want) {
+			t.Fatalf("prompt missing %s: %s", want, got)
+		}
+	}
+	if strings.Contains(got, "@图片1") {
+		t.Fatalf("Chinese alias not normalized: %s", got)
 	}
 }
 

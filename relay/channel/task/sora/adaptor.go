@@ -109,7 +109,7 @@ func isSeedanceModel(model string) bool {
 }
 
 var imageReferenceMentionRE = regexp.MustCompile(`(?i)(?:@?image\s*0*[1-9]\d*|参考图(?:片)?\s*0*[1-9]\d*|图片\s*0*[1-9]\d*)`)
-var chineseImageReferenceRE = regexp.MustCompile(`(?i)(?:参考图(?:片)?|图片)\s*0*([1-9]\d*)`)
+var chineseImageReferenceRE = regexp.MustCompile(`(?i)@?(?:参考图(?:片)?|图片)\s*0*([1-9]\d*)`)
 var plainImageReferenceRE = regexp.MustCompile(`(?i)(?:@?image)\s*0*([1-9]\d*)`)
 var compactImageReferenceBoundaryRE = regexp.MustCompile(`(@Image[1-9]\d*)([^\s，。！？、；：,.!?;:])`)
 
@@ -136,7 +136,36 @@ func canonicalizeImageReferencePrompt(prompt string, imageCount int) string {
 	}
 	prompt = normalize(chineseImageReferenceRE, prompt)
 	prompt = normalize(plainImageReferenceRE, prompt)
-	return compactImageReferenceBoundaryRE.ReplaceAllString(prompt, "$1 $2")
+	prompt = compactImageReferenceBoundaryRE.ReplaceAllString(prompt, "$1 $2")
+
+	// Seedance treats uploaded style blobs as weak, unindexed context unless the
+	// prompt explicitly binds each @ImageN handle. Preserve the user's wording,
+	// but append only missing references so every uploaded image is semantically
+	// available to the model instead of effectively falling back to Image1.
+	present := make(map[int]bool, imageCount)
+	for _, match := range plainImageReferenceRE.FindAllStringSubmatch(prompt, -1) {
+		if len(match) != 2 {
+			continue
+		}
+		if n, err := strconv.Atoi(match[1]); err == nil && n >= 1 && n <= imageCount {
+			present[n] = true
+		}
+	}
+	// Multi-reference Seedance requests need every handle to be explicit. Keep
+	// singular requests unchanged for backward compatibility, and do not append a
+	// contradictory binding when the prompt contains an out-of-range index.
+	missing := make([]string, 0, imageCount-len(present))
+	if imageCount > 1 && len(present) > 0 {
+		for n := 1; n <= imageCount; n++ {
+			if !present[n] {
+				missing = append(missing, fmt.Sprintf("@Image%d", n))
+			}
+		}
+	}
+	if len(missing) > 0 {
+		prompt = strings.TrimSpace(prompt) + "\n参考素材绑定（全部必须使用）：" + strings.Join(missing, " ")
+	}
+	return prompt
 }
 
 // EstimateBilling 根据用户请求的 seconds 和 size 计算 OtherRatios。

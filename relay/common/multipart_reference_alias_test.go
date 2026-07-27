@@ -66,6 +66,29 @@ func TestValidateMultipartTaskRequestPreservesRepeatedSingularImageAliases(t *te
 	}
 }
 
+func TestValidateMultipartTaskRequestPreservesRepeatedImageField(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	var body bytes.Buffer
+	w := multipart.NewWriter(&body)
+	_ = w.WriteField("prompt", "run")
+	_ = w.WriteField("model", "seedance-2.0-720p")
+	_ = w.WriteField("image", "https://assets.example/one.png")
+	_ = w.WriteField("image", "https://assets.example/two.png")
+	_ = w.WriteField("image", "https://assets.example/three.png")
+	_ = w.Close()
+
+	c, _ := gin.CreateTestContext(httptest.NewRecorder())
+	c.Request = httptest.NewRequest("POST", "/v1/videos", &body)
+	c.Request.Header.Set("Content-Type", w.FormDataContentType())
+	req, err := validateMultipartTaskRequest(c, &RelayInfo{}, "generate")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := collectTaskImageRefsForTest(req); len(got) != 3 {
+		t.Fatalf("collected=%v want=3", got)
+	}
+}
+
 func collectTaskImageRefsForTest(req TaskSubmitReq) []string {
 	seen := map[string]bool{}
 	var out []string
