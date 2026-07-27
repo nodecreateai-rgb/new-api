@@ -94,6 +94,9 @@ func validateMultipartTaskRequest(c *gin.Context, info *RelayInfo, action string
 		Model:          formData.Get("model"),
 		Mode:           formData.Get("mode"),
 		Image:          formData.Get("image"),
+		ImageURL:       formData.Get("image_url"),
+		ReferenceImage: formData.Get("reference_image"),
+		InputReference: formData.Get("input_reference"),
 		Size:           formData.Get("size"),
 		Resolution:     formData.Get("resolution"),
 		Aspect:         formData.Get("aspect"),
@@ -102,6 +105,33 @@ func validateMultipartTaskRequest(c *gin.Context, info *RelayInfo, action string
 		ComplianceMode: formData.Get("compliance_mode"),
 		Metadata:       make(map[string]interface{}),
 	}
+	req.ImageRefs = append([]string(nil), formData["image_refs"]...)
+	req.ImageURLs = append([]string(nil), formData["image_urls"]...)
+	// Some clients submit several references as repeated historically singular
+	// fields. Keep the scalar first item for compatibility, and also preserve the
+	// complete repeated list so the outbound canonical image_refs array is not
+	// silently truncated to one image.
+	req.ImageURLs = append(req.ImageURLs, formData["image_url"]...)
+	req.ReferenceImages = append([]string(nil), formData["reference_images"]...)
+	req.ReferenceImages = append(req.ReferenceImages, formData["reference_image"]...)
+	req.ExtraImages = append([]string(nil), formData["extra_images"]...)
+	req.Video = formData.Get("video")
+	req.VideoURL = formData.Get("video_url")
+	req.ReferenceVideo = formData.Get("reference_video")
+	req.VideoRefs = append([]string(nil), formData["video_refs"]...)
+	req.VideoURLs = append([]string(nil), formData["video_urls"]...)
+	req.VideoURLs = append(req.VideoURLs, formData["video_url"]...)
+	req.ReferenceVideos = append([]string(nil), formData["reference_videos"]...)
+	req.ReferenceVideos = append(req.ReferenceVideos, formData["reference_video"]...)
+	req.AudioURL = formData.Get("audio_url")
+	req.ReferenceAudio = formData.Get("reference_audio")
+	req.AudioRefs = append([]string(nil), formData["audio_refs"]...)
+	req.AudioURLs = append([]string(nil), formData["audio_urls"]...)
+	req.AudioURLs = append(req.AudioURLs, formData["audio_url"]...)
+	req.ReferenceAudios = append([]string(nil), formData["reference_audios"]...)
+	req.ReferenceAudios = append(req.ReferenceAudios, formData["reference_audio"]...)
+	req.Audios = append([]string(nil), formData["audios"]...)
+	req.ExtraAudios = append([]string(nil), formData["extra_audios"]...)
 	if raw := strings.TrimSpace(formData.Get("compliance_enabled")); raw != "" {
 		if enabled, err := strconv.ParseBool(raw); err == nil {
 			req.ComplianceEnabled = &enabled
@@ -114,8 +144,14 @@ func validateMultipartTaskRequest(c *gin.Context, info *RelayInfo, action string
 		req.AspectRatio = strings.TrimSpace(req.Aspect)
 	}
 
-	if durationStr := formData.Get("seconds"); durationStr != "" {
+	req.Seconds = strings.TrimSpace(formData.Get("seconds"))
+	if durationStr := strings.TrimSpace(formData.Get("duration")); durationStr != "" {
 		if duration, err := strconv.Atoi(durationStr); err == nil {
+			req.Duration = duration
+		}
+	}
+	if req.Duration <= 0 && req.Seconds != "" {
+		if duration, err := strconv.Atoi(req.Seconds); err == nil {
 			req.Duration = duration
 		}
 	}
@@ -254,7 +290,27 @@ func isKnownTaskField(field string) bool {
 		"model":              true,
 		"mode":               true,
 		"image":              true,
+		"image_url":          true,
+		"image_refs":         true,
+		"image_urls":         true,
+		"reference_image":    true,
+		"reference_images":   true,
+		"extra_images":       true,
 		"images":             true,
+		"video":              true,
+		"video_url":          true,
+		"video_refs":         true,
+		"video_urls":         true,
+		"reference_video":    true,
+		"reference_videos":   true,
+		"extra_videos":       true,
+		"audio_url":          true,
+		"audio_refs":         true,
+		"audio_urls":         true,
+		"reference_audio":    true,
+		"reference_audios":   true,
+		"extra_audios":       true,
+		"audios":             true,
 		"size":               true,
 		"resolution":         true,
 		"aspect":             true,

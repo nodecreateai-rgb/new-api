@@ -106,6 +106,15 @@ func (e *NewAPIError) Unwrap() error {
 	return e.Err
 }
 
+// UnderlyingError exposes the transport/provider cause to retry classifiers
+// without changing the stable public error returned to API clients.
+func (e *NewAPIError) UnderlyingError() error {
+	if e == nil {
+		return nil
+	}
+	return e.Err
+}
+
 func (e *NewAPIError) GetErrorCode() ErrorCode {
 	if e == nil {
 		return ""

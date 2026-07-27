@@ -7,8 +7,10 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/textproto"
+	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/constant"
@@ -92,7 +94,49 @@ func (a *TaskAdaptor) ValidateRequestAndSetAction(c *gin.Context, info *relaycom
 	if info.Action == constant.TaskActionRemix {
 		return validateRemixRequest(c)
 	}
-	return relaycommon.ValidateMultipartDirect(c, info)
+	if taskErr := relaycommon.ValidateMultipartDirect(c, info); taskErr != nil {
+		return taskErr
+	}
+	req, err := relaycommon.GetTaskRequest(c)
+	if err == nil && isSeedanceModel(info.OriginModelName) && promptMentionsImageReference(req.Prompt) && !req.HasImage() {
+		return &dto.TaskError{Code: "missing_reference_image", Message: "prompt references an image, but no image material was received; send image/image_url/reference_image/image_refs", StatusCode: http.StatusBadRequest, LocalError: true, Error: fmt.Errorf("missing reference image material")}
+	}
+	return nil
+}
+
+func isSeedanceModel(model string) bool {
+	return strings.Contains(strings.ToLower(strings.TrimSpace(model)), "seedance")
+}
+
+var imageReferenceMentionRE = regexp.MustCompile(`(?i)(?:@?image\s*0*[1-9]\d*|参考图(?:片)?\s*0*[1-9]\d*|图片\s*0*[1-9]\d*)`)
+var chineseImageReferenceRE = regexp.MustCompile(`(?i)(?:参考图(?:片)?|图片)\s*0*([1-9]\d*)`)
+var plainImageReferenceRE = regexp.MustCompile(`(?i)(?:@?image)\s*0*([1-9]\d*)`)
+var compactImageReferenceBoundaryRE = regexp.MustCompile(`(@Image[1-9]\d*)([^\s，。！？、；：,.!?;:])`)
+
+func promptMentionsImageReference(prompt string) bool {
+	return imageReferenceMentionRE.MatchString(prompt)
+}
+
+func canonicalizeImageReferencePrompt(prompt string, imageCount int) string {
+	if imageCount <= 0 {
+		return prompt
+	}
+	normalize := func(re *regexp.Regexp, text string) string {
+		return re.ReplaceAllStringFunc(text, func(match string) string {
+			parts := re.FindStringSubmatch(match)
+			if len(parts) != 2 {
+				return match
+			}
+			n, err := strconv.Atoi(parts[1])
+			if err != nil || n < 1 || n > imageCount {
+				return match
+			}
+			return fmt.Sprintf("@Image%d", n)
+		})
+	}
+	prompt = normalize(chineseImageReferenceRE, prompt)
+	prompt = normalize(plainImageReferenceRE, prompt)
+	return compactImageReferenceBoundaryRE.ReplaceAllString(prompt, "$1 $2")
 }
 
 // EstimateBilling 根据用户请求的 seconds 和 size 计算 OtherRatios。
@@ -356,7 +400,31 @@ func (a *TaskAdaptor) FetchTask(baseUrl, key string, body map[string]any, proxy 
 	if err != nil {
 		return nil, fmt.Errorf("new proxy http client failed: %w", err)
 	}
-	return client.Do(req)
+	return doRestartWindowFetch(client, req)
+}
+
+func doRestartWindowFetch(client *http.Client, req *http.Request) (*http.Response, error) {
+	const maxAttempts = 15
+	for attempt := 1; attempt <= maxAttempts; attempt++ {
+		current := req
+		if attempt > 1 {
+			current = req.Clone(req.Context())
+		}
+		resp, err := client.Do(current)
+		if err == nil {
+			return resp, nil
+		}
+		if attempt == maxAttempts || !channel.IsRestartWindowTransportError(err) {
+			return nil, err
+		}
+		delay := time.Duration(attempt) * time.Second
+		select {
+		case <-req.Context().Done():
+			return nil, req.Context().Err()
+		case <-time.After(delay):
+		}
+	}
+	return nil, fmt.Errorf("task fetch failed after restart-window retries")
 }
 
 func (a *TaskAdaptor) GetModelList() []string {
@@ -559,9 +627,10 @@ func firstFormValue(values map[string][]string, key string) string {
 }
 
 func taskSubmitReqToUpstreamVideoBody(req relaycommon.TaskSubmitReq, upstreamModel string) map[string]interface{} {
+	imageRefs := collectUpstreamVideoImageRefs(req)
 	body := map[string]interface{}{
 		"model":  upstreamModel,
-		"prompt": req.Prompt,
+		"prompt": canonicalizeImageReferencePrompt(req.Prompt, len(imageRefs)),
 	}
 	if duration := taskSubmitDuration(req); duration > 0 {
 		body["duration"] = duration
@@ -589,7 +658,7 @@ func taskSubmitReqToUpstreamVideoBody(req relaycommon.TaskSubmitReq, upstreamMod
 	if complianceMode := strings.TrimSpace(req.ComplianceMode); complianceMode != "" {
 		body["compliance_mode"] = complianceMode
 	}
-	if imageRefs := collectUpstreamVideoImageRefs(req); len(imageRefs) > 0 {
+	if len(imageRefs) > 0 {
 		body["image_refs"] = imageRefs
 		// Keep the legacy scalar alias only for a genuinely singular request.
 		// Multi-reference upstreams already consume image_refs; repeating the

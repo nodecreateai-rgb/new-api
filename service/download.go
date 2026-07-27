@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/setting/system_setting"
@@ -49,6 +51,44 @@ func DoWorkerRequest(req *WorkerRequest) (*http.Response, error) {
 	return GetHttpClient().Post(workerUrl, "application/json", bytes.NewBuffer(workerPayload))
 }
 
+const downloadRequestMaxAttempts = 3
+
+func isRetryableDownloadError(err error) bool {
+	if err == nil {
+		return false
+	}
+	if err == io.EOF || err == io.ErrUnexpectedEOF {
+		return true
+	}
+	message := strings.ToLower(err.Error())
+	return strings.Contains(message, "eof") ||
+		strings.Contains(message, "connection reset") ||
+		strings.Contains(message, "broken pipe") ||
+		strings.Contains(message, "server closed idle connection")
+}
+
+func doDownloadWithRetry(client *http.Client, originURL string, maxAttempts int) (*http.Response, error) {
+	if maxAttempts < 1 {
+		maxAttempts = 1
+	}
+	var lastErr error
+	for attempt := 1; attempt <= maxAttempts; attempt++ {
+		resp, err := client.Get(originURL)
+		if err == nil {
+			return resp, nil
+		}
+		lastErr = err
+		if !isRetryableDownloadError(err) || attempt == maxAttempts {
+			break
+		}
+		if transport, ok := client.Transport.(*http.Transport); ok && transport != nil {
+			transport.CloseIdleConnections()
+		}
+		time.Sleep(time.Duration(attempt) * 200 * time.Millisecond)
+	}
+	return nil, lastErr
+}
+
 func DoDownloadRequest(originUrl string, reason ...string) (resp *http.Response, err error) {
 	if system_setting.EnableWorker() {
 		common.SysLog(fmt.Sprintf("downloading file from worker: %s, reason: %s", originUrl, strings.Join(reason, ", ")))
@@ -65,6 +105,6 @@ func DoDownloadRequest(originUrl string, reason ...string) (resp *http.Response,
 		}
 
 		common.SysLog(fmt.Sprintf("downloading from origin: %s, reason: %s", common.MaskSensitiveInfo(originUrl), strings.Join(reason, ", ")))
-		return GetHttpClient().Get(originUrl)
+		return doDownloadWithRetry(GetHttpClient(), originUrl, downloadRequestMaxAttempts)
 	}
 }

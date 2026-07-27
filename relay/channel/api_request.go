@@ -485,6 +485,15 @@ func sendPingData(c *gin.Context, mutex *sync.Mutex) error {
 func DoRequest(c *gin.Context, req *http.Request, info *common.RelayInfo) (*http.Response, error) {
 	return doRequest(c, req, info)
 }
+
+func isTaskSubmitRequest(c *gin.Context) bool {
+	if c == nil || c.Request == nil || c.Request.Method != http.MethodPost {
+		return false
+	}
+	path := strings.TrimSpace(c.Request.URL.Path)
+	return path == "/v1/videos" || path == "/v1/video" || path == "/v1/tasks"
+}
+
 func doRequest(c *gin.Context, req *http.Request, info *common.RelayInfo) (*http.Response, error) {
 	var client *http.Client
 	var err error
@@ -515,10 +524,31 @@ func doRequest(c *gin.Context, req *http.Request, info *common.RelayInfo) (*http
 		}
 	}
 
-	resp, err := client.Do(req)
-	if err != nil {
-		logger.LogError(c, "do request failed: "+err.Error())
-		return nil, types.NewError(err, types.ErrorCodeDoRequestFailed, types.ErrOptionWithHideErrMsg("upstream error: do request failed"))
+	var resp *http.Response
+	const taskTransportAttempts = 15
+	for attempt := 1; attempt <= taskTransportAttempts; attempt++ {
+		if attempt > 1 && req.GetBody != nil {
+			body, bodyErr := req.GetBody()
+			if bodyErr != nil {
+				return nil, types.NewError(bodyErr, types.ErrorCodeDoRequestFailed, types.ErrOptionWithHideErrMsg("upstream error: do request failed"))
+			}
+			req.Body = body
+		}
+		resp, err = client.Do(req)
+		if err == nil {
+			break
+		}
+		if !isTaskSubmitRequest(c) || attempt == taskTransportAttempts || !isRestartWindowTransportError(err) {
+			logger.LogError(c, "do request failed: "+err.Error())
+			return nil, types.NewError(err, types.ErrorCodeDoRequestFailed, types.ErrOptionWithHideErrMsg("upstream error: do request failed"))
+		}
+		delay := time.Duration(attempt) * time.Second
+		logger.LogError(c, fmt.Sprintf("task upstream unavailable during restart window; retry %d/%d in %s: %v", attempt, taskTransportAttempts, delay, err))
+		select {
+		case <-c.Request.Context().Done():
+			return nil, types.NewError(c.Request.Context().Err(), types.ErrorCodeDoRequestFailed, types.ErrOptionWithHideErrMsg("upstream error: do request failed"))
+		case <-time.After(delay):
+		}
 	}
 	if resp == nil {
 		return nil, errors.New("resp is nil")
@@ -559,11 +589,16 @@ func DoTaskApiRequest(a TaskAdaptor, c *gin.Context, info *common.RelayInfo, req
 		if doErr == nil {
 			return resp, nil
 		}
-		if attempt >= maxAttempts || !isRestartWindowTransportError(doErr) {
-			return nil, fmt.Errorf("do request failed: %w", doErr)
+		rootErr := doErr
+		var newAPIErr *types.NewAPIError
+		if errors.As(doErr, &newAPIErr) && newAPIErr.UnderlyingError() != nil {
+			rootErr = newAPIErr.UnderlyingError()
+		}
+		if attempt >= maxAttempts || !isRestartWindowTransportError(rootErr) {
+			return nil, fmt.Errorf("do request failed: %w", rootErr)
 		}
 		delay := time.Duration(attempt) * time.Second
-		logger.LogError(c, fmt.Sprintf("task upstream unavailable during restart window; retry %d/%d in %s: %v", attempt, maxAttempts, delay, doErr))
+		logger.LogError(c, fmt.Sprintf("task upstream unavailable during restart window; retry %d/%d in %s: %v", attempt, maxAttempts, delay, rootErr))
 		select {
 		case <-c.Request.Context().Done():
 			return nil, fmt.Errorf("do request failed: %w", c.Request.Context().Err())
@@ -590,4 +625,8 @@ func isRestartWindowTransportError(err error) bool {
 		}
 	}
 	return false
+}
+
+func IsRestartWindowTransportError(err error) bool {
+	return isRestartWindowTransportError(err)
 }
