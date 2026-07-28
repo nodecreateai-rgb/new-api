@@ -120,19 +120,17 @@ func VideoProxy(c *gin.Context) {
 			return
 		}
 	case constant.ChannelTypeOpenAI, constant.ChannelTypeSora:
-		if contentURL := privateVideoContentURL(baseURL, task.GetUpstreamTaskID()); contentURL != "" {
+		if directURL := strings.TrimSpace(task.PrivateData.UpstreamResultURL); directURL != "" {
+			videoURL = directURL
+		} else if directURL := getStoredVideoURL(task); directURL != "" {
+			videoURL = directURL
+		} else if directURL := resolveUpstreamTaskVideoURL(c.Request.Context(), client, baseURL, channel.Key, task.GetUpstreamTaskID()); directURL != "" {
+			videoURL = directURL
+		} else if contentURL := privateVideoContentURL(baseURL, task.GetUpstreamTaskID()); contentURL != "" {
 			videoURL = contentURL
 			req.Header.Set("Authorization", "Bearer "+channel.Key)
 		} else if outputURL := upstreamVideoOutputURL(baseURL, task.GetUpstreamTaskID()); outputURL != "" {
-			// Prefer the provider's local /outputs handle over URLs persisted in task.Data.
-			// Some upstream services store a public CDN/domain in their JSON response; those
-			// links can be stale, misconfigured, cached as 404, or leak internal branding.
-			// The upstream task id + channel base URL is the stable, private route.
 			videoURL = outputURL
-		} else if directURL := getStoredVideoURL(task); directURL != "" {
-			videoURL = directURL
-		} else if channel.Type == constant.ChannelTypeSora && upstreamVideoOutputURL(baseURL, task.GetUpstreamTaskID()) != "" {
-			videoURL = upstreamVideoOutputURL(baseURL, task.GetUpstreamTaskID())
 		} else {
 			videoURL = fmt.Sprintf("%s/v1/videos/%s/content", baseURL, task.GetUpstreamTaskID())
 			req.Header.Set("Authorization", "Bearer "+channel.Key)
@@ -216,6 +214,40 @@ func VideoProxy(c *gin.Context) {
 	if _, err = io.Copy(c.Writer, resp.Body); err != nil {
 		logger.LogError(c.Request.Context(), fmt.Sprintf("Failed to stream video content: %s", err.Error()))
 	}
+}
+
+func resolveUpstreamTaskVideoURL(ctx context.Context, client *http.Client, baseURL, apiKey, upstreamTaskID string) string {
+	baseURL = strings.TrimRight(strings.TrimSpace(baseURL), "/")
+	upstreamTaskID = strings.TrimSpace(upstreamTaskID)
+	if baseURL == "" || upstreamTaskID == "" {
+		return ""
+	}
+	requestCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
+	defer cancel()
+	req, err := http.NewRequestWithContext(requestCtx, http.MethodGet, baseURL+"/v1/videos/"+url.PathEscape(upstreamTaskID), nil)
+	if err != nil {
+		return ""
+	}
+	if key := strings.TrimSpace(apiKey); key != "" {
+		req.Header.Set("Authorization", "Bearer "+key)
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return ""
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return ""
+	}
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 2<<20))
+	if err != nil {
+		return ""
+	}
+	var payload any
+	if err := common.Unmarshal(body, &payload); err != nil {
+		return ""
+	}
+	return findVideoURLInPayload(payload)
 }
 
 func privateVideoContentURL(baseURL, upstreamTaskID string) string {

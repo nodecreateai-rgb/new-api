@@ -1,6 +1,12 @@
 package controller
 
-import "testing"
+import (
+	"context"
+	"io"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+)
 
 func TestResolvePossiblyRelativeVideoURL(t *testing.T) {
 	t.Run("relative output path uses channel base URL", func(t *testing.T) {
@@ -52,6 +58,25 @@ func TestVideoOutputCacheBypass(t *testing.T) {
 	want := "https://sd2-c7.dopio.cyou/outputs/task_abc.mp4?_cb=1783756372"
 	if got != want {
 		t.Fatalf("got %q want %q", got, want)
+	}
+}
+
+func TestResolveUpstreamTaskVideoURL(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/v1/videos/task_upstream" {
+			t.Fatalf("unexpected path %q", r.URL.Path)
+		}
+		if got := r.Header.Get("Authorization"); got != "Bearer secret" {
+			t.Fatalf("unexpected authorization %q", got)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = io.WriteString(w, `{"id":"task_upstream","status":"completed","video_url":"https://cdn.example.com/result.mp4"}`)
+	}))
+	defer server.Close()
+
+	got := resolveUpstreamTaskVideoURL(context.Background(), server.Client(), server.URL, "secret", "task_upstream")
+	if got != "https://cdn.example.com/result.mp4" {
+		t.Fatalf("got %q", got)
 	}
 }
 

@@ -7,10 +7,38 @@ import (
 	"os"
 	"testing"
 
+	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/constant"
 	"github.com/QuantumNous/new-api/model"
 	relaycommon "github.com/QuantumNous/new-api/relay/common"
 )
+
+func TestExtractCompletedVideoURLFromOpenAICompatibleTask(t *testing.T) {
+	payload := map[string]any{
+		"code": "success",
+		"data": map[string]any{
+			"id":        "task_upstream",
+			"task_id":   "task_provider_short",
+			"status":    "completed",
+			"progress":  100,
+			"video_url": "https://cdn.example.com/result.mp4",
+		},
+	}
+	body, err := common.Marshal(payload)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := extractCompletedVideoURL(body); got != "https://cdn.example.com/result.mp4" {
+		t.Fatalf("got %q", got)
+	}
+}
+
+func TestExtractCompletedVideoURLRejectsTaskIdentifiers(t *testing.T) {
+	body := []byte(`{"data":{"id":"task_upstream","task_id":"task_provider_short","status":"completed"}}`)
+	if got := extractCompletedVideoURL(body); got != "" {
+		t.Fatalf("task identifier leaked as URL: %q", got)
+	}
+}
 
 func TestValidateCompletedVideoRejectsZeroDurationMP4(t *testing.T) {
 	InitHttpClient()

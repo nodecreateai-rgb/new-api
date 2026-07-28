@@ -432,6 +432,9 @@ func updateVideoSingleTask(ctx context.Context, adaptor TaskPollingAdaptor, ch *
 		taskResult.TaskID = t.TaskID
 		taskResult.Status = string(t.Status)
 		taskResult.Url = t.GetResultURL()
+		if taskResult.Url == "" {
+			taskResult.Url = extractCompletedVideoURL(responseBody)
+		}
 		taskResult.Progress = t.Progress
 		taskResult.Reason = t.FailReason
 		task.Data = t.Data
@@ -511,15 +514,14 @@ func updateVideoSingleTask(ctx context.Context, adaptor TaskPollingAdaptor, ch *
 		if task.FinishTime == 0 {
 			task.FinishTime = now
 		}
-		if strings.HasPrefix(taskResult.Url, "data:") {
-			// data: URI (e.g. Vertex base64 encoded video) — keep in Data, not in ResultURL
-			task.PrivateData.ResultURL = taskcommon.BuildProxyURL(task.TaskID)
-		} else if taskResult.Url != "" {
-			// Direct upstream URL (e.g. Kling, Ali, Doubao, etc.)
-			task.PrivateData.ResultURL = taskResult.Url
+		// Always expose the stable New-API content endpoint. Keep any direct
+		// provider URL private so it can be fetched by VideoProxy without leaking
+		// the upstream host or returning an expiring CDN URL to clients.
+		task.PrivateData.ResultURL = taskcommon.BuildProxyURL(task.TaskID)
+		if strings.HasPrefix(taskResult.Url, "data:") || taskResult.Url == "" {
+			task.PrivateData.UpstreamResultURL = ""
 		} else {
-			// No URL from adaptor — construct proxy URL using public task ID
-			task.PrivateData.ResultURL = taskcommon.BuildProxyURL(task.TaskID)
+			task.PrivateData.UpstreamResultURL = taskResult.Url
 		}
 		shouldSettle = true
 	case model.TaskStatusFailure:
@@ -576,6 +578,40 @@ func updateVideoSingleTask(ctx context.Context, adaptor TaskPollingAdaptor, ch *
 const maxVideoValidationBytes int64 = 64 << 20
 
 var errVideoValidationInconclusive = errors.New("video validation inconclusive")
+
+func extractCompletedVideoURL(body []byte) string {
+	var payload any
+	if err := common.Unmarshal(body, &payload); err != nil {
+		return ""
+	}
+	return findCompletedVideoURL(payload)
+}
+
+func findCompletedVideoURL(payload any) string {
+	switch value := payload.(type) {
+	case map[string]any:
+		for _, key := range []string{"video_url", "videoUrl", "url", "download_url", "downloadUrl", "output_url", "outputUrl", "remote_url", "remoteUrl"} {
+			if candidate, ok := value[key].(string); ok {
+				candidate = strings.TrimSpace(candidate)
+				if strings.HasPrefix(candidate, "https://") || strings.HasPrefix(candidate, "http://") || strings.HasPrefix(candidate, "/") || strings.HasPrefix(candidate, "data:video/") {
+					return candidate
+				}
+			}
+		}
+		for _, child := range value {
+			if candidate := findCompletedVideoURL(child); candidate != "" {
+				return candidate
+			}
+		}
+	case []any:
+		for _, child := range value {
+			if candidate := findCompletedVideoURL(child); candidate != "" {
+				return candidate
+			}
+		}
+	}
+	return ""
+}
 
 func validateCompletedVideo(ctx context.Context, ch *model.Channel, task *model.Task, taskResult *relaycommon.TaskInfo) error {
 	videoURL := strings.TrimSpace(taskResult.Url)
