@@ -276,9 +276,12 @@ func ValidateMultipartDirect(c *gin.Context, info *RelayInfo) *dto.TaskError {
 }
 
 func supportsAudioReference(model string) bool {
-	switch strings.TrimSpace(model) {
-	case "seedance-720", "klsdpro2",
-		"seedance-video-fast", "seedance-video-standard",
+	model = strings.ToLower(strings.TrimSpace(model))
+	if strings.HasPrefix(model, "seedance-720") || strings.HasPrefix(model, "klsdpro2") {
+		return true
+	}
+	switch model {
+	case "seedance-video-fast", "seedance-video-standard",
 		"seedance-video-fast-per-second", "seedance-video-standard-per-second",
 		"seedance-2.0-fast-720p", "seedance-2.0-720p",
 		"seedance-2.0-1080p", "seedance-2.0-4k":
