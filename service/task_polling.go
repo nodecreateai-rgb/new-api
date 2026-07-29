@@ -441,6 +441,11 @@ func updateVideoSingleTask(ctx context.Context, adaptor TaskPollingAdaptor, ch *
 	} else if taskResult, err = adaptor.ParseTaskResult(responseBody); err != nil {
 		return fmt.Errorf("parseTaskResult failed for task %s: %w", taskId, err)
 	}
+	// OpenAI/Sora adaptors leave Url empty on completed; qinnaonao and similar
+	// gateways return a CDN url in the JSON instead of serving /outputs/{id}.mp4.
+	if taskResult.Url == "" {
+		taskResult.Url = extractCompletedVideoURL(responseBody)
+	}
 
 	if task.Platform == constant.TaskPlatformImage {
 		responseBody, taskResult.Url = normalizeImageResponseBodyForTask(task.TaskID, responseBody, taskResult.Url)
