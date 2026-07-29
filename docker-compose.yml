@@ -30,6 +30,7 @@ services:
       - new-api-network
       - dokploy-network
       - video-api-internal
+      - paco-llm-network
       - default
     healthcheck:
       test:
@@ -102,3 +103,6 @@ networks:
     external: true
   video-api-internal:
     external: true
+  paco-llm-network:
+    external: true
+    name: paco-llm-0yit87_new-api-network
