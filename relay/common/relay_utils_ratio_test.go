@@ -56,8 +56,10 @@ func TestValidateMultipartTaskRequestAcceptsComplianceParams(t *testing.T) {
 	}
 }
 
-func TestSupportsAudioReferenceOnlyForPixVerseAliases(t *testing.T) {
+func TestSupportsAudioReferenceForConfiguredVideoModels(t *testing.T) {
 	for _, model := range []string{
+		"seedance-720",
+		"klsdpro2",
 		"seedance-video-fast",
 		"seedance-video-standard",
 		"seedance-video-fast-per-second",
