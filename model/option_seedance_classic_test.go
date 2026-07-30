@@ -16,3 +16,8 @@ func TestSeedanceClassicPublicModels(t *testing.T) {
 func TestHiggsSeedanceUniformPrice(t *testing.T) {
 	require.Equal(t, 2.5, higgsSeedancePrice)
 }
+
+func TestEnsureCSVValueAddsVIP6Once(t *testing.T) {
+	require.Equal(t, "default,vip,vip6", ensureCSVValue("default,vip", "vip6"))
+	require.Equal(t, "default,vip6", ensureCSVValue("default,vip6", "vip6"))
+}

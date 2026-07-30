@@ -598,6 +598,26 @@ func ensureSeedance720HiggsRouting() error {
 
 var seedanceClassicPublicModels = []string{"seedance-2.0-fast-720p", "seedance-2.0-720p"}
 
+func ensureCSVValue(csv, value string) string {
+	value = strings.TrimSpace(value)
+	parts := make([]string, 0)
+	seen := false
+	for _, part := range strings.Split(csv, ",") {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+		if part == value {
+			seen = true
+		}
+		parts = append(parts, part)
+	}
+	if !seen && value != "" {
+		parts = append(parts, value)
+	}
+	return strings.Join(parts, ",")
+}
+
 func ensureAdobeSeedanceClassicRouting() error {
 	const channelID = 14
 	const baseURL = "http://video-seedance-classic:39918"
@@ -626,6 +646,7 @@ func ensureAdobeSeedanceClassicRouting() error {
 		"key":           apiKey,
 		"models":        strings.Join(publicModels, ","),
 		"model_mapping": string(mappingJSON),
+		"group":         ensureCSVValue(channel.Group, "vip6"),
 		"priority":      10,
 		"weight":        100,
 	}).Error; err != nil {
@@ -634,6 +655,7 @@ func ensureAdobeSeedanceClassicRouting() error {
 	if err := DB.Model(&Ability{}).Where("channel_id = ? AND model NOT IN ?", channelID, publicModels).Update("enabled", false).Error; err != nil {
 		return err
 	}
+	channel.Group = ensureCSVValue(channel.Group, "vip6")
 	for _, group := range strings.Split(channel.Group, ",") {
 		group = strings.TrimSpace(group)
 		if group == "" {
