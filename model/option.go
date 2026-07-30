@@ -2,6 +2,9 @@ package model
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -529,6 +532,10 @@ func ensureDopioRMBPricing() {
 		common.SysLog("failed to enforce Seedance 720 gateway routing: " + err.Error())
 		return
 	}
+	if err := ensureAdobeSeedanceClassicRouting(); err != nil {
+		common.SysLog("failed to enforce classic Seedance gateway routing: " + err.Error())
+		return
+	}
 	common.SysLog("enforced Dopio RMB pricing incl vip6 Seedance 720p fast=1.5/full=2.5, banana=0.01, sd2-c6=1, sd2-c7=0.5, vip2 sd2-c7=0.3, sd2-c11=2.5, sd2-c12=3, vip2 sd2-c11=1.5, vip2 sd2-c12=2, Price=1, USDExchangeRate=1, quota_display_type=CNY")
 }
 
@@ -577,6 +584,93 @@ func ensureSeedance720HiggsRouting() error {
 		if err := DB.Model(&Ability{}).
 			Where(commonGroupCol+" = ? AND model = ? AND channel_id = ?", group, publicModel, channelID).
 			Updates(map[string]any{"enabled": true, "priority": &priority, "weight": uint(100)}).Error; err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+var seedanceClassicPublicModels = []string{"seedance-2.0-fast-720p", "seedance-2.0-720p"}
+
+func ensureAdobeSeedanceClassicRouting() error {
+	const channelID = 14
+	const baseURL = "http://video-seedance-classic:39918"
+	publicModels := seedanceClassicPublicModels
+	mapping := map[string]string{
+		"seedance-2.0-fast-720p": "seedance-2.0-fast",
+		"seedance-2.0-720p":      "seedance-2.0",
+	}
+
+	var channel Channel
+	if err := DB.First(&channel, channelID).Error; err != nil {
+		return err
+	}
+	apiKey := strings.TrimSpace(os.Getenv("ADOBE2API_GATEWAY_KEY"))
+	if apiKey == "" {
+		return fmt.Errorf("ADOBE2API_GATEWAY_KEY is empty")
+	}
+	mappingJSON, err := json.Marshal(mapping)
+	if err != nil {
+		return err
+	}
+	if err := DB.Model(&Channel{}).Where("id = ?", channelID).Updates(map[string]any{
+		"name":          "Generation Service",
+		"status":        common.ChannelStatusEnabled,
+		"base_url":      baseURL,
+		"key":           apiKey,
+		"models":        strings.Join(publicModels, ","),
+		"model_mapping": string(mappingJSON),
+		"priority":      10,
+		"weight":        100,
+	}).Error; err != nil {
+		return err
+	}
+	if err := DB.Model(&Ability{}).Where("channel_id = ? AND model NOT IN ?", channelID, publicModels).Update("enabled", false).Error; err != nil {
+		return err
+	}
+	for _, group := range strings.Split(channel.Group, ",") {
+		group = strings.TrimSpace(group)
+		if group == "" {
+			continue
+		}
+		for _, publicModel := range publicModels {
+			ability := Ability{Group: group, Model: publicModel, ChannelId: channelID}
+			if err := DB.Where(commonGroupCol+" = ? AND model = ? AND channel_id = ?", group, publicModel, channelID).
+				FirstOrCreate(&ability).Error; err != nil {
+				return err
+			}
+			priority := int64(10)
+			if err := DB.Model(&Ability{}).
+				Where(commonGroupCol+" = ? AND model = ? AND channel_id = ?", group, publicModel, channelID).
+				Updates(map[string]any{"enabled": true, "priority": &priority, "weight": uint(100)}).Error; err != nil {
+				return err
+			}
+		}
+	}
+	endpointJSON := `{"openai-video":{"path":"/v1/videos","method":"POST"}}`
+	for _, publicModel := range publicModels {
+		var marketplaceModel Model
+		err := DB.Where("model_name = ? AND deleted_at IS NULL", publicModel).Order("id DESC").First(&marketplaceModel).Error
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			marketplaceModel = Model{
+				ModelName:    publicModel,
+				Tags:         "video",
+				Status:       1,
+				SyncOfficial: 0,
+				Endpoints:    endpointJSON,
+			}
+			if err := marketplaceModel.Insert(); err != nil {
+				return err
+			}
+		} else if err != nil {
+			return err
+		} else if err := DB.Model(&marketplaceModel).Updates(map[string]any{
+			"status":        1,
+			"tags":          "video",
+			"endpoints":     endpointJSON,
+			"sync_official": 0,
+			"updated_time":  common.GetTimestamp(),
+		}).Error; err != nil {
 			return err
 		}
 	}
