@@ -4,7 +4,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: new-api:sd2-mini-20260729
+    image: new-api:seedance-higgs-20260730
     container_name: new-api
     restart: always
     command: --log-dir /app/logs
