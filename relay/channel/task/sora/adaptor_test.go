@@ -66,6 +66,18 @@ func TestNormalizeSoraVideoStatus(t *testing.T) {
 	require.Equal(t, "failed", normalizeSoraVideoStatus("cancelled"))
 }
 
+func TestParseTaskResultPreservesCompletedRelativeVideoURL(t *testing.T) {
+	result, err := (&TaskAdaptor{}).ParseTaskResult([]byte(`{
+		"id":"upstream",
+		"status":"completed",
+		"progress":100,
+		"video_url":"/outputs/task_upstream.mp4"
+	}`))
+	require.NoError(t, err)
+	require.Equal(t, model.TaskStatusSuccess, result.Status)
+	require.Equal(t, "/outputs/task_upstream.mp4", result.Url)
+}
+
 func TestTaskSubmitReqToUpstreamVideoBody(t *testing.T) {
 	enabled := false
 	body := taskSubmitReqToUpstreamVideoBody(relaycommon.TaskSubmitReq{

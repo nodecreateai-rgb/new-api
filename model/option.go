@@ -212,6 +212,7 @@ func ensureDopioRMBPricing() {
 		"sd2-c5":                             5,
 		"sd2-c6":                             1,
 		"sd2-c7":                             0.5,
+		"sd2-mini":                           0.6,
 		"sd2-c8":                             5,
 		"sd2-c9":                             2,
 		"sd2-c10":                            4,
@@ -488,6 +489,11 @@ func ensureDopioRMBPricing() {
 				changed = true
 			}
 		}
+		// sd2-mini is intentionally the same fixed ¥0.60 per request in every group.
+		if groupPrices["sd2-mini"] != 0.6 {
+			groupPrices["sd2-mini"] = 0.6
+			changed = true
+		}
 		modelGroupPrices[group] = groupPrices
 	}
 	for group, targetPrices := range targetModelGroupPrices {
@@ -509,18 +515,72 @@ func ensureDopioRMBPricing() {
 		}
 	}
 
-	if len(updates) == 0 {
-		return
-	}
-	if err := UpdateOptionsBulk(updates); err != nil {
-		common.SysLog("failed to enforce Dopio RMB pricing: " + err.Error())
-		return
+	if len(updates) > 0 {
+		if err := UpdateOptionsBulk(updates); err != nil {
+			common.SysLog("failed to enforce Dopio RMB pricing: " + err.Error())
+			return
+		}
 	}
 	if err := ensureChannelGroupAbilities(15, "vip6"); err != nil {
 		common.SysLog("failed to ensure vip6 channel abilities: " + err.Error())
 		return
 	}
+	if err := ensureSeedance720HiggsRouting(); err != nil {
+		common.SysLog("failed to enforce Seedance 720 gateway routing: " + err.Error())
+		return
+	}
 	common.SysLog("enforced Dopio RMB pricing incl vip6 Seedance 720p fast=1.5/full=2.5, banana=0.01, sd2-c6=1, sd2-c7=0.5, vip2 sd2-c7=0.3, sd2-c11=2.5, sd2-c12=3, vip2 sd2-c11=1.5, vip2 sd2-c12=2, Price=1, USDExchangeRate=1, quota_display_type=CNY")
+}
+
+func ensureSeedance720HiggsRouting() error {
+	const channelID = 15
+	const baseURL = "http://video-seedance-hub:38473"
+	const publicModel = "seedance-720"
+
+	var channel Channel
+	if err := DB.First(&channel, channelID).Error; err != nil {
+		return err
+	}
+	mapping := map[string]string{
+		publicModel: "seedance-2.0",
+	}
+	mappingJSON, err := json.Marshal(mapping)
+	if err != nil {
+		return err
+	}
+	updates := map[string]any{
+		"name":          "Video Model 720p",
+		"status":        common.ChannelStatusEnabled,
+		"base_url":      baseURL,
+		"models":        publicModel,
+		"model_mapping": string(mappingJSON),
+		"priority":      10,
+		"weight":        100,
+	}
+	if err := DB.Model(&Channel{}).Where("id = ?", channelID).Updates(updates).Error; err != nil {
+		return err
+	}
+	if err := DB.Model(&Ability{}).Where("channel_id = ? AND model <> ?", channelID, publicModel).Update("enabled", false).Error; err != nil {
+		return err
+	}
+	for _, group := range strings.Split(channel.Group, ",") {
+		group = strings.TrimSpace(group)
+		if group == "" {
+			continue
+		}
+		ability := Ability{Group: group, Model: publicModel, ChannelId: channelID}
+		if err := DB.Where(commonGroupCol+" = ? AND model = ? AND channel_id = ?", group, publicModel, channelID).
+			FirstOrCreate(&ability).Error; err != nil {
+			return err
+		}
+		priority := int64(10)
+		if err := DB.Model(&Ability{}).
+			Where(commonGroupCol+" = ? AND model = ? AND channel_id = ?", group, publicModel, channelID).
+			Updates(map[string]any{"enabled": true, "priority": &priority, "weight": uint(100)}).Error; err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func ensureChannelGroupAbilities(channelID int, group string) error {

@@ -54,6 +54,10 @@ type responseTask struct {
 	Seconds            string `json:"seconds,omitempty"`
 	Size               string `json:"size,omitempty"`
 	RemixedFromVideoID string `json:"remixed_from_video_id,omitempty"`
+	URL                string `json:"url,omitempty"`
+	VideoURL           string `json:"video_url,omitempty"`
+	OutputURL          string `json:"output_url,omitempty"`
+	DownloadURL        string `json:"download_url,omitempty"`
 	Error              *struct {
 		Message string `json:"message"`
 		Code    string `json:"code"`
@@ -217,7 +221,7 @@ func (a *TaskAdaptor) ForceApplyBillingRatios(info *relaycommon.RelayInfo) bool 
 // IDs are fixed-price per generated video, independent of requested duration.
 func (a *TaskAdaptor) UseRequestBillingRatios(info *relaycommon.RelayInfo) bool {
 	switch strings.TrimSpace(info.OriginModelName) {
-	case "seedance-2.0-fast-720p", "seedance-2.0-720p", "seedance-2.0-1080p":
+	case "sd2-mini", "seedance-720", "seedance-2.0-fast-720p", "seedance-2.0-720p", "seedance-2.0-1080p":
 		return false
 	default:
 		return true
@@ -481,7 +485,7 @@ func (a *TaskAdaptor) ParseTaskResult(respBody []byte) (*relaycommon.TaskInfo, e
 		taskResult.Status = model.TaskStatusInProgress
 	case "completed":
 		taskResult.Status = model.TaskStatusSuccess
-		// Url intentionally left empty — the caller constructs the proxy URL using the public task ID
+		taskResult.Url = firstNonEmptyVideoURL(resTask.VideoURL, resTask.URL, resTask.OutputURL, resTask.DownloadURL)
 	case "failed", "cancelled":
 		taskResult.Status = model.TaskStatusFailure
 		if resTask.Error != nil {
@@ -496,6 +500,16 @@ func (a *TaskAdaptor) ParseTaskResult(respBody []byte) (*relaycommon.TaskInfo, e
 	}
 
 	return &taskResult, nil
+}
+
+func firstNonEmptyVideoURL(values ...string) string {
+	for _, value := range values {
+		value = strings.TrimSpace(value)
+		if strings.HasPrefix(value, "/") || strings.HasPrefix(value, "http://") || strings.HasPrefix(value, "https://") || strings.HasPrefix(value, "data:video/") {
+			return value
+		}
+	}
+	return ""
 }
 
 func (a *TaskAdaptor) ConvertToOpenAIVideo(task *model.Task) ([]byte, error) {
