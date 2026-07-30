@@ -24,6 +24,8 @@ type Option struct {
 	Value string `json:"value"`
 }
 
+const higgsSeedancePrice = 2.5
+
 func AllOption() ([]*Option, error) {
 	var options []*Option
 	var err error
@@ -221,6 +223,7 @@ func ensureDopioRMBPricing() {
 		"sd2-c10":                            4,
 		"sd2-c11":                            2.5,
 		"sd2-c12":                            3,
+		"seedance-720":                       higgsSeedancePrice,
 		"seedance-2.0-720p":                  3,
 		"seedance-2.0-fast-720p":             2,
 		"seedance-2.0-1080p":                 4,
@@ -368,6 +371,9 @@ func ensureDopioRMBPricing() {
 			"seedance-2.0-fast-720p": 1.5,
 			"seedance-2.0-720p":      2.5,
 		},
+	}
+	for group := range targetModelGroupPrices {
+		targetModelGroupPrices[group]["seedance-720"] = higgsSeedancePrice
 	}
 
 	updates := map[string]string{}

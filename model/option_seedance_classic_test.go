@@ -12,3 +12,7 @@ func TestSeedanceClassicPublicModels(t *testing.T) {
 		"seedance-2.0-720p",
 	}, seedanceClassicPublicModels)
 }
+
+func TestHiggsSeedanceUniformPrice(t *testing.T) {
+	require.Equal(t, 2.5, higgsSeedancePrice)
+}
