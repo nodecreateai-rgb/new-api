@@ -315,11 +315,11 @@ func GetAllUnFinishSyncTasks(limit int) []*Task {
 	var tasks []*Task
 	var err error
 	// get all tasks progress is not 100%
-	// Poll newest unfinished tasks first. Ordering oldest-first permanently starves
-	// fresh tasks when the backlog exceeds TASK_QUERY_LIMIT after an upstream
-	// restart: the same oldest rows occupy every polling batch while newer 55%
-	// submissions are never requested again.
-	err = DB.Where("progress != ?", "100%").Where("status != ?", TaskStatusFailure).Where("status != ?", TaskStatusSuccess).Limit(limit).Order("id DESC").Find(&tasks).Error
+	// Poll every unfinished task. A hard LIMIT makes some rows permanently starve
+	// after restart whenever the backlog is larger than the configured batch:
+	// the same subset is selected every cycle while other 40%-55% tasks never get
+	// requested again. Task/channel fan-out is already independent downstream.
+	err = DB.Where("progress != ?", "100%").Where("status != ?", TaskStatusFailure).Where("status != ?", TaskStatusSuccess).Order("id DESC").Find(&tasks).Error
 	if err != nil {
 		return nil
 	}
