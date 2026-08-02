@@ -564,7 +564,10 @@ func ensureSD2FastRouting() error {
 	const groups = "default,vip,svip,vip1,vip2,vip3,vip6"
 	baseURL := strings.TrimSpace(os.Getenv("SD2_FAST_BASE_URL"))
 	if baseURL == "" {
-		baseURL = "http://video-fast-upstream:39763"
+		// Traecn2API is a manager-owned Compose container while New-API runs on
+		// another Swarm node. Docker does not advertise that container alias to
+		// the remote worker, so use the worker-verified published route by default.
+		baseURL = "http://187.124.94.7:38474"
 	}
 	key := strings.TrimSpace(os.Getenv("SD2_FAST_GATEWAY_KEY"))
 	if key == "" {
