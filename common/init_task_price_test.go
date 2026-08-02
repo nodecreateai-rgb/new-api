@@ -9,7 +9,7 @@ import (
 func TestResolveTaskPricePatchesIncludesFixedPriceMyEditModels(t *testing.T) {
 	patches := resolveTaskPricePatches("")
 	for _, model := range []string{
-		"seedance-720", "seedance-2.0-fast-720p", "seedance-2.0-720p", "seedance-2.0-1080p",
+		"sd2-fast", "seedance-720", "seedance-2.0-fast-720p", "seedance-2.0-720p", "seedance-2.0-1080p",
 		"wan2.7-720p", "wan2.7-1080p", "viduq3-turbo-720p", "viduq3-pro-1080p",
 		"happyhorse-1.1-1080p", "sora-2-1080p", "kling-v3-4k",
 	} {
