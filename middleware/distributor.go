@@ -41,6 +41,18 @@ func Distribute() func(c *gin.Context) {
 		if modelRequest != nil {
 			modelRequest.Model = common.MapImageGenerationModelAlias(modelRequest.Model)
 		}
+		if shouldSelectChannel && modelRequest != nil && modelRequest.Model != "" {
+			enabled, err := model.IsModelEnabledForRelay(modelRequest.Model)
+			if err != nil {
+				common.SysError(fmt.Sprintf("check model status failed for %s: %s", modelRequest.Model, err.Error()))
+				abortWithOpenAiMessage(c, http.StatusInternalServerError, "failed to check model status")
+				return
+			}
+			if !enabled {
+				abortWithOpenAiMessage(c, http.StatusNotFound, fmt.Sprintf("The model '%s' does not exist or is disabled", modelRequest.Model), types.ErrorCodeModelNotFound)
+				return
+			}
+		}
 		if ok {
 			id, err := strconv.Atoi(channelId.(string))
 			if err != nil {

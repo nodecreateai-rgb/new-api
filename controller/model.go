@@ -268,6 +268,16 @@ func ListModels(c *gin.Context, modelType int) {
 		}
 	}
 
+	userModelNames, err = model.FilterEnabledModelsForRelay(userModelNames)
+	if err != nil {
+		common.SysLog(fmt.Sprintf("FilterEnabledModelsForRelay error: %v", err))
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"message": "get enabled models failed",
+		})
+		return
+	}
+
 	ownerByModel := map[string]string{}
 	if len(ownerGroups) > 0 {
 		ownerByModel = getPreferredModelOwners(userModelNames, ownerGroups)

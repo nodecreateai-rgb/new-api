@@ -1,6 +1,7 @@
 package model
 
 import (
+	"errors"
 	"strconv"
 	"strings"
 
@@ -108,6 +109,55 @@ func GetAllModels(offset int, limit int) ([]*Model, error) {
 	var models []*Model
 	err := DB.Order("id DESC").Offset(offset).Limit(limit).Find(&models).Error
 	return models, err
+}
+
+// IsModelEnabledForRelay returns false only when model metadata explicitly
+// marks the requested model as disabled. Models without metadata remain
+// available for backward compatibility with custom channel model names.
+func IsModelEnabledForRelay(modelName string) (bool, error) {
+	modelName = strings.TrimSpace(modelName)
+	if modelName == "" {
+		return true, nil
+	}
+
+	var meta Model
+	err := DB.Select("status").Where("model_name = ?", modelName).Take(&meta).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return true, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return meta.Status == 1, nil
+}
+
+// FilterEnabledModelsForRelay applies the same metadata status gate used by
+// relay requests to model-list responses.
+func FilterEnabledModelsForRelay(modelNames []string) ([]string, error) {
+	modelNames = normalizeLookupValues(modelNames)
+	if len(modelNames) == 0 {
+		return []string{}, nil
+	}
+
+	var disabled []string
+	if err := DB.Model(&Model{}).
+		Where("model_name IN ? AND status <> ?", modelNames, 1).
+		Pluck("model_name", &disabled).Error; err != nil {
+		return nil, err
+	}
+	disabledSet := make(map[string]struct{}, len(disabled))
+	for _, modelName := range disabled {
+		disabledSet[modelName] = struct{}{}
+	}
+
+	filtered := make([]string, 0, len(modelNames))
+	for _, modelName := range modelNames {
+		if _, disabled := disabledSet[modelName]; disabled {
+			continue
+		}
+		filtered = append(filtered, modelName)
+	}
+	return filtered, nil
 }
 
 func GetBoundChannelsByModelsMap(modelNames []string) (map[string][]BoundChannel, error) {

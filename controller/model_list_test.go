@@ -212,6 +212,7 @@ func TestListModelsIncludesTieredBillingModel(t *testing.T) {
 
 func TestListModelsTokenLimitIncludesTieredBillingModel(t *testing.T) {
 	withSelfUseModeDisabled(t)
+	setupModelListControllerTestDB(t)
 	withTieredBillingConfig(t, map[string]string{
 		"zz-token-tiered-visible-model":      "tiered_expr",
 		"zz-token-tiered-empty-expr-model":   "tiered_expr",
