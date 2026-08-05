@@ -19,3 +19,16 @@ func TestSD2FastRoutingHasDeploymentOverrideAndWorkerReachableFallback(t *testin
 		t.Fatal("sd2-fast routing must fall back to the worker-verified published route")
 	}
 }
+
+func TestSD25RoutingUsesNeutralPersistentAlias(t *testing.T) {
+	data, err := os.ReadFile("option.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := string(data)
+	for _, want := range []string{`const publicModel = "sd2.5"`, `const upstreamModel = "seedance-2.5-omni"`, `baseURL = "http://video-omni-upstream:38474"`} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("missing %s", want)
+		}
+	}
+}

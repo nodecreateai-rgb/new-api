@@ -219,6 +219,7 @@ func ensureDopioRMBPricing() {
 		"sd2-c7":                             0.5,
 		"sd2-mini":                           0.6,
 		"sd2-fast":                           1,
+		"sd2.5":                              2,
 		"sd2-c8":                             5,
 		"sd2-c9":                             2,
 		"sd2-c10":                            4,
@@ -551,7 +552,11 @@ func ensureDopioRMBPricing() {
 		common.SysLog("failed to enforce sd2-fast gateway routing: " + err.Error())
 		return
 	}
-	common.SysLog("enforced Dopio RMB pricing incl sd2-fast=1 per call, vip6 Seedance 720p fast=1.5/full=2.5, banana=0.01, sd2-c6=1, sd2-c7=0.5, vip2 sd2-c7=0.3, sd2-c11=2.5, sd2-c12=3, vip2 sd2-c11=1.5, vip2 sd2-c12=2, Price=1, USDExchangeRate=1, quota_display_type=CNY")
+	if err := ensureSD25Routing(); err != nil {
+		common.SysLog("failed to enforce sd2.5 gateway routing: " + err.Error())
+		return
+	}
+	common.SysLog("enforced Dopio RMB pricing incl sd2.5=2 per call, sd2-fast=1 per call, vip6 Seedance 720p fast=1.5/full=2.5, banana=0.01, sd2-c6=1, sd2-c7=0.5, vip2 sd2-c7=0.3, sd2-c11=2.5, sd2-c12=3, vip2 sd2-c11=1.5, vip2 sd2-c12=2, Price=1, USDExchangeRate=1, quota_display_type=CNY")
 }
 
 func ensureSD2FastRouting() error {
@@ -643,6 +648,81 @@ func ensureSD2FastRouting() error {
 		"description": "", "icon": "", "tags": "video", "endpoints": endpoint,
 		"status": 1, "sync_official": 0, "deleted_at": nil, "updated_time": common.GetTimestamp(),
 	}).Error
+}
+
+func ensureSD25Routing() error {
+	const publicModel = "sd2.5"
+	const upstreamModel = "seedance-2.5-omni"
+	const neutralName = "Video Omni"
+	const groups = "default,vip,svip,vip1,vip2,vip3,vip6"
+	baseURL := strings.TrimSpace(os.Getenv("SD25_BASE_URL"))
+	if baseURL == "" {
+		baseURL = "http://video-omni-upstream:38474"
+	}
+	key := strings.TrimSpace(os.Getenv("SD25_GATEWAY_KEY"))
+	if key == "" {
+		if keyFile := strings.TrimSpace(os.Getenv("SD25_GATEWAY_KEY_FILE")); keyFile != "" {
+			if raw, err := os.ReadFile(keyFile); err == nil {
+				key = strings.TrimSpace(string(raw))
+			}
+		}
+	}
+	var channel Channel
+	err := DB.Where("name = ?", neutralName).First(&channel).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		if key == "" {
+			return fmt.Errorf("SD25_GATEWAY_KEY is required")
+		}
+		weight := uint(100)
+		priority := int64(10)
+		autoBan := 0
+		mapping := fmt.Sprintf(`{"%s":"%s"}`, publicModel, upstreamModel)
+		channel = Channel{Type: 1, Key: key, Status: common.ChannelStatusEnabled, Name: neutralName, Weight: &weight,
+			CreatedTime: common.GetTimestamp(), BaseURL: stringPtr(baseURL), Models: publicModel, Group: groups,
+			ModelMapping: &mapping, Priority: &priority, AutoBan: &autoBan}
+		if err := DB.Create(&channel).Error; err != nil {
+			return err
+		}
+	} else if err != nil {
+		return err
+	} else {
+		if key == "" {
+			key = channel.Key
+		}
+		if key == "" {
+			return fmt.Errorf("SD25_GATEWAY_KEY is required")
+		}
+		mapping := fmt.Sprintf(`{"%s":"%s"}`, publicModel, upstreamModel)
+		if err := DB.Model(&Channel{}).Where("id = ?", channel.Id).Updates(map[string]any{
+			"type": 1, "key": key, "status": common.ChannelStatusEnabled, "name": neutralName, "base_url": baseURL,
+			"models": publicModel, "group": groups, "model_mapping": mapping, "priority": 10, "weight": 100, "auto_ban": 0,
+		}).Error; err != nil {
+			return err
+		}
+	}
+	if err := DB.Model(&Ability{}).Where("channel_id = ? AND model <> ?", channel.Id, publicModel).Update("enabled", false).Error; err != nil {
+		return err
+	}
+	for _, group := range strings.Split(groups, ",") {
+		ability := Ability{Group: group, Model: publicModel, ChannelId: channel.Id}
+		if err := DB.Where(commonGroupCol+" = ? AND model = ? AND channel_id = ?", group, publicModel, channel.Id).FirstOrCreate(&ability).Error; err != nil {
+			return err
+		}
+		if err := DB.Model(&Ability{}).Where(commonGroupCol+" = ? AND model = ? AND channel_id = ?", group, publicModel, channel.Id).Updates(map[string]any{"enabled": true, "priority": int64(10), "weight": uint(100)}).Error; err != nil {
+			return err
+		}
+	}
+	endpoint := `{"openai-video":{"path":"/v1/videos","method":"POST"}}`
+	var meta Model
+	err = DB.Unscoped().Where("model_name = ?", publicModel).First(&meta).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		meta = Model{ModelName: publicModel, Description: "", Icon: "", Tags: "video", Endpoints: endpoint, Status: 1, SyncOfficial: 0, CreatedTime: common.GetTimestamp(), UpdatedTime: common.GetTimestamp()}
+		return DB.Create(&meta).Error
+	}
+	if err != nil {
+		return err
+	}
+	return DB.Unscoped().Model(&Model{}).Where("id = ?", meta.Id).Updates(map[string]any{"description": "", "icon": "", "tags": "video", "endpoints": endpoint, "status": 1, "sync_official": 0, "deleted_at": nil, "updated_time": common.GetTimestamp()}).Error
 }
 
 func stringPtr(value string) *string { return &value }

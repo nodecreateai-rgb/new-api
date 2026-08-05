@@ -221,7 +221,7 @@ func (a *TaskAdaptor) ForceApplyBillingRatios(info *relaycommon.RelayInfo) bool 
 // IDs are fixed-price per generated video, independent of requested duration.
 func (a *TaskAdaptor) UseRequestBillingRatios(info *relaycommon.RelayInfo) bool {
 	switch strings.TrimSpace(info.OriginModelName) {
-	case "sd2-mini", "sd2-fast", "seedance-720", "seedance-2.0-fast-720p", "seedance-2.0-720p", "seedance-2.0-1080p":
+	case "sd2.5", "sd2-mini", "sd2-fast", "seedance-720", "seedance-2.0-fast-720p", "seedance-2.0-720p", "seedance-2.0-1080p":
 		return false
 	default:
 		return true
