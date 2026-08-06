@@ -268,6 +268,9 @@ func (a *TaskAdaptor) BuildRequestBody(c *gin.Context, info *relaycommon.RelayIn
 			// immediate 400 before a task is persisted.
 			if parsed, reqErr := relaycommon.GetTaskRequest(c); reqErr == nil {
 				applyCanonicalVideoControls(bodyMap, parsed)
+				if strings.TrimSpace(info.OriginModelName) == "sd2.5" {
+					applySD25DurationLimit(bodyMap, parsed)
+				}
 			}
 			normalizeOpenAIVideoAspectBody(bodyMap)
 			if newBody, err := common.Marshal(bodyMap); err == nil {
@@ -355,6 +358,21 @@ func applyCanonicalVideoControls(body map[string]interface{}, req relaycommon.Ta
 	}
 	delete(body, "eye_mask_enabled")
 	delete(body, "eye_mask_mode")
+}
+
+func applySD25DurationLimit(body map[string]interface{}, req relaycommon.TaskSubmitReq) {
+	if body == nil {
+		return
+	}
+	duration := req.Duration
+	if duration <= 0 {
+		duration, _ = strconv.Atoi(strings.TrimSpace(req.Seconds))
+	}
+	if duration <= 0 || duration > 10 {
+		duration = 10
+	}
+	body["duration"] = duration
+	body["seconds"] = strconv.Itoa(duration)
 }
 
 func normalizeSoraVideoStatus(status string) string {

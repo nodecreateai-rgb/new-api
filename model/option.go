@@ -219,7 +219,7 @@ func ensureDopioRMBPricing() {
 		"sd2-c7":                             0.5,
 		"sd2-mini":                           0.6,
 		"sd2-fast":                           1,
-		"sd2.5":                              2,
+		"sd2.5":                              0.8,
 		"sd2-c8":                             5,
 		"sd2-c9":                             2,
 		"sd2-c10":                            4,
@@ -556,7 +556,7 @@ func ensureDopioRMBPricing() {
 		common.SysLog("failed to enforce sd2.5 gateway routing: " + err.Error())
 		return
 	}
-	common.SysLog("enforced Dopio RMB pricing incl sd2.5=2 per call, sd2-fast=1 per call, vip6 Seedance 720p fast=1.5/full=2.5, banana=0.01, sd2-c6=1, sd2-c7=0.5, vip2 sd2-c7=0.3, sd2-c11=2.5, sd2-c12=3, vip2 sd2-c11=1.5, vip2 sd2-c12=2, Price=1, USDExchangeRate=1, quota_display_type=CNY")
+	common.SysLog("enforced Dopio RMB pricing incl sd2.5=0.8 per call, sd2-fast=1 per call, vip6 Seedance 720p fast=1.5/full=2.5, banana=0.01, sd2-c6=1, sd2-c7=0.5, vip2 sd2-c7=0.3, sd2-c11=2.5, sd2-c12=3, vip2 sd2-c11=1.5, vip2 sd2-c12=2, Price=1, USDExchangeRate=1, quota_display_type=CNY")
 }
 
 func ensureSD2FastRouting() error {

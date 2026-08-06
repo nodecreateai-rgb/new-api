@@ -116,6 +116,18 @@ func TestApplyCanonicalVideoControlsConvertsStringBooleanBeforeUpstream(t *testi
 	require.NotContains(t, body, "eye_mask_mode")
 }
 
+func TestApplySD25DurationLimitUsesSecondsAndCapsAtTen(t *testing.T) {
+	body := map[string]interface{}{"seconds": "15"}
+	applySD25DurationLimit(body, relaycommon.TaskSubmitReq{Seconds: "15"})
+	require.Equal(t, 10, body["duration"])
+	require.Equal(t, "10", body["seconds"])
+
+	body = map[string]interface{}{}
+	applySD25DurationLimit(body, relaycommon.TaskSubmitReq{Duration: 5})
+	require.Equal(t, 5, body["duration"])
+	require.Equal(t, "5", body["seconds"])
+}
+
 func TestUpstreamVideoTaskPrefersJSON(t *testing.T) {
 	require.True(t, upstreamVideoTaskPrefersJSON("http://paco-dola2api-er9b9x-dola2api-1:38472"))
 	require.False(t, upstreamVideoTaskPrefersJSON("https://api.openai.com"))
