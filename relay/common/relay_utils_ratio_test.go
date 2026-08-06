@@ -58,6 +58,8 @@ func TestValidateMultipartTaskRequestAcceptsComplianceParams(t *testing.T) {
 
 func TestSupportsAudioReferenceForConfiguredVideoModels(t *testing.T) {
 	for _, model := range []string{
+		"sd2.5",
+		"seedance-2.5-omni",
 		"seedance-720",
 		"seedance-720 ",
 		"seedance-720-audio",
@@ -80,6 +82,30 @@ func TestSupportsAudioReferenceForConfiguredVideoModels(t *testing.T) {
 		if supportsAudioReference(model) {
 			t.Fatalf("expected %q to reject audio references", model)
 		}
+	}
+}
+
+func TestValidateMultipartDirectAllowsSD25AudioReferences(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	c, _ := gin.CreateTestContext(httptest.NewRecorder())
+	c.Request = httptest.NewRequest("POST", "/v1/videos", strings.NewReader(`{
+		"model":"sd2.5",
+		"prompt":"use the image and audio references",
+		"image_urls":["https://assets.example/ref.jpg"],
+		"audio_url":"https://assets.example/ref.mp3",
+		"reference_audios":["https://assets.example/ref2.wav"]
+	}`))
+	c.Request.Header.Set("Content-Type", "application/json")
+	info := &RelayInfo{OriginModelName: "sd2.5", ChannelMeta: &ChannelMeta{}, TaskRelayInfo: &TaskRelayInfo{}}
+	if taskErr := ValidateMultipartDirect(c, info); taskErr != nil {
+		t.Fatalf("sd2.5 audio references rejected: %+v", taskErr)
+	}
+	req, err := GetTaskRequest(c)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if req.AudioURL != "https://assets.example/ref.mp3" || len(req.ReferenceAudios) != 1 || len(req.ImageURLs) != 1 {
+		t.Fatalf("request lost sd2.5 references: %+v", req)
 	}
 }
 

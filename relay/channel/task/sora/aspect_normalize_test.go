@@ -116,6 +116,28 @@ func TestTaskSubmitReqToUpstreamVideoBodyAcceptsAudioRefs(t *testing.T) {
 	}
 }
 
+func TestTaskSubmitReqToUpstreamVideoBodyForSD25FansOutAllAudioAliases(t *testing.T) {
+	req := relaycommon.TaskSubmitReq{
+		AudioURL:        "https://assets.example/audio.mp3",
+		AudioRefs:       []string{"https://assets.example/audio.mp3"},
+		ReferenceAudios: []string{"https://assets.example/audio2.wav"},
+	}
+	body := taskSubmitReqToUpstreamVideoBody(req, "seedance-2.5-omni")
+	audios, ok := body["audio_refs"].([]string)
+	if !ok || len(audios) != 2 {
+		t.Fatalf("sd2.5 audio_refs body=%v", body)
+	}
+	for _, key := range []string{"audio_urls", "audios", "reference_audios"} {
+		refs, ok := body[key].([]string)
+		if !ok || len(refs) != 2 {
+			t.Fatalf("sd2.5 %s body=%v", key, body)
+		}
+	}
+	if body["audio_url"] != audios[0] || body["reference_audio"] != audios[0] {
+		t.Fatalf("sd2.5 single audio aliases body=%v", body)
+	}
+}
+
 func TestTaskSubmitReqToUpstreamVideoBodyAcceptsImageAndVideoRefs(t *testing.T) {
 	req := relaycommon.TaskSubmitReq{
 		ImageURL:        "https://assets.example/image.png",
