@@ -26,7 +26,7 @@ func TestSD25RoutingUsesNeutralPersistentAlias(t *testing.T) {
 		t.Fatal(err)
 	}
 	s := string(data)
-	for _, want := range []string{`const publicModel = "sd2.5"`, `const upstreamModel = "seedance-2.5-omni"`, `baseURL = "http://video-omni-upstream:38474"`} {
+	for _, want := range []string{`const publicModel = "sd2.5"`, `const upstreamModel = "seedance-2.5-omni"`, `baseURL = "http://astore2api-sd25:38474"`} {
 		if !strings.Contains(s, want) {
 			t.Fatalf("missing %s", want)
 		}

@@ -657,7 +657,7 @@ func ensureSD25Routing() error {
 	const groups = "default,vip,svip,vip1,vip2,vip3,vip6"
 	baseURL := strings.TrimSpace(os.Getenv("SD25_BASE_URL"))
 	if baseURL == "" {
-		baseURL = "http://video-omni-upstream:38474"
+		baseURL = "http://astore2api-sd25:38474"
 	}
 	key := strings.TrimSpace(os.Getenv("SD25_GATEWAY_KEY"))
 	if key == "" {
