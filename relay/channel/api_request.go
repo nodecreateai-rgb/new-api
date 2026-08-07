@@ -619,6 +619,11 @@ func isRestartWindowTransportError(err error) bool {
 			strings.Contains(msg, "connect: connection reset") ||
 			strings.Contains(msg, "server misbehaving") ||
 			strings.Contains(msg, "temporary failure in name resolution") ||
+			strings.Contains(msg, "server closed idle connection") ||
+			strings.Contains(msg, "broken pipe") ||
+			strings.Contains(msg, "no route to host") ||
+			strings.Contains(msg, "network is unreachable") ||
+			strings.Contains(msg, "i/o timeout") ||
 			strings.Contains(msg, "unexpected eof") ||
 			strings.HasSuffix(msg, ": eof") {
 			return true

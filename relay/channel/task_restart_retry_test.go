@@ -12,6 +12,11 @@ func TestIsRestartWindowTransportError(t *testing.T) {
 		`Post "http://dola2api:38472/v1/videos": EOF`,
 		`read response: unexpected EOF`,
 		`dial tcp: lookup dola2api on 127.0.0.11:53: server misbehaving`,
+		`net/http: HTTP/1.x transport connection broken: http: server closed idle connection`,
+		`write tcp 10.0.2.167:41234->10.0.2.186:38474: write: broken pipe`,
+		`dial tcp 10.0.2.186:38474: connect: no route to host`,
+		`dial tcp 10.0.2.186:38474: connect: network is unreachable`,
+		`read tcp 10.0.2.167:41234->10.0.2.186:38474: i/o timeout`,
 	} {
 		if !isRestartWindowTransportError(errors.New(msg)) {
 			t.Fatalf("expected retryable restart transport error: %s", msg)

@@ -76,6 +76,16 @@ services:
       - traefik.http.services.paco-llm-0yit87-3-websecure.loadbalancer.server.port=3000
       - traefik.http.routers.paco-llm-0yit87-3-websecure.service=paco-llm-0yit87-3-websecure
       - traefik.http.routers.paco-llm-0yit87-3-websecure.tls.certresolver=letsencrypt
+      - traefik.http.routers.paco-llm-0yit87-3-web.rule=Host(`llm.chre3.com`)
+      - traefik.http.routers.paco-llm-0yit87-3-web.entrypoints=web
+      - traefik.http.services.paco-llm-0yit87-3-web.loadbalancer.server.port=3000
+      - traefik.http.routers.paco-llm-0yit87-3-web.service=paco-llm-0yit87-3-web
+      - traefik.http.routers.paco-llm-0yit87-3-web.middlewares=redirect-to-https@file
+      - traefik.http.routers.paco-llm-0yit87-3-websecure.rule=Host(`llm.chre3.com`)
+      - traefik.http.routers.paco-llm-0yit87-3-websecure.entrypoints=websecure
+      - traefik.http.services.paco-llm-0yit87-3-websecure.loadbalancer.server.port=3000
+      - traefik.http.routers.paco-llm-0yit87-3-websecure.service=paco-llm-0yit87-3-websecure
+      - traefik.http.routers.paco-llm-0yit87-3-websecure.tls.certresolver=letsencrypt
       - traefik.docker.network=dokploy-network
       - traefik.http.routers.paco-llm-0yit87-3-web.rule=Host(`llm.chre3.com`)
       - traefik.http.routers.paco-llm-0yit87-3-web.entrypoints=web
