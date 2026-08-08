@@ -802,7 +802,15 @@ func ensureCSVValue(csv, value string) string {
 
 func ensureAdobeSeedanceClassicRouting() error {
 	const channelID = 14
-	const baseURL = "http://video-seedance-classic:39918"
+	baseURL := strings.TrimSpace(os.Getenv("ADOBE_SEEDANCE_CLASSIC_BASE_URL"))
+	if baseURL == "" {
+		managerIP := strings.TrimSpace(os.Getenv("MANAGER_IP"))
+		if managerIP != "" {
+			baseURL = "http://" + managerIP + ":39918"
+		} else {
+			baseURL = "http://video-seedance-classic:39918"
+		}
+	}
 	publicModels := seedanceClassicPublicModels
 	mapping := map[string]string{
 		"seedance-2.0-fast-720p": "seedance-2.0-fast",
