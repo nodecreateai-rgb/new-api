@@ -808,7 +808,9 @@ func ensureCSVValue(csv, value string) string {
 }
 
 func ensureAdobeSeedanceClassicRouting() error {
-	const channelID = 14
+	const channelName = "Generation Service"
+	const legacyChannelID = 14
+	const defaultGroups = "default,vip,svip,vip1,vip2,vip3,vip6"
 	baseURL := strings.TrimSpace(os.Getenv("ADOBE_SEEDANCE_CLASSIC_BASE_URL"))
 	if baseURL == "" {
 		managerIP := strings.TrimSpace(os.Getenv("MANAGER_IP"))
@@ -824,27 +826,58 @@ func ensureAdobeSeedanceClassicRouting() error {
 		"seedance-2.0-720p":      "seedance-2.0",
 		"kling-o3":               "kling-o3",
 	}
-
-	var channel Channel
-	if err := DB.First(&channel, channelID).Error; err != nil {
+	mappingJSON, err := json.Marshal(mapping)
+	if err != nil {
 		return err
 	}
 	apiKey := strings.TrimSpace(os.Getenv("ADOBE2API_GATEWAY_KEY"))
 	if apiKey == "" {
 		return fmt.Errorf("ADOBE2API_GATEWAY_KEY is empty")
 	}
-	mappingJSON, err := json.Marshal(mapping)
-	if err != nil {
+
+	var channel Channel
+	err = DB.Where("name = ?", channelName).First(&channel).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		err = DB.First(&channel, legacyChannelID).Error
+	}
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		weight := uint(100)
+		priority := int64(10)
+		autoBan := 0
+		channel = Channel{
+			Type:         1,
+			Key:          apiKey,
+			Status:       common.ChannelStatusEnabled,
+			Name:         channelName,
+			Weight:       &weight,
+			CreatedTime:  common.GetTimestamp(),
+			BaseURL:      stringPtr(baseURL),
+			Models:       strings.Join(publicModels, ","),
+			Group:        defaultGroups,
+			ModelMapping: stringPtr(string(mappingJSON)),
+			Priority:     &priority,
+			AutoBan:      &autoBan,
+		}
+		if err := DB.Create(&channel).Error; err != nil {
+			return err
+		}
+	} else if err != nil {
 		return err
 	}
+
+	channelID := channel.Id
+	groups := ensureCSVValue(channel.Group, "vip6")
+	if strings.TrimSpace(groups) == "" {
+		groups = defaultGroups
+	}
 	if err := DB.Model(&Channel{}).Where("id = ?", channelID).Updates(map[string]any{
-		"name":          "Generation Service",
+		"name":          channelName,
 		"status":        common.ChannelStatusEnabled,
 		"base_url":      baseURL,
 		"key":           apiKey,
 		"models":        strings.Join(publicModels, ","),
 		"model_mapping": string(mappingJSON),
-		"group":         ensureCSVValue(channel.Group, "vip6"),
+		"group":         groups,
 		"priority":      10,
 		"weight":        100,
 	}).Error; err != nil {
@@ -853,8 +886,7 @@ func ensureAdobeSeedanceClassicRouting() error {
 	if err := DB.Model(&Ability{}).Where("channel_id = ? AND model NOT IN ?", channelID, publicModels).Update("enabled", false).Error; err != nil {
 		return err
 	}
-	channel.Group = ensureCSVValue(channel.Group, "vip6")
-	for _, group := range strings.Split(channel.Group, ",") {
+	for _, group := range strings.Split(groups, ",") {
 		group = strings.TrimSpace(group)
 		if group == "" {
 			continue
@@ -873,6 +905,10 @@ func ensureAdobeSeedanceClassicRouting() error {
 			}
 		}
 	}
+	return ensureClassicVideoMarketplaceModels(publicModels)
+}
+
+func ensureClassicVideoMarketplaceModels(publicModels []string) error {
 	endpointJSON := `{"openai-video":{"path":"/v1/videos","method":"POST"}}`
 	for _, publicModel := range publicModels {
 		var marketplaceModel Model
