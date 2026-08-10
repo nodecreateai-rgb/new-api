@@ -196,13 +196,18 @@ func CacheGetChannel(id int) (*Channel, error) {
 		return GetChannelById(id, true)
 	}
 	channelSyncLock.RLock()
-	defer channelSyncLock.RUnlock()
-
 	c, ok := channelsIDM[id]
-	if !ok {
+	channelSyncLock.RUnlock()
+	if ok {
+		return c, nil
+	}
+	// Channel may have been restored in DB after the last cache sync (e.g. Generation Service id=14).
+	channel, err := GetChannelById(id, true)
+	if err != nil {
 		return nil, fmt.Errorf("渠道# %d，已不存在", id)
 	}
-	return c, nil
+	CacheUpdateChannel(channel)
+	return channel, nil
 }
 
 func CacheGetChannelInfo(id int) (*ChannelInfo, error) {
