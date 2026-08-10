@@ -583,6 +583,9 @@ func ensureSD2FastRouting() error {
 			}
 		}
 	}
+	if key == "" {
+		key = strings.TrimSpace(os.Getenv("ADOBE2API_GATEWAY_KEY"))
+	}
 	var channel Channel
 	err := DB.Where("name = ?", neutralName).First(&channel).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -667,6 +670,9 @@ func ensureSD25Routing() error {
 				key = strings.TrimSpace(string(raw))
 			}
 		}
+	}
+	if key == "" {
+		key = strings.TrimSpace(os.Getenv("ADOBE2API_GATEWAY_KEY"))
 	}
 	var channel Channel
 	err := DB.Where("name = ?", neutralName).First(&channel).Error
