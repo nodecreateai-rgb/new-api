@@ -16,6 +16,14 @@ func TestSeedanceClassicPublicModels(t *testing.T) {
 	}, seedanceClassicPublicModels)
 }
 
+func TestClassicRoutingDefaultsToUnambiguousAdobeAlias(t *testing.T) {
+	data, err := os.ReadFile("option.go")
+	require.NoError(t, err)
+	s := string(data)
+	require.Contains(t, s, `baseURL = "http://adobe2api:39918"`)
+	require.NotContains(t, s, `baseURL = "http://video-seedance-classic:39918"`)
+}
+
 func TestClassicMarketplaceRegistrationPrecedesGatewayKeyValidation(t *testing.T) {
 	data, err := os.ReadFile("option.go")
 	require.NoError(t, err)
