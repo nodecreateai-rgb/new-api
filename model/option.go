@@ -830,6 +830,13 @@ func ensureAdobeSeedanceClassicRouting() error {
 	if err != nil {
 		return err
 	}
+	// Marketplace registration is database-only and must not depend on the
+	// upstream gateway credential. Dokploy may temporarily start a cluster node
+	// without injected secrets; the public catalog should still expose supported
+	// models while routing reports its own configuration error separately.
+	if err := ensureClassicVideoMarketplaceModels(publicModels); err != nil {
+		return err
+	}
 	apiKey := strings.TrimSpace(os.Getenv("ADOBE2API_GATEWAY_KEY"))
 	if apiKey == "" {
 		return fmt.Errorf("ADOBE2API_GATEWAY_KEY is empty")
@@ -905,7 +912,7 @@ func ensureAdobeSeedanceClassicRouting() error {
 			}
 		}
 	}
-	return ensureClassicVideoMarketplaceModels(publicModels)
+	return nil
 }
 
 func ensureClassicVideoMarketplaceModels(publicModels []string) error {
