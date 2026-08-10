@@ -102,6 +102,11 @@ func (a *TaskAdaptor) ValidateRequestAndSetAction(c *gin.Context, info *relaycom
 		return taskErr
 	}
 	req, err := relaycommon.GetTaskRequest(c)
+	if err == nil && isKlingO3Model(info.OriginModelName) {
+		if imageCount := len(collectUpstreamVideoImageRefs(req)); imageCount > 2 {
+			return &dto.TaskError{Code: "too_many_reference_images", Message: "kling-o3 supports at most 2 reference images", StatusCode: http.StatusBadRequest, LocalError: true, Error: fmt.Errorf("kling-o3 supports at most 2 reference images, got %d", imageCount)}
+		}
+	}
 	if err == nil && isSeedanceModel(info.OriginModelName) && promptMentionsImageReference(req.Prompt) && !req.HasImage() {
 		return &dto.TaskError{Code: "missing_reference_image", Message: "prompt references an image, but no image material was received; send image/image_url/reference_image/image_refs", StatusCode: http.StatusBadRequest, LocalError: true, Error: fmt.Errorf("missing reference image material")}
 	}
@@ -110,6 +115,10 @@ func (a *TaskAdaptor) ValidateRequestAndSetAction(c *gin.Context, info *relaycom
 
 func isSeedanceModel(model string) bool {
 	return strings.Contains(strings.ToLower(strings.TrimSpace(model)), "seedance")
+}
+
+func isKlingO3Model(model string) bool {
+	return strings.EqualFold(strings.TrimSpace(model), "kling-o3")
 }
 
 var imageReferenceMentionRE = regexp.MustCompile(`(?i)(?:@?image\s*0*[1-9]\d*|参考图(?:片)?\s*0*[1-9]\d*|图片\s*0*[1-9]\d*)`)
@@ -221,7 +230,7 @@ func (a *TaskAdaptor) ForceApplyBillingRatios(info *relaycommon.RelayInfo) bool 
 // IDs are fixed-price per generated video, independent of requested duration.
 func (a *TaskAdaptor) UseRequestBillingRatios(info *relaycommon.RelayInfo) bool {
 	switch strings.TrimSpace(info.OriginModelName) {
-	case "sd2.5", "sd2-mini", "sd2-fast", "seedance-720", "seedance-2.0-fast-720p", "seedance-2.0-720p", "seedance-2.0-1080p":
+	case "sd2.5", "sd2-mini", "sd2-fast", "seedance-720", "seedance-2.0-fast-720p", "seedance-2.0-720p", "seedance-2.0-1080p", "kling-o3":
 		return false
 	default:
 		return true

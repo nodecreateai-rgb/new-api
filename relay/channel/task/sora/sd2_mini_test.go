@@ -13,6 +13,22 @@ func TestSD2MiniUsesFixedPerRequestBilling(t *testing.T) {
 	require.False(t, a.UseRequestBillingRatios(&relaycommon.RelayInfo{OriginModelName: "sd2-mini"}))
 	require.False(t, a.UseRequestBillingRatios(&relaycommon.RelayInfo{OriginModelName: "sd2-fast"}))
 	require.False(t, a.UseRequestBillingRatios(&relaycommon.RelayInfo{OriginModelName: "seedance-720"}))
+	require.False(t, a.UseRequestBillingRatios(&relaycommon.RelayInfo{OriginModelName: "kling-o3"}))
+}
+
+func TestKlingO3UpstreamBodyPassesDurationAspectAndImages(t *testing.T) {
+	req := relaycommon.TaskSubmitReq{
+		Prompt:      "cinematic apple on table",
+		Duration:    15,
+		AspectRatio: "9:16",
+		Images:      []string{"https://example.com/frame1.png", "https://example.com/frame2.png"},
+	}
+	body := taskSubmitReqToUpstreamVideoBody(req, "kling-o3")
+	require.Equal(t, "kling-o3", body["model"])
+	require.Equal(t, 15, body["duration"])
+	require.Equal(t, "9:16", body["aspect_ratio"])
+	require.Equal(t, []string{"https://example.com/frame1.png", "https://example.com/frame2.png"}, body["image_refs"])
+	require.NotContains(t, body, "image_url")
 }
 
 func TestSD2MiniCanonicalBodyMatchesSeedanceMediaShape(t *testing.T) {

@@ -246,6 +246,7 @@ func ensureDopioRMBPricing() {
 		"kling-v3-1080p":                     1,
 		"kling-v3-4k":                        2,
 		"kling-3-pro":                        1,
+		"kling-o3":                           1,
 		"gpt-image-2":                        0.03,
 		"nano-banana-2":                      0.01,
 		"nano-banana-pro":                    0.01,
@@ -778,7 +779,7 @@ func ensureSeedance720HiggsRouting() error {
 	return nil
 }
 
-var seedanceClassicPublicModels = []string{"seedance-2.0-fast-720p", "seedance-2.0-720p"}
+var seedanceClassicPublicModels = []string{"seedance-2.0-fast-720p", "seedance-2.0-720p", "kling-o3"}
 
 func ensureCSVValue(csv, value string) string {
 	value = strings.TrimSpace(value)
@@ -815,6 +816,7 @@ func ensureAdobeSeedanceClassicRouting() error {
 	mapping := map[string]string{
 		"seedance-2.0-fast-720p": "seedance-2.0-fast",
 		"seedance-2.0-720p":      "seedance-2.0",
+		"kling-o3":               "kling-o3",
 	}
 
 	var channel Channel
