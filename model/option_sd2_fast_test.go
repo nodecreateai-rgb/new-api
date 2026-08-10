@@ -32,3 +32,16 @@ func TestSD25RoutingUsesNeutralPersistentAlias(t *testing.T) {
 		}
 	}
 }
+
+func TestDolaRoutingUsesNeutralPersistentAlias(t *testing.T) {
+	data, err := os.ReadFile("option.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := string(data)
+	for _, want := range []string{`os.Getenv("DOLA2API_BASE_URL")`, `baseURL = "http://dola2api:38472"`} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("missing %s", want)
+		}
+	}
+}
