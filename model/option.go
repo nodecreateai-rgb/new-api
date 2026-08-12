@@ -371,8 +371,8 @@ func ensureDopioRMBPricing() {
 			"seedance-video-standard-per-second": 0.33,
 		},
 		"vip6": {
-			"seedance-2.0-fast-720p": 1,
-			"seedance-2.0-720p":      2,
+			"seedance-2.0-fast-720p": 1.5,
+			"seedance-2.0-720p":      2.5,
 		},
 	}
 	for group := range targetModelGroupPrices {
