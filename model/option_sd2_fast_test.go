@@ -33,6 +33,19 @@ func TestSD25RoutingUsesNeutralPersistentAlias(t *testing.T) {
 	}
 }
 
+func TestSD25PriceIsOnePointFivePerCall(t *testing.T) {
+	data, err := os.ReadFile("option.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := string(data)
+	for _, want := range []string{`"sd2.5":                              1.5`, `sd2.5=1.5 per call`} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("missing %s", want)
+		}
+	}
+}
+
 func TestDolaRoutingUsesNeutralPersistentAlias(t *testing.T) {
 	data, err := os.ReadFile("option.go")
 	if err != nil {
