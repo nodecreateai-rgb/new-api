@@ -216,7 +216,7 @@ func ensureDopioRMBPricing() {
 		"sd2-c3":                             4,
 		"sd2-c5":                             5,
 		"sd2-c6":                             0.5,
-		"sd2-c7":                             0.5,
+		"sd2-c7":                             1,
 		"sd2-mini":                           0.6,
 		"sd2-fast":                           1,
 		"sd2.5":                              1.5,
@@ -281,7 +281,7 @@ func ensureDopioRMBPricing() {
 			"sora-2-720p": 0.5, "sora-2-1080p": 1, "sora-2-pro-720p": 5, "sora-2-pro-1080p": 8,
 			"kling-v3-720p": 0.5, "kling-v3-1080p": 1, "kling-v3-4k": 2,
 			"sd2-c6":          0.5,
-			"sd2-c7":          0.5,
+			"sd2-c7":          1,
 			"gpt-image-2":     0.03,
 			"nano-banana-2":   0.01,
 			"nano-banana-pro": 0.01,
@@ -296,7 +296,7 @@ func ensureDopioRMBPricing() {
 			"seedance-video-standard-per-second": 0.33,
 			"sd2-c5":                             3,
 			"sd2-c6":                             0.5,
-			"sd2-c7":                             0.5,
+			"sd2-c7":                             1,
 			"sd2-c8":                             3,
 			"sd2-c9":                             1,
 			"sd2-c10":                            0.5,
@@ -317,7 +317,7 @@ func ensureDopioRMBPricing() {
 			"sd2-c3":                             3,
 			"sd2-c5":                             4,
 			"sd2-c6":                             0.5,
-			"sd2-c7":                             0.5,
+			"sd2-c7":                             1,
 			"gpt-image-2":                        0.03,
 			"nano-banana-2":                      0.01,
 			"nano-banana-pro":                    0.01,
@@ -335,7 +335,7 @@ func ensureDopioRMBPricing() {
 			"sd2-c3":                             2,
 			"sd2-c5":                             2,
 			"sd2-c6":                             0.5,
-			"sd2-c7":                             0.5,
+			"sd2-c7":                             1,
 			"gpt-image-2":                        0.03,
 			"nano-banana-2":                      0.01,
 			"nano-banana-pro":                    0.01,
@@ -354,7 +354,7 @@ func ensureDopioRMBPricing() {
 			"sora-2-720p": 0.5, "sora-2-1080p": 1, "sora-2-pro-720p": 5, "sora-2-pro-1080p": 8,
 			"kling-v3-720p": 0.5, "kling-v3-1080p": 1, "kling-v3-4k": 2,
 			"sd2-c6":          0.3,
-			"sd2-c7":          0.3,
+			"sd2-c7":          1,
 			"sd2-c11":         1.5,
 			"sd2-c12":         2,
 			"gpt-image-2":     0.03,
@@ -377,6 +377,8 @@ func ensureDopioRMBPricing() {
 	}
 	for group := range targetModelGroupPrices {
 		targetModelGroupPrices[group]["seedance-720"] = higgsSeedancePrice
+		// sd2-c7 is a fixed ¥1 per-call alias in every actual user group.
+		targetModelGroupPrices[group]["sd2-c7"] = 1
 	}
 
 	updates := map[string]string{}
