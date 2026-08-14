@@ -101,15 +101,18 @@ func TestTaskSubmitReqToUpstreamVideoBody(t *testing.T) {
 
 func TestApplyCanonicalVideoControlsConvertsStringBooleanBeforeUpstream(t *testing.T) {
 	enabled := true
+	promptCompliance := true
 	body := map[string]interface{}{
 		"compliance_enabled": "true",
 		"eye_mask_enabled":   "true",
 		"eye_mask_mode":      "grid",
 	}
 	applyCanonicalVideoControls(body, relaycommon.TaskSubmitReq{
-		ComplianceEnabled: &enabled,
-		ComplianceMode:    "colored-pencil",
+		PromptComplianceEnabled: &promptCompliance,
+		ComplianceEnabled:       &enabled,
+		ComplianceMode:          "colored-pencil",
 	})
+	require.Equal(t, true, body["prompt_compliance_enabled"])
 	require.Equal(t, true, body["compliance_enabled"])
 	require.Equal(t, "colored-pencil", body["compliance_mode"])
 	require.NotContains(t, body, "eye_mask_enabled")

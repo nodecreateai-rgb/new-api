@@ -362,6 +362,9 @@ func applyCanonicalVideoControls(body map[string]interface{}, req relaycommon.Ta
 	if body == nil {
 		return
 	}
+	if req.PromptComplianceEnabled != nil {
+		body["prompt_compliance_enabled"] = *req.PromptComplianceEnabled
+	}
 	if req.ComplianceEnabled != nil {
 		body["compliance_enabled"] = *req.ComplianceEnabled
 	}
@@ -682,6 +685,11 @@ func buildUpstreamVideoJSONFromMultipart(c *gin.Context, info *relaycommon.Relay
 			InputReference: firstFormValue(formData.Value, "input_reference"),
 			ComplianceMode: firstFormValue(formData.Value, "compliance_mode"),
 		}
+		if raw := strings.TrimSpace(firstFormValue(formData.Value, "prompt_compliance_enabled")); raw != "" {
+			if enabled, convErr := strconv.ParseBool(raw); convErr == nil {
+				req.PromptComplianceEnabled = &enabled
+			}
+		}
 		if raw := strings.TrimSpace(firstFormValue(formData.Value, "compliance_enabled")); raw != "" {
 			if enabled, convErr := strconv.ParseBool(raw); convErr == nil {
 				req.ComplianceEnabled = &enabled
@@ -734,6 +742,9 @@ func taskSubmitReqToUpstreamVideoBody(req relaycommon.TaskSubmitReq, upstreamMod
 	}
 	if aspect != "" {
 		body["aspect_ratio"] = aspect
+	}
+	if req.PromptComplianceEnabled != nil {
+		body["prompt_compliance_enabled"] = *req.PromptComplianceEnabled
 	}
 	if req.ComplianceEnabled != nil {
 		body["compliance_enabled"] = *req.ComplianceEnabled

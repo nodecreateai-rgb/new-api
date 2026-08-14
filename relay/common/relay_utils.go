@@ -135,6 +135,11 @@ func validateMultipartTaskRequest(c *gin.Context, info *RelayInfo, action string
 	req.ReferenceAudios = append(req.ReferenceAudios, formData["reference_audio"]...)
 	req.Audios = append([]string(nil), formData["audios"]...)
 	req.ExtraAudios = append([]string(nil), formData["extra_audios"]...)
+	if raw := strings.TrimSpace(formData.Get("prompt_compliance_enabled")); raw != "" {
+		if enabled, err := strconv.ParseBool(raw); err == nil {
+			req.PromptComplianceEnabled = &enabled
+		}
+	}
 	if raw := strings.TrimSpace(formData.Get("compliance_enabled")); raw != "" {
 		if enabled, err := strconv.ParseBool(raw); err == nil {
 			req.ComplianceEnabled = &enabled
@@ -308,40 +313,41 @@ func supportsAudioReference(model string) bool {
 
 func isKnownTaskField(field string) bool {
 	knownFields := map[string]bool{
-		"prompt":             true,
-		"model":              true,
-		"mode":               true,
-		"image":              true,
-		"image_url":          true,
-		"image_refs":         true,
-		"image_urls":         true,
-		"reference_image":    true,
-		"reference_images":   true,
-		"extra_images":       true,
-		"images":             true,
-		"video":              true,
-		"video_url":          true,
-		"video_refs":         true,
-		"video_urls":         true,
-		"reference_video":    true,
-		"reference_videos":   true,
-		"extra_videos":       true,
-		"audio_url":          true,
-		"audio_refs":         true,
-		"audio_urls":         true,
-		"reference_audio":    true,
-		"reference_audios":   true,
-		"extra_audios":       true,
-		"audios":             true,
-		"size":               true,
-		"resolution":         true,
-		"aspect":             true,
-		"aspect_ratio":       true,
-		"ratio":              true,
-		"duration":           true,
-		"input_reference":    true, // Sora 特有字段
-		"compliance_enabled": true,
-		"compliance_mode":    true,
+		"prompt":                    true,
+		"model":                     true,
+		"mode":                      true,
+		"image":                     true,
+		"image_url":                 true,
+		"image_refs":                true,
+		"image_urls":                true,
+		"reference_image":           true,
+		"reference_images":          true,
+		"extra_images":              true,
+		"images":                    true,
+		"video":                     true,
+		"video_url":                 true,
+		"video_refs":                true,
+		"video_urls":                true,
+		"reference_video":           true,
+		"reference_videos":          true,
+		"extra_videos":              true,
+		"audio_url":                 true,
+		"audio_refs":                true,
+		"audio_urls":                true,
+		"reference_audio":           true,
+		"reference_audios":          true,
+		"extra_audios":              true,
+		"audios":                    true,
+		"size":                      true,
+		"resolution":                true,
+		"aspect":                    true,
+		"aspect_ratio":              true,
+		"ratio":                     true,
+		"duration":                  true,
+		"input_reference":           true, // Sora 特有字段
+		"prompt_compliance_enabled": true,
+		"compliance_enabled":        true,
+		"compliance_mode":           true,
 	}
 	return knownFields[field]
 }

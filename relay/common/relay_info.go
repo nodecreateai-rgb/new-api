@@ -682,45 +682,46 @@ type TaskRelayInfo struct {
 }
 
 type TaskSubmitReq struct {
-	Prompt            string                 `json:"prompt"`
-	Model             string                 `json:"model,omitempty"`
-	Mode              string                 `json:"mode,omitempty"`
-	Image             string                 `json:"image,omitempty"`
-	ImageURL          string                 `json:"image_url,omitempty"`
-	ReferenceImage    string                 `json:"reference_image,omitempty"`
-	ImageRefs         []string               `json:"image_refs,omitempty"`
-	ImageURLs         []string               `json:"image_urls,omitempty"`
-	Images            []string               `json:"images,omitempty"`
-	ReferenceImages   []string               `json:"reference_images,omitempty"`
-	ExtraImages       []string               `json:"extra_images,omitempty"`
-	Video             string                 `json:"video,omitempty"`
-	VideoURL          string                 `json:"video_url,omitempty"`
-	ReferenceVideo    string                 `json:"reference_video,omitempty"`
-	VideoRefs         []string               `json:"video_refs,omitempty"`
-	VideoURLs         []string               `json:"video_urls,omitempty"`
-	Videos            []string               `json:"videos,omitempty"`
-	ReferenceVideos   []string               `json:"reference_videos,omitempty"`
-	ExtraVideos       []string               `json:"extra_videos,omitempty"`
-	AudioURL          string                 `json:"audio_url,omitempty"`
-	ReferenceAudio    string                 `json:"reference_audio,omitempty"`
-	AudioRefs         []string               `json:"audio_refs,omitempty"`
-	AudioURLs         []string               `json:"audio_urls,omitempty"`
-	Audios            []string               `json:"audios,omitempty"`
-	ReferenceAudios   []string               `json:"reference_audios,omitempty"`
-	ExtraAudios       []string               `json:"extra_audios,omitempty"`
-	Size              string                 `json:"size,omitempty"`
-	Resolution        string                 `json:"resolution,omitempty"`
-	Aspect            string                 `json:"aspect,omitempty"`
-	AspectRatio       string                 `json:"aspect_ratio,omitempty"`
-	Ratio             string                 `json:"ratio,omitempty"`
-	Duration          int                    `json:"duration,omitempty"`
-	Seconds           string                 `json:"seconds,omitempty"`
-	InputReference    string                 `json:"input_reference,omitempty"`
-	ComplianceEnabled *bool                  `json:"compliance_enabled,omitempty"`
-	ComplianceMode    string                 `json:"compliance_mode,omitempty"`
-	EyeMaskEnabled    *bool                  `json:"eye_mask_enabled,omitempty"`
-	EyeMaskMode       string                 `json:"eye_mask_mode,omitempty"`
-	Metadata          map[string]interface{} `json:"metadata,omitempty"`
+	Prompt                  string                 `json:"prompt"`
+	Model                   string                 `json:"model,omitempty"`
+	Mode                    string                 `json:"mode,omitempty"`
+	Image                   string                 `json:"image,omitempty"`
+	ImageURL                string                 `json:"image_url,omitempty"`
+	ReferenceImage          string                 `json:"reference_image,omitempty"`
+	ImageRefs               []string               `json:"image_refs,omitempty"`
+	ImageURLs               []string               `json:"image_urls,omitempty"`
+	Images                  []string               `json:"images,omitempty"`
+	ReferenceImages         []string               `json:"reference_images,omitempty"`
+	ExtraImages             []string               `json:"extra_images,omitempty"`
+	Video                   string                 `json:"video,omitempty"`
+	VideoURL                string                 `json:"video_url,omitempty"`
+	ReferenceVideo          string                 `json:"reference_video,omitempty"`
+	VideoRefs               []string               `json:"video_refs,omitempty"`
+	VideoURLs               []string               `json:"video_urls,omitempty"`
+	Videos                  []string               `json:"videos,omitempty"`
+	ReferenceVideos         []string               `json:"reference_videos,omitempty"`
+	ExtraVideos             []string               `json:"extra_videos,omitempty"`
+	AudioURL                string                 `json:"audio_url,omitempty"`
+	ReferenceAudio          string                 `json:"reference_audio,omitempty"`
+	AudioRefs               []string               `json:"audio_refs,omitempty"`
+	AudioURLs               []string               `json:"audio_urls,omitempty"`
+	Audios                  []string               `json:"audios,omitempty"`
+	ReferenceAudios         []string               `json:"reference_audios,omitempty"`
+	ExtraAudios             []string               `json:"extra_audios,omitempty"`
+	Size                    string                 `json:"size,omitempty"`
+	Resolution              string                 `json:"resolution,omitempty"`
+	Aspect                  string                 `json:"aspect,omitempty"`
+	AspectRatio             string                 `json:"aspect_ratio,omitempty"`
+	Ratio                   string                 `json:"ratio,omitempty"`
+	Duration                int                    `json:"duration,omitempty"`
+	Seconds                 string                 `json:"seconds,omitempty"`
+	InputReference          string                 `json:"input_reference,omitempty"`
+	PromptComplianceEnabled *bool                  `json:"prompt_compliance_enabled,omitempty"`
+	ComplianceEnabled       *bool                  `json:"compliance_enabled,omitempty"`
+	ComplianceMode          string                 `json:"compliance_mode,omitempty"`
+	EyeMaskEnabled          *bool                  `json:"eye_mask_enabled,omitempty"`
+	EyeMaskMode             string                 `json:"eye_mask_mode,omitempty"`
+	Metadata                map[string]interface{} `json:"metadata,omitempty"`
 }
 
 func (t *TaskSubmitReq) GetPrompt() string {
@@ -747,9 +748,10 @@ func (t *TaskSubmitReq) HasAudioReference() bool {
 func (t *TaskSubmitReq) UnmarshalJSON(data []byte) error {
 	type Alias TaskSubmitReq
 	aux := &struct {
-		Metadata          json.RawMessage `json:"metadata,omitempty"`
-		Duration          json.RawMessage `json:"duration,omitempty"`
-		ComplianceEnabled json.RawMessage `json:"compliance_enabled,omitempty"`
+		Metadata                json.RawMessage `json:"metadata,omitempty"`
+		Duration                json.RawMessage `json:"duration,omitempty"`
+		PromptComplianceEnabled json.RawMessage `json:"prompt_compliance_enabled,omitempty"`
+		ComplianceEnabled       json.RawMessage `json:"compliance_enabled,omitempty"`
 		*Alias
 	}{
 		Alias: (*Alias)(t),
@@ -772,25 +774,19 @@ func (t *TaskSubmitReq) UnmarshalJSON(data []byte) error {
 			}
 		}
 	}
-	if len(aux.ComplianceEnabled) > 0 {
-		var enabled bool
-		if err := common.Unmarshal(aux.ComplianceEnabled, &enabled); err == nil {
-			t.ComplianceEnabled = &enabled
-		} else {
-			var raw string
-			if err := common.Unmarshal(aux.ComplianceEnabled, &raw); err != nil {
-				return fmt.Errorf("invalid compliance_enabled: must be a boolean or boolean string")
-			}
-			switch strings.ToLower(strings.TrimSpace(raw)) {
-			case "true", "1", "yes", "on":
-				enabled = true
-			case "false", "0", "no", "off":
-				enabled = false
-			default:
-				return fmt.Errorf("invalid compliance_enabled %q: must be true or false", raw)
-			}
-			t.ComplianceEnabled = &enabled
+	if len(aux.PromptComplianceEnabled) > 0 {
+		enabled, err := parseFlexibleTaskBool(aux.PromptComplianceEnabled, "prompt_compliance_enabled")
+		if err != nil {
+			return err
 		}
+		t.PromptComplianceEnabled = &enabled
+	}
+	if len(aux.ComplianceEnabled) > 0 {
+		enabled, err := parseFlexibleTaskBool(aux.ComplianceEnabled, "compliance_enabled")
+		if err != nil {
+			return err
+		}
+		t.ComplianceEnabled = &enabled
 	}
 
 	if len(aux.Metadata) > 0 {
@@ -824,6 +820,26 @@ func (t *TaskSubmitReq) UnmarshalJSON(data []byte) error {
 
 	return nil
 }
+
+func parseFlexibleTaskBool(rawJSON json.RawMessage, field string) (bool, error) {
+	var enabled bool
+	if err := common.Unmarshal(rawJSON, &enabled); err == nil {
+		return enabled, nil
+	}
+	var raw string
+	if err := common.Unmarshal(rawJSON, &raw); err != nil {
+		return false, fmt.Errorf("invalid %s: must be a boolean or boolean string", field)
+	}
+	switch strings.ToLower(strings.TrimSpace(raw)) {
+	case "true", "1", "yes", "on":
+		return true, nil
+	case "false", "0", "no", "off":
+		return false, nil
+	default:
+		return false, fmt.Errorf("invalid %s %q: must be true or false", field, raw)
+	}
+}
+
 func (t *TaskSubmitReq) UnmarshalMetadata(v any) error {
 	metadata := t.Metadata
 	if metadata != nil {

@@ -38,6 +38,7 @@ func TestValidateMultipartTaskRequestAcceptsComplianceParams(t *testing.T) {
 	w := multipart.NewWriter(&body)
 	_ = w.WriteField("prompt", "test")
 	_ = w.WriteField("model", "seedance-video-standard")
+	_ = w.WriteField("prompt_compliance_enabled", "true")
 	_ = w.WriteField("compliance_enabled", "false")
 	_ = w.WriteField("compliance_mode", "colored-pencil")
 	_ = w.Close()
@@ -47,6 +48,9 @@ func TestValidateMultipartTaskRequestAcceptsComplianceParams(t *testing.T) {
 	req, err := validateMultipartTaskRequest(c, &RelayInfo{}, "textGenerate")
 	if err != nil {
 		t.Fatalf("validate request: %v", err)
+	}
+	if req.PromptComplianceEnabled == nil || !*req.PromptComplianceEnabled {
+		t.Fatalf("prompt_compliance_enabled=%v", req.PromptComplianceEnabled)
 	}
 	if req.ComplianceEnabled == nil || *req.ComplianceEnabled {
 		t.Fatalf("compliance_enabled=%v", req.ComplianceEnabled)
