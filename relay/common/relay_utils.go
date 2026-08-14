@@ -153,10 +153,8 @@ func validateMultipartTaskRequest(c *gin.Context, info *RelayInfo, action string
 			req.Duration = duration
 		}
 	}
-	if req.Duration <= 0 && req.Seconds != "" {
-		if duration, err := strconv.Atoi(req.Seconds); err == nil {
-			req.Duration = duration
-		}
+	if resolved := ResolveTaskSubmitDuration(req.Duration, req.Seconds); resolved > 0 {
+		req.Duration = resolved
 	}
 
 	if images := formData["images"]; len(images) > 0 {
@@ -228,6 +226,10 @@ func ValidateMultipartDirect(c *gin.Context, info *RelayInfo) *dto.TaskError {
 	if seconds == 0 {
 		seconds = req.Duration
 	}
+	if resolved := ResolveTaskSubmitDuration(req.Duration, req.Seconds); resolved > 0 {
+		seconds = resolved
+		req.Duration = resolved
+	}
 	if req.InputReference != "" {
 		req.Images = append(req.Images, req.InputReference)
 	}
@@ -273,6 +275,17 @@ func ValidateMultipartDirect(c *gin.Context, info *RelayInfo) *dto.TaskError {
 	storeTaskRequest(c, info, action, req)
 
 	return nil
+}
+
+// ResolveTaskSubmitDuration picks the effective clip length when clients send both
+// duration and OpenAI-compatible seconds. Some UIs keep a stale duration=10
+// default while seconds carries the real request (e.g. 30).
+func ResolveTaskSubmitDuration(duration int, seconds string) int {
+	d := duration
+	if s, err := strconv.Atoi(strings.TrimSpace(seconds)); err == nil && s > 0 && s > d {
+		d = s
+	}
+	return d
 }
 
 func supportsAudioReference(model string) bool {
@@ -351,6 +364,10 @@ func ValidateBasicTaskRequest(c *gin.Context, info *RelayInfo, action string) *d
 
 	if taskErr := validatePrompt(req.Prompt); taskErr != nil {
 		return taskErr
+	}
+
+	if resolved := ResolveTaskSubmitDuration(req.Duration, req.Seconds); resolved > 0 {
+		req.Duration = resolved
 	}
 
 	if len(req.Images) == 0 && strings.TrimSpace(req.Image) != "" {

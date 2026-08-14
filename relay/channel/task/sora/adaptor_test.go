@@ -136,6 +136,17 @@ func TestApplySD25DurationLimitUsesSecondsAndCapsAtThirty(t *testing.T) {
 	applySD25DurationLimit(body, relaycommon.TaskSubmitReq{})
 	require.NotContains(t, body, "duration")
 	require.NotContains(t, body, "seconds")
+
+	body = map[string]interface{}{"duration": 10}
+	applySD25DurationLimit(body, relaycommon.TaskSubmitReq{Duration: 10, Seconds: "30"})
+	require.Equal(t, 30, body["duration"])
+	require.Equal(t, "30", body["seconds"])
+}
+
+func TestTaskSubmitDurationPrefersSecondsOverStaleDurationDefault(t *testing.T) {
+	require.Equal(t, 30, taskSubmitDuration(relaycommon.TaskSubmitReq{Duration: 10, Seconds: "30"}))
+	require.Equal(t, 30, relaycommon.ResolveTaskSubmitDuration(10, "30"))
+	require.Equal(t, 10, taskSubmitDuration(relaycommon.TaskSubmitReq{Duration: 10, Seconds: "10"}))
 }
 
 func TestUpstreamVideoTaskPrefersJSON(t *testing.T) {

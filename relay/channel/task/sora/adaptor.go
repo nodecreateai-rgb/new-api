@@ -197,6 +197,9 @@ func (a *TaskAdaptor) EstimateBilling(c *gin.Context, info *relaycommon.RelayInf
 	if seconds == 0 {
 		seconds = req.Duration
 	}
+	if resolved := relaycommon.ResolveTaskSubmitDuration(req.Duration, req.Seconds); resolved > 0 {
+		seconds = resolved
+	}
 	if seconds <= 0 {
 		seconds = 4
 	}
@@ -373,10 +376,7 @@ func applySD25DurationLimit(body map[string]interface{}, req relaycommon.TaskSub
 	if body == nil {
 		return
 	}
-	duration := req.Duration
-	if duration <= 0 {
-		duration, _ = strconv.Atoi(strings.TrimSpace(req.Seconds))
-	}
+	duration := taskSubmitDuration(req)
 	if duration <= 0 {
 		// Leave duration unset so dola2api can infer clip length from the prompt
 		// (e.g. "30 秒") instead of forcing the legacy 10s default.
@@ -695,6 +695,9 @@ func buildUpstreamVideoJSONFromMultipart(c *gin.Context, info *relaycommon.Relay
 		}
 	}
 	bodyMap := taskSubmitReqToUpstreamVideoBody(req, info.UpstreamModelName)
+	if strings.TrimSpace(info.OriginModelName) == "sd2.5" {
+		applySD25DurationLimit(bodyMap, req)
+	}
 	normalizeOpenAIVideoAspectBody(bodyMap)
 	return common.Marshal(bodyMap)
 }
@@ -767,13 +770,7 @@ func taskSubmitReqToUpstreamVideoBody(req relaycommon.TaskSubmitReq, upstreamMod
 }
 
 func taskSubmitDuration(req relaycommon.TaskSubmitReq) int {
-	if req.Duration > 0 {
-		return req.Duration
-	}
-	if seconds, err := strconv.Atoi(strings.TrimSpace(req.Seconds)); err == nil {
-		return seconds
-	}
-	return 0
+	return relaycommon.ResolveTaskSubmitDuration(req.Duration, req.Seconds)
 }
 
 func collectUpstreamVideoImageRefs(req relaycommon.TaskSubmitReq) []string {
