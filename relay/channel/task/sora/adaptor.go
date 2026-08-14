@@ -377,8 +377,14 @@ func applySD25DurationLimit(body map[string]interface{}, req relaycommon.TaskSub
 	if duration <= 0 {
 		duration, _ = strconv.Atoi(strings.TrimSpace(req.Seconds))
 	}
-	if duration <= 0 || duration > 10 {
+	if duration <= 0 {
 		duration = 10
+	}
+	if duration < 5 {
+		duration = 5
+	}
+	if duration > 30 {
+		duration = 30
 	}
 	body["duration"] = duration
 	body["seconds"] = strconv.Itoa(duration)
