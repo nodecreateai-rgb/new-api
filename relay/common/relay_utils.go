@@ -281,7 +281,7 @@ func supportsAudioReference(model string) bool {
 		return true
 	}
 	switch model {
-	case "sd2.5", "seedance-2.5-omni", "sd2-mini", "seedance2_mini":
+	case "sd2.5", "seedance2.5-c1", "seedance-2.5-omni", "sd2-mini", "seedance2_mini":
 		return true
 	case "seedance-video-fast", "seedance-video-standard",
 		"seedance-video-fast-per-second", "seedance-video-standard-per-second",

@@ -669,12 +669,12 @@ func ensureSD2FastRouting() error {
 
 func ensureSD25Routing() error {
 	const publicModel = "sd2.5"
-	const upstreamModel = "seedance-2.5-omni"
+	const upstreamModel = "seedance2.5-c1"
 	const neutralName = "Video Omni"
 	const groups = "default,vip,svip,vip1,vip2,vip3,vip6"
 	baseURL := strings.TrimSpace(os.Getenv("SD25_BASE_URL"))
 	if baseURL == "" {
-		baseURL = "http://astore2api-sd25:38474"
+		baseURL = "http://dola2api:38472"
 	}
 	key := strings.TrimSpace(os.Getenv("SD25_GATEWAY_KEY"))
 	if key == "" {
@@ -721,6 +721,11 @@ func ensureSD25Routing() error {
 		}
 	}
 	if err := DB.Model(&Ability{}).Where("channel_id = ? AND model <> ?", channel.Id, publicModel).Update("enabled", false).Error; err != nil {
+		return err
+	}
+	// sd2.5 is exclusively owned by this Dola-backed channel. Disable stale
+	// abilities on any previous provider so no group can route elsewhere.
+	if err := DB.Model(&Ability{}).Where("model = ? AND channel_id <> ?", publicModel, channel.Id).Update("enabled", false).Error; err != nil {
 		return err
 	}
 	for _, group := range strings.Split(groups, ",") {

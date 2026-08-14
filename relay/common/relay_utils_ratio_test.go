@@ -59,6 +59,7 @@ func TestValidateMultipartTaskRequestAcceptsComplianceParams(t *testing.T) {
 func TestSupportsAudioReferenceForConfiguredVideoModels(t *testing.T) {
 	for _, model := range []string{
 		"sd2.5",
+		"seedance2.5-c1",
 		"seedance-2.5-omni",
 		"seedance-720",
 		"seedance-720 ",

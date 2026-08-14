@@ -122,7 +122,7 @@ func TestTaskSubmitReqToUpstreamVideoBodyForSD25FansOutAllAudioAliases(t *testin
 		AudioRefs:       []string{"https://assets.example/audio.mp3"},
 		ReferenceAudios: []string{"https://assets.example/audio2.wav"},
 	}
-	body := taskSubmitReqToUpstreamVideoBody(req, "seedance-2.5-omni")
+	body := taskSubmitReqToUpstreamVideoBody(req, "seedance2.5-c1")
 	audios, ok := body["audio_refs"].([]string)
 	if !ok || len(audios) != 2 {
 		t.Fatalf("sd2.5 audio_refs body=%v", body)
