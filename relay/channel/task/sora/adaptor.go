@@ -378,7 +378,11 @@ func applySD25DurationLimit(body map[string]interface{}, req relaycommon.TaskSub
 		duration, _ = strconv.Atoi(strings.TrimSpace(req.Seconds))
 	}
 	if duration <= 0 {
-		duration = 10
+		// Leave duration unset so dola2api can infer clip length from the prompt
+		// (e.g. "30 秒") instead of forcing the legacy 10s default.
+		delete(body, "duration")
+		delete(body, "seconds")
+		return
 	}
 	if duration < 5 {
 		duration = 5
