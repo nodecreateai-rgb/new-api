@@ -25,12 +25,21 @@ func InitChannelCache() {
 	}
 	newChannelId2channel := make(map[int]*Channel)
 	var channels []*Channel
-	DB.Find(&channels)
+	if err := DB.Find(&channels).Error; err != nil {
+		// Never replace a healthy cache with an empty/partial snapshot when the
+		// database is temporarily unavailable or corrupt. Pollers can continue
+		// using the last known channel definitions until the next successful sync.
+		common.SysError("sync channels from database failed; keeping previous cache: " + err.Error())
+		return
+	}
 	for _, channel := range channels {
 		newChannelId2channel[channel.Id] = channel
 	}
 	var abilities []*Ability
-	DB.Find(&abilities)
+	if err := DB.Find(&abilities).Error; err != nil {
+		common.SysError("sync channel abilities from database failed; keeping previous cache: " + err.Error())
+		return
+	}
 	groups := make(map[string]bool)
 	for _, ability := range abilities {
 		groups[ability.Group] = true
