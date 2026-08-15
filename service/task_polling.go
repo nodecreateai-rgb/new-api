@@ -349,22 +349,17 @@ func updateVideoTasks(ctx context.Context, platform constant.TaskPlatform, chann
 	}
 	cacheGetChannel, err := model.CacheGetChannel(channelId)
 	if err != nil {
-		// Collect DB primary key IDs for bulk update (taskIds are upstream IDs, not task_id column values)
-		var failedIDs []int64
-		for _, upstreamID := range taskIds {
-			if t, ok := taskM[upstreamID]; ok {
-				failedIDs = append(failedIDs, t.ID)
-			}
+		// A channel-cache miss is infrastructure/cache state, not an upstream
+		// terminal result. Fall back to the authoritative database so a transient
+		// empty/stale cache cannot permanently fail and refund every in-flight task
+		// for the channel.
+		cacheErr := err
+		cacheGetChannel, err = model.GetChannelById(channelId, true)
+		if err != nil {
+			return fmt.Errorf("get channel %d failed (cache: %v, db: %w)", channelId, cacheErr, err)
 		}
-		errUpdate := model.TaskBulkUpdateByID(failedIDs, map[string]any{
-			"fail_reason": fmt.Sprintf("Failed to get channel info, channel ID: %d", channelId),
-			"status":      "FAILURE",
-			"progress":    "100%",
-		})
-		if errUpdate != nil {
-			common.SysLog(fmt.Sprintf("UpdateVideoTask error: %v", errUpdate))
-		}
-		return fmt.Errorf("CacheGetChannel failed: %w", err)
+		model.CacheUpdateChannel(cacheGetChannel)
+		logger.LogInfo(ctx, fmt.Sprintf("Channel #%d missing from cache; recovered from database for %d pending video tasks", channelId, len(taskIds)))
 	}
 
 	for _, taskId := range taskIds {
