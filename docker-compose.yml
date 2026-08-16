@@ -4,7 +4,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: 187.124.94.7:5000/new-api:sd25-duration-20260814
+    image: 187.124.94.7:5000/new-api:vip6-price-20260816
     restart: always
     command: --log-dir /app/logs
     working_dir: /
