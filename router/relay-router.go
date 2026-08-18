@@ -87,6 +87,11 @@ func SetRelayRouter(router *gin.Engine) {
 		taskFetchRouter.GET("/images/edits/:task_id", controller.ImageTaskFetch)
 	}
 	{
+		authRouter := relayV1Router.Group("")
+		authRouter.Use(middleware.Distribute())
+		authRouter.POST("/auth", controller.RelayAuth)
+	}
+	{
 		//http router
 		httpRouter := relayV1Router.Group("")
 		httpRouter.Use(middleware.Distribute())

@@ -250,6 +250,7 @@ func ensureDopioRMBPricing() {
 		"gpt-image-2":                        0.03,
 		"nano-banana-2":                      0.01,
 		"nano-banana-pro":                    0.01,
+		"oauth2":                        0.1,
 	}
 	targetGroupRatios := map[string]float64{
 		"default": 1,
@@ -564,7 +565,11 @@ func ensureDopioRMBPricing() {
 		common.SysLog("failed to enforce sd2.5 gateway routing: " + err.Error())
 		return
 	}
-	common.SysLog("enforced Dopio RMB pricing incl sd2.5=1.5 per call, vip6 sd2.5=1, sd2-fast=1 per call, vip6 Seedance 720p fast=1/full=2, banana=0.01, sd2-c6=1, sd2-c7=1, sd2-c11=2.5, sd2-c12=3, Price=1, USDExchangeRate=1, quota_display_type=CNY")
+	if err := ensureOAuth2APIRouting(); err != nil {
+		common.SysLog("failed to enforce oauth2 gateway routing: " + err.Error())
+		return
+	}
+	common.SysLog("enforced Dopio RMB pricing incl sd2.5=1.5 per call, vip6 sd2.5=1, sd2-fast=1 per call, vip6 Seedance 720p fast=1/full=2, banana=0.01, oauth2=0.1, sd2-c6=1, sd2-c7=1, sd2-c11=2.5, sd2-c12=3, Price=1, USDExchangeRate=1, quota_display_type=CNY")
 }
 
 func ensureDolaSeedanceRouting() error {
@@ -751,6 +756,93 @@ func ensureSD25Routing() error {
 		return err
 	}
 	return DB.Unscoped().Model(&Model{}).Where("id = ?", meta.Id).Updates(map[string]any{"description": "", "icon": "", "tags": "video", "endpoints": endpoint, "status": 1, "sync_official": 0, "deleted_at": nil, "updated_time": common.GetTimestamp()}).Error
+}
+
+func ensureOAuth2APIRouting() error {
+	const publicModel = "oauth2"
+	const neutralName = "OAuth2 Auth"
+	const groups = "default,vip,svip,vip1,vip2,vip3,vip6"
+	baseURL := strings.TrimSpace(os.Getenv("OAUTH2API_BASE_URL"))
+	if baseURL == "" {
+		baseURL = "http://google2api:39181"
+	}
+	key := strings.TrimSpace(os.Getenv("OAUTH2API_GATEWAY_KEY"))
+	if key == "" {
+		if keyFile := strings.TrimSpace(os.Getenv("OAUTH2API_GATEWAY_KEY_FILE")); keyFile != "" {
+			if raw, err := os.ReadFile(keyFile); err == nil {
+				key = strings.TrimSpace(string(raw))
+			}
+		}
+	}
+	if key == "" {
+		key = strings.TrimSpace(os.Getenv("ADOBE2API_GATEWAY_KEY"))
+	}
+	var channel Channel
+	err := DB.Where("name = ?", neutralName).First(&channel).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		if key == "" {
+			return fmt.Errorf("OAUTH2API_GATEWAY_KEY is required")
+		}
+		weight := uint(100)
+		priority := int64(10)
+		autoBan := 0
+		channel = Channel{
+			Type: 1, Key: key, Status: common.ChannelStatusEnabled, Name: neutralName, Weight: &weight,
+			CreatedTime: common.GetTimestamp(), BaseURL: stringPtr(baseURL), Models: publicModel, Group: groups,
+			Priority: &priority, AutoBan: &autoBan,
+		}
+		if err := DB.Create(&channel).Error; err != nil {
+			return err
+		}
+	} else if err != nil {
+		return err
+	} else {
+		if key == "" {
+			key = channel.Key
+		}
+		if key == "" {
+			return fmt.Errorf("OAUTH2API_GATEWAY_KEY is required")
+		}
+		if err := DB.Model(&Channel{}).Where("id = ?", channel.Id).Updates(map[string]any{
+			"type": 1, "key": key, "status": common.ChannelStatusEnabled, "name": neutralName, "base_url": baseURL,
+			"models": publicModel, "group": groups, "priority": 10, "weight": 100, "auto_ban": 0,
+		}).Error; err != nil {
+			return err
+		}
+	}
+	if err := DB.Model(&Ability{}).Where("channel_id = ? AND model <> ?", channel.Id, publicModel).Update("enabled", false).Error; err != nil {
+		return err
+	}
+	if err := DB.Model(&Ability{}).Where("model = ? AND channel_id <> ?", publicModel, channel.Id).Update("enabled", false).Error; err != nil {
+		return err
+	}
+	for _, group := range strings.Split(groups, ",") {
+		ability := Ability{Group: group, Model: publicModel, ChannelId: channel.Id}
+		if err := DB.Where(commonGroupCol+" = ? AND model = ? AND channel_id = ?", group, publicModel, channel.Id).FirstOrCreate(&ability).Error; err != nil {
+			return err
+		}
+		if err := DB.Model(&Ability{}).Where(commonGroupCol+" = ? AND model = ? AND channel_id = ?", group, publicModel, channel.Id).
+			Updates(map[string]any{"enabled": true, "priority": int64(10), "weight": uint(100)}).Error; err != nil {
+			return err
+		}
+	}
+	endpoint := `{"openai":{"path":"/v1/auth","method":"POST"}}`
+	var meta Model
+	err = DB.Unscoped().Where("model_name = ?", publicModel).First(&meta).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		meta = Model{
+			ModelName: publicModel, Description: "Google OAuth2 authentication service", Icon: "", Tags: "auth",
+			Endpoints: endpoint, Status: 1, SyncOfficial: 0, CreatedTime: common.GetTimestamp(), UpdatedTime: common.GetTimestamp(),
+		}
+		return DB.Create(&meta).Error
+	}
+	if err != nil {
+		return err
+	}
+	return DB.Unscoped().Model(&Model{}).Where("id = ?", meta.Id).Updates(map[string]any{
+		"description": "Google OAuth2 authentication service", "icon": "", "tags": "auth", "endpoints": endpoint,
+		"status": 1, "sync_official": 0, "deleted_at": nil, "updated_time": common.GetTimestamp(),
+	}).Error
 }
 
 func stringPtr(value string) *string { return &value }
