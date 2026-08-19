@@ -96,6 +96,12 @@ func VideoProxy(c *gin.Context) {
 		videoProxyError(c, http.StatusInternalServerError, "server_error", "Failed to create proxy request")
 		return
 	}
+	// Preserve byte-range semantics for browser video seeking. Without this, the
+	// gateway converts every Range request into a full upstream GET and always
+	// returns 200, forcing clients to redownload the complete MP4.
+	if rangeHeader := strings.TrimSpace(c.GetHeader("Range")); rangeHeader != "" {
+		req.Header.Set("Range", rangeHeader)
+	}
 
 	switch channel.Type {
 	case constant.ChannelTypeGemini:
@@ -197,7 +203,7 @@ func VideoProxy(c *gin.Context) {
 		}
 	}
 
-	if resp.StatusCode != http.StatusOK {
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusPartialContent {
 		logger.LogError(c.Request.Context(), fmt.Sprintf("Upstream returned status %d for %s", resp.StatusCode, videoURL))
 		videoProxyError(c, http.StatusBadGateway, "server_error",
 			fmt.Sprintf("Upstream service returned status %d", resp.StatusCode))
