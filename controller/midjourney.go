@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/QuantumNous/new-api/common"
+	"github.com/QuantumNous/new-api/constant"
 	"github.com/QuantumNous/new-api/dto"
 	"github.com/QuantumNous/new-api/logger"
 	"github.com/QuantumNous/new-api/model"
@@ -19,6 +20,14 @@ import (
 
 	"github.com/gin-gonic/gin"
 )
+
+func midjourneyTaskTimedOut(elapsedMilliseconds int64, progress string) bool {
+	if constant.TaskTimeoutMinutes <= 0 || progress == "100%" {
+		return false
+	}
+	limitMilliseconds := int64(constant.TaskTimeoutMinutes) * int64(time.Minute/time.Millisecond)
+	return elapsedMilliseconds > limitMilliseconds
+}
 
 func UpdateMidjourneyTaskBulk() {
 	//imageModel := "midjourney"
@@ -122,9 +131,9 @@ func UpdateMidjourneyTaskBulk() {
 				task := taskM[responseItem.MjId]
 
 				useTime := (time.Now().UnixNano() / int64(time.Millisecond)) - task.SubmitTime
-				// 如果时间超过一小时，且进度不是100%，则认为任务失败
-				if useTime > 3600000 && task.Progress != "100%" {
-					responseItem.FailReason = "上游任务超时（超过1小时）"
+				// 与统一异步任务时限配置保持一致；0 表示禁用。
+				if midjourneyTaskTimedOut(useTime, task.Progress) {
+					responseItem.FailReason = fmt.Sprintf("上游任务超时（超过%d分钟）", constant.TaskTimeoutMinutes)
 					responseItem.Status = "FAILURE"
 				}
 				if !checkMjTaskNeedUpdate(task, responseItem) {
