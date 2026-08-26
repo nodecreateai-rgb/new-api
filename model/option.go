@@ -17,6 +17,7 @@ import (
 	"github.com/QuantumNous/new-api/setting/ratio_setting"
 	"github.com/QuantumNous/new-api/setting/system_setting"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type Option struct {
@@ -259,9 +260,11 @@ func ensureDopioRMBPricing() {
 		"svip":    1,
 		"vip2":    1,
 		"vip6":    1,
+		"vip7":    1,
 	}
 	targetUserUsableGroups := map[string]string{
 		"vip6": "VIP6分组",
+		"vip7": "VIP7分组",
 	}
 	// Fixed per-group RMB prices for Dopio video aliases. ModelGroupPrice
 	// overrides ModelPrice and resets group ratio to 1 during billing, which is
@@ -376,11 +379,17 @@ func ensureDopioRMBPricing() {
 			"seedance-2.0-720p":      2,
 			"sd2.5":                  1,
 		},
+		"vip7": {
+			"sd2-c7": 0.3,
+			"sd2.5":  0.3,
+		},
 	}
 	for group := range targetModelGroupPrices {
 		targetModelGroupPrices[group]["seedance-720"] = higgsSeedancePrice
-		// sd2-c7 is a fixed ¥1 per-call alias in every actual user group.
-		targetModelGroupPrices[group]["sd2-c7"] = 1
+		// sd2-c7 is a fixed ¥1 per call except for the dedicated vip7 price.
+		if group != "vip7" {
+			targetModelGroupPrices[group]["sd2-c7"] = 1
+		}
 	}
 
 	updates := map[string]string{}
@@ -543,6 +552,14 @@ func ensureDopioRMBPricing() {
 	}
 	if err := ensureChannelGroupAbilities(15, "vip6"); err != nil {
 		common.SysLog("failed to ensure vip6 channel abilities: " + err.Error())
+		return
+	}
+	if err := ensureExactGroupAbility(2, "vip7", "sd2-c7"); err != nil {
+		common.SysLog("failed to ensure vip7 sd2-c7 ability: " + err.Error())
+		return
+	}
+	if err := ensureExactGroupAbility(50, "vip7", "sd2.5"); err != nil {
+		common.SysLog("failed to ensure vip7 sd2.5 ability: " + err.Error())
 		return
 	}
 	if err := ensureSeedance720HiggsRouting(); err != nil {
@@ -1075,6 +1092,22 @@ func ensureChannelGroupAbilities(channelID int, group string) error {
 		}
 	}
 	return channel.AddAbilities(nil)
+}
+
+func ensureExactGroupAbility(channelID int, group, modelName string) error {
+	var channel Channel
+	if err := DB.First(&channel, channelID).Error; err != nil {
+		return err
+	}
+	ability := Ability{
+		Group: group, Model: modelName, ChannelId: channelID,
+		Enabled:  channel.Status == common.ChannelStatusEnabled,
+		Priority: channel.Priority, Weight: uint(channel.GetWeight()), Tag: channel.Tag,
+	}
+	return DB.Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "group"}, {Name: "model"}, {Name: "channel_id"}},
+		DoUpdates: clause.AssignmentColumns([]string{"enabled", "priority", "weight", "tag"}),
+	}).Create(&ability).Error
 }
 
 func SyncOptions(frequency int) {
