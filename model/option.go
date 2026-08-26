@@ -696,7 +696,7 @@ func ensureSD25Routing() error {
 	const publicModel = "sd2.5"
 	const upstreamModel = "seedance2.5-c1"
 	const neutralName = "Video Omni"
-	const groups = "default,vip,svip,vip1,vip2,vip3,vip6"
+	const groups = "default,vip,svip,vip1,vip2,vip3,vip6,vip7"
 	baseURL := strings.TrimSpace(os.Getenv("SD25_BASE_URL"))
 	if baseURL == "" {
 		baseURL = "http://dola2api:38472"
