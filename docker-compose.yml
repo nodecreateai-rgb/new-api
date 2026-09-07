@@ -48,6 +48,11 @@ services:
       - postgres
     networks:
       - new-api-network
+      # Traefik 默认在 dokploy-network 上解析容器 IP；仅内网时 Domains 会配上仍 404。
+      - dokploy-network
+    labels:
+      # 多网卡时强制走 Dokploy/Traefik 所在网络（Domains 注入的 Host 规则仍生效）。
+      - traefik.docker.network=dokploy-network
     healthcheck:
       test:
         [
@@ -110,7 +115,9 @@ volumes:
   pg_data:
 
 networks:
-  # 由本 compose 创建；Dokploy 项目前缀会自动加到网络名上。
-  # 切勿写成 external + 旧服务器上的 paco-llm-*/其它项目网络名。
+  # 应用内网：postgres / redis / new-api。
   new-api-network:
     driver: bridge
+  # Dokploy 全局网络：供 Traefik 发现并转发域名流量。
+  dokploy-network:
+    external: true
