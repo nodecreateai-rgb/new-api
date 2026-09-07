@@ -1,10 +1,11 @@
 # New-API Docker Compose
 #
-# 本地：docker compose up -d，默认映射 ${HOST_PORT:-3060}:3000
-# Dokploy：用本文件或 docker-compose.dokploy.yml；在 UI → Domains 绑定服务 new-api、端口 3000，
-#         由 Dokploy 注入 Traefik 标签与公网网络。不要手写 dokploy-network / 旧项目网络名。
+# 本地：docker compose up -d
+# Dokploy：Domains 绑定服务 new-api、端口 3000；Environment 中 SQL_DSN 主机名须为 mysql
+#         （与下方 mysql 服务名一致），例如：
+#         root:<密码>@tcp(mysql:3306)/new-api?charset=utf8mb4
 #
-# ⚠️ 生产环境请通过环境变量覆盖默认密码与密钥（见 docs/env.dokploy.example / .env.example）。
+# ⚠️ 生产请在 Dokploy Environment 覆盖密码/密钥，勿提交真实密钥到仓库。
 
 version: "3.4"
 
@@ -19,7 +20,7 @@ services:
     working_dir: /
     expose:
       - "3000"
-    # 本地直连时可取消注释；Dokploy 生产请用 Domains/Traefik，勿长期暴露公网端口。
+    # 本地直连时可取消注释；Dokploy 生产请用 Domains/Traefik。
     # ports:
     #   - "${HOST_PORT:-3060}:3000"
     volumes:
@@ -28,7 +29,7 @@ services:
     environment:
       - PORT=3000
       - TZ=Asia/Shanghai
-      - SQL_DSN=${SQL_DSN:-postgresql://root:123456@postgres:5432/new-api}
+      - SQL_DSN=${SQL_DSN:-root:123456@tcp(mysql:3306)/new-api?charset=utf8mb4}
       - REDIS_CONN_STRING=${REDIS_CONN_STRING:-redis://:123456@redis:6379}
       - SESSION_SECRET=${SESSION_SECRET:-}
       - ERROR_LOG_ENABLED=${ERROR_LOG_ENABLED:-true}
@@ -44,14 +45,14 @@ services:
       - OAUTH2API_BASE_URL=${OAUTH2API_BASE_URL:-}
       - OAUTH2API_GATEWAY_KEY=${OAUTH2API_GATEWAY_KEY:-${ADOBE2API_GATEWAY_KEY:-}}
     depends_on:
-      - redis
-      - postgres
+      redis:
+        condition: service_started
+      mysql:
+        condition: service_healthy
     networks:
       - new-api-network
-      # Traefik 默认在 dokploy-network 上解析容器 IP；仅内网时 Domains 会配上仍 404。
       - dokploy-network
     labels:
-      # 多网卡时强制走 Dokploy/Traefik 所在网络（Domains 注入的 Host 规则仍生效）。
       - traefik.docker.network=dokploy-network
     healthcheck:
       test:
@@ -61,7 +62,7 @@ services:
         ]
       interval: 30s
       timeout: 10s
-      retries: 3
+      retries: 5
       start_period: 90s
     logging:
       driver: json-file
@@ -84,27 +85,28 @@ services:
         max-size: "20m"
         max-file: "3"
 
-  postgres:
-    image: postgres:15
+  mysql:
+    image: mysql:8
     restart: always
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-root}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-123456}
-      POSTGRES_DB: ${POSTGRES_DB:-new-api}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-123456}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-new-api}
+      TZ: Asia/Shanghai
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
     volumes:
-      - pg_data:/var/lib/postgresql/data
+      - mysql_data:/var/lib/mysql
     networks:
       - new-api-network
     healthcheck:
       test:
         [
           "CMD-SHELL",
-          "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB || exit 1",
+          'mysqladmin ping -h 127.0.0.1 -uroot -p"$$MYSQL_ROOT_PASSWORD" || exit 1',
         ]
       interval: 10s
       timeout: 5s
       retries: 30
-      start_period: 20s
+      start_period: 40s
     logging:
       driver: json-file
       options:
@@ -112,12 +114,10 @@ services:
         max-file: "3"
 
 volumes:
-  pg_data:
+  mysql_data:
 
 networks:
-  # 应用内网：postgres / redis / new-api。
   new-api-network:
     driver: bridge
-  # Dokploy 全局网络：供 Traefik 发现并转发域名流量。
   dokploy-network:
     external: true
