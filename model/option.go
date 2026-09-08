@@ -1120,6 +1120,22 @@ func SyncOptions(frequency int) {
 
 func UpdateOption(key string, value string) error {
 	// Save to database first
+	if common.UsingClickHouse {
+		var option Option
+		err := DB.Where("`key` = ?", key).Take(&option).Error
+		if err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				if err := DB.Create(&Option{Key: key, Value: value}).Error; err != nil {
+					return err
+				}
+			} else {
+				return err
+			}
+		} else if err := DB.Model(&Option{}).Where("`key` = ?", key).Update("value", value).Error; err != nil {
+			return err
+		}
+		return updateOptionMap(key, value)
+	}
 	option := Option{
 		Key: key,
 	}
@@ -1143,21 +1159,45 @@ func UpdateOptionsBulk(values map[string]string) error {
 	if len(values) == 0 {
 		return nil
 	}
-	err := DB.Transaction(func(tx *gorm.DB) error {
-		for k, v := range values {
-			option := Option{Key: k}
-			if err := tx.FirstOrCreate(&option, Option{Key: k}).Error; err != nil {
+	writeOne := func(tx *gorm.DB, k, v string) error {
+		if common.UsingClickHouse {
+			var option Option
+			err := tx.Where("`key` = ?", k).Take(&option).Error
+			if err != nil {
+				if errors.Is(err, gorm.ErrRecordNotFound) {
+					return tx.Create(&Option{Key: k, Value: v}).Error
+				}
 				return err
 			}
-			option.Value = v
-			if err := tx.Save(&option).Error; err != nil {
+			return tx.Model(&Option{}).Where("`key` = ?", k).Update("value", v).Error
+		}
+		option := Option{Key: k}
+		if err := tx.FirstOrCreate(&option, Option{Key: k}).Error; err != nil {
+			return err
+		}
+		option.Value = v
+		return tx.Save(&option).Error
+	}
+	var err error
+	if common.UsingClickHouse {
+		// ClickHouse has no ACID transactions; write sequentially.
+		for k, v := range values {
+			if err = writeOne(DB, k, v); err != nil {
 				return err
 			}
 		}
-		return nil
-	})
-	if err != nil {
-		return err
+	} else {
+		err = DB.Transaction(func(tx *gorm.DB) error {
+			for k, v := range values {
+				if err := writeOne(tx, k, v); err != nil {
+					return err
+				}
+			}
+			return nil
+		})
+		if err != nil {
+			return err
+		}
 	}
 	for k, v := range values {
 		if err := updateOptionMap(k, v); err != nil {

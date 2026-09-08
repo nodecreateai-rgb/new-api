@@ -1,9 +1,10 @@
 # New-API Docker Compose
 #
 # 本地：docker compose up -d
-# Dokploy：Domains 绑定服务 new-api、端口 3000；Environment 中 SQL_DSN 主机名须为 mysql
-#         （与下方 mysql 服务名一致），例如：
-#         root:<密码>@tcp(mysql:3306)/new-api?charset=utf8mb4
+# Dokploy：Domains 绑定服务 new-api、端口 3000；主库/日志库均使用 ClickHouse，例如：
+#   SQL_DSN=clickhouse://default:<密码>@domiex-clickhouse-xxx-clickhouse-1:9000/new_api
+#   LOG_SQL_DSN=clickhouse://default:<密码>@domiex-clickhouse-xxx-clickhouse-1:9000/new_api_logs
+# （LOG_SQL_DSN 可留空，此时日志写入主库 new_api.logs）
 #
 # ⚠️ 生产请在 Dokploy Environment 覆盖密码/密钥，勿提交真实密钥到仓库。
 
@@ -29,7 +30,7 @@ services:
     environment:
       - PORT=3000
       - TZ=Asia/Shanghai
-      - SQL_DSN=${SQL_DSN:-root:123456@tcp(mysql:3306)/new-api?charset=utf8mb4}
+      - SQL_DSN=${SQL_DSN:-clickhouse://default:password@clickhouse:9000/new_api}
       - LOG_SQL_DSN=${LOG_SQL_DSN:-}
       - LOG_SQL_CLICKHOUSE_TTL_DAYS=${LOG_SQL_CLICKHOUSE_TTL_DAYS:-0}
       - REDIS_CONN_STRING=${REDIS_CONN_STRING:-redis://:123456@redis:6379}
@@ -49,8 +50,6 @@ services:
     depends_on:
       redis:
         condition: service_started
-      mysql:
-        condition: service_healthy
     networks:
       - new-api-network
       - dokploy-network
@@ -86,37 +85,6 @@ services:
       options:
         max-size: "20m"
         max-file: "3"
-
-  mysql:
-    image: mysql:8
-    restart: always
-    environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-123456}
-      MYSQL_DATABASE: ${MYSQL_DATABASE:-new-api}
-      TZ: Asia/Shanghai
-    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
-    volumes:
-      - mysql_data:/var/lib/mysql
-    networks:
-      - new-api-network
-    healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          'mysqladmin ping -h 127.0.0.1 -uroot -p"$$MYSQL_ROOT_PASSWORD" || exit 1',
-        ]
-      interval: 10s
-      timeout: 5s
-      retries: 30
-      start_period: 40s
-    logging:
-      driver: json-file
-      options:
-        max-size: "50m"
-        max-file: "3"
-
-volumes:
-  mysql_data:
 
 networks:
   new-api-network:

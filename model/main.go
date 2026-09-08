@@ -13,7 +13,6 @@ import (
 	"github.com/QuantumNous/new-api/constant"
 
 	"github.com/glebarez/sqlite"
-	"gorm.io/driver/clickhouse"
 	"gorm.io/driver/mysql"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -146,15 +145,7 @@ func chooseDB(envName string, isLog bool) (*gorm.DB, error) {
 	dsn := os.Getenv(envName)
 	if dsn != "" {
 		if isClickHouseDSN(dsn) {
-			if !isLog {
-				return nil, fmt.Errorf("%s does not support ClickHouse; use SQLite, MySQL, or PostgreSQL for the primary database and LOG_SQL_DSN for ClickHouse logs", envName)
-			}
-			common.SysLog("using ClickHouse as log database")
-			common.LogSqlType = common.DatabaseTypeClickHouse
-			common.UsingClickHouse = true
-			return gorm.Open(clickhouse.Open(normalizeClickHouseDSN(dsn)), &gorm.Config{
-				PrepareStmt: false,
-			})
+			return openClickHouseGorm(dsn, isLog)
 		}
 		if strings.HasPrefix(dsn, "postgres://") || strings.HasPrefix(dsn, "postgresql://") {
 			// Use PostgreSQL
@@ -226,9 +217,16 @@ func InitDB() (err error) {
 		if err != nil {
 			return err
 		}
-		sqlDB.SetMaxIdleConns(common.GetEnvOrDefault("SQL_MAX_IDLE_CONNS", 100))
-		sqlDB.SetMaxOpenConns(common.GetEnvOrDefault("SQL_MAX_OPEN_CONNS", 1000))
-		sqlDB.SetConnMaxLifetime(time.Second * time.Duration(common.GetEnvOrDefault("SQL_MAX_LIFETIME", 60)))
+		if common.UsingClickHouse {
+			// ClickHouse prefers fewer long-lived connections than MySQL.
+			sqlDB.SetMaxIdleConns(common.GetEnvOrDefault("SQL_MAX_IDLE_CONNS", 10))
+			sqlDB.SetMaxOpenConns(common.GetEnvOrDefault("SQL_MAX_OPEN_CONNS", 50))
+			sqlDB.SetConnMaxLifetime(time.Second * time.Duration(common.GetEnvOrDefault("SQL_MAX_LIFETIME", 300)))
+		} else {
+			sqlDB.SetMaxIdleConns(common.GetEnvOrDefault("SQL_MAX_IDLE_CONNS", 100))
+			sqlDB.SetMaxOpenConns(common.GetEnvOrDefault("SQL_MAX_OPEN_CONNS", 1000))
+			sqlDB.SetConnMaxLifetime(time.Second * time.Duration(common.GetEnvOrDefault("SQL_MAX_LIFETIME", 60)))
+		}
 
 		if !common.IsMasterNode {
 			return nil
@@ -283,6 +281,9 @@ func InitLogDB() (err error) {
 }
 
 func migrateDB() error {
+	if common.UsingClickHouse {
+		return migrateClickHousePrimaryDB()
+	}
 	// Migrate price_amount column from float/double to decimal for existing tables
 	migrateSubscriptionPlanPriceAmount()
 	// Migrate model_limits column from varchar to text for existing tables
@@ -333,6 +334,9 @@ func migrateDB() error {
 }
 
 func migrateDBFast() error {
+	if common.UsingClickHouse {
+		return migrateClickHousePrimaryDB()
+	}
 
 	var wg sync.WaitGroup
 

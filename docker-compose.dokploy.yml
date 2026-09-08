@@ -10,7 +10,8 @@
 #
 # 端口：容器内监听见 Dockerfile `PORT=3000`；Domains 填 3000，不要填宿主机映射端口（如 3060）。
 #
-# MySQL：仅挂在 `new-api-internal`，不对外暴露 3306。
+# 主库：ClickHouse（SQL_DSN=clickhouse://...）。服务需能解析到 ClickHouse 容器主机名
+# （通常把 new-api 加入 dokploy-network，与 clickhouse 同网）。
 #
 # 在 Dokploy 环境变量中设置（勿提交真实密码到仓库）；完整示例见 docs/env.dokploy.example。
 
@@ -30,12 +31,11 @@ services:
       PORT: "3000"
       TZ: Asia/Shanghai
       SQL_DSN: ${SQL_DSN}
+      LOG_SQL_DSN: ${LOG_SQL_DSN:-}
+      LOG_SQL_CLICKHOUSE_TTL_DAYS: ${LOG_SQL_CLICKHOUSE_TTL_DAYS:-0}
       SESSION_SECRET: ${SESSION_SECRET:-}
     volumes:
       - new_api_data:/data
-    depends_on:
-      mysql:
-        condition: service_healthy
     networks:
       - new-api-internal
     stop_grace_period: 30s
@@ -55,38 +55,8 @@ services:
         max-size: "50m"
         max-file: "3"
 
-  mysql:
-    image: mysql:8
-    restart: always
-    environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?set MYSQL_ROOT_PASSWORD in Dokploy}
-      MYSQL_DATABASE: new-api
-      TZ: Asia/Shanghai
-    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
-    volumes:
-      - mysql_data:/var/lib/mysql
-    networks:
-      - new-api-internal
-    stop_grace_period: 60s
-    healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          'mysqladmin ping -h 127.0.0.1 -uroot -p"$$MYSQL_ROOT_PASSWORD" || exit 1',
-        ]
-      interval: 10s
-      timeout: 5s
-      retries: 30
-      start_period: 40s
-    logging:
-      driver: json-file
-      options:
-        max-size: "50m"
-        max-file: "3"
-
 volumes:
   new_api_data:
-  mysql_data:
 
 networks:
   new-api-internal:
