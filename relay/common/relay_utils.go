@@ -243,9 +243,9 @@ func ValidateMultipartDirect(c *gin.Context, info *RelayInfo) *dto.TaskError {
 		return createTaskError(fmt.Errorf("model field is required"), "missing_model", http.StatusBadRequest, true)
 	}
 
-	if req.HasAudioReference() && !supportsAudioReference(info.OriginModelName) {
-		return createTaskError(fmt.Errorf("audio reference is not supported for this video model"), "unsupported_audio_reference", http.StatusBadRequest, true)
-	}
+	// Audio / image / video references are passed through to upstream as-is.
+	// Do not gate by model allowlist here — providers like roboneo Seedance Mini
+	// accept audio refs, and unsupported upstreams will reject on their own.
 	if req.HasImage() || req.HasVideo() {
 		hasInputReference = true
 	}
@@ -291,24 +291,6 @@ func ResolveTaskSubmitDuration(duration int, seconds string) int {
 		d = s
 	}
 	return d
-}
-
-func supportsAudioReference(model string) bool {
-	model = strings.ToLower(strings.TrimSpace(model))
-	if strings.HasPrefix(model, "seedance-720") || strings.HasPrefix(model, "klsdpro2") {
-		return true
-	}
-	switch model {
-	case "sd2.5", "seedance2.5-c1", "seedance-2.5-omni", "sd2-mini", "seedance2_mini":
-		return true
-	case "seedance-video-fast", "seedance-video-standard",
-		"seedance-video-fast-per-second", "seedance-video-standard-per-second",
-		"seedance-2.0-fast-720p", "seedance-2.0-720p",
-		"seedance-2.0-1080p", "seedance-2.0-4k":
-		return true
-	default:
-		return false
-	}
 }
 
 func isKnownTaskField(field string) bool {

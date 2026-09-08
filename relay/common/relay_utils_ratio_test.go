@@ -60,32 +60,36 @@ func TestValidateMultipartTaskRequestAcceptsComplianceParams(t *testing.T) {
 	}
 }
 
-func TestSupportsAudioReferenceForConfiguredVideoModels(t *testing.T) {
+func TestValidateMultipartDirectAllowsAudioReferencesForAnyVideoModel(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	// Gateway no longer allowlists audio refs by model; pass-through to upstream.
 	for _, model := range []string{
 		"sd2.5",
-		"seedance2.5-c1",
-		"seedance-2.5-omni",
-		"seedance-720",
-		"seedance-720 ",
-		"seedance-720-audio",
-		"klsdpro2",
-		"klsdpro2-v1",
-		"seedance-video-fast",
-		"seedance-video-standard",
-		"seedance-video-fast-per-second",
-		"seedance-video-standard-per-second",
-		"seedance-2.0-fast-720p",
-		"seedance-2.0-720p",
-		"seedance-2.0-1080p",
-		"seedance-2.0-4k",
+		"seedance-2.0-mini",
+		"seedance-2.0-mini-480p",
+		"sd2-c6",
+		"sd2-c7",
+		"sora-2",
+		"seedance-2.0",
 	} {
-		if !supportsAudioReference(model) {
-			t.Fatalf("expected %q to support audio references", model)
+		c, _ := gin.CreateTestContext(httptest.NewRecorder())
+		c.Request = httptest.NewRequest("POST", "/v1/videos", strings.NewReader(`{
+			"model":"`+model+`",
+			"prompt":"use the audio reference",
+			"audio_url":"https://assets.example/ref.mp3",
+			"reference_audios":["https://assets.example/ref2.wav"]
+		}`))
+		c.Request.Header.Set("Content-Type", "application/json")
+		info := &RelayInfo{OriginModelName: model, ChannelMeta: &ChannelMeta{}, TaskRelayInfo: &TaskRelayInfo{}}
+		if taskErr := ValidateMultipartDirect(c, info); taskErr != nil {
+			t.Fatalf("%s audio references rejected: %+v", model, taskErr)
 		}
-	}
-	for _, model := range []string{"sora-2", "sd2-c7", "seedance-2.0-standard", "seedance-2.0", ""} {
-		if supportsAudioReference(model) {
-			t.Fatalf("expected %q to reject audio references", model)
+		req, err := GetTaskRequest(c)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if req.AudioURL != "https://assets.example/ref.mp3" || len(req.ReferenceAudios) != 1 {
+			t.Fatalf("%s request lost audio references: %+v", model, req)
 		}
 	}
 }
