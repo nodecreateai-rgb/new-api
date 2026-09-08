@@ -73,7 +73,7 @@ func ResolveOriginTask(c *gin.Context, info *relaycommon.RelayInfo) *dto.TaskErr
 			info.OriginModelName = originTask.Properties.UpstreamModelName
 		} else {
 			var taskData map[string]interface{}
-			_ = common.Unmarshal(originTask.Data, &taskData)
+			_ = common.Unmarshal([]byte(originTask.Data), &taskData)
 			if m, ok := taskData["model"].(string); ok && m != "" {
 				info.OriginModelName = m
 			}
@@ -116,7 +116,7 @@ func ResolveOriginTask(c *gin.Context, info *relaycommon.RelayInfo) *dto.TaskErr
 		} else {
 			// 旧的 remix 逻辑：直接从 task data 解析 seconds 和 size（如果存在）
 			var taskData map[string]interface{}
-			_ = common.Unmarshal(originTask.Data, &taskData)
+			_ = common.Unmarshal([]byte(originTask.Data), &taskData)
 			secondsStr, _ := taskData["seconds"].(string)
 			seconds, _ := strconv.Atoi(secondsStr)
 			if seconds <= 0 {
@@ -621,16 +621,19 @@ func sanitizeTaskDtoProperties(task *model.Task) any {
 
 func sanitizeTaskDtoData(task *model.Task) json.RawMessage {
 	if task == nil || len(task.Data) == 0 {
-		return task.Data
+		if task == nil {
+			return nil
+		}
+		return json.RawMessage(task.Data)
 	}
 	var payload map[string]any
-	if err := common.Unmarshal(task.Data, &payload); err != nil {
-		return task.Data
+	if err := common.Unmarshal([]byte(task.Data), &payload); err != nil {
+		return json.RawMessage(task.Data)
 	}
 	scrubTaskPayload(payload, task.TaskID)
 	b, err := common.Marshal(payload)
 	if err != nil {
-		return task.Data
+		return json.RawMessage(task.Data)
 	}
 	return json.RawMessage(b)
 }

@@ -488,7 +488,7 @@ func (a *TaskAdaptor) ParseTaskResult(respBody []byte) (*relaycommon.TaskInfo, e
 
 func (a *TaskAdaptor) ConvertToOpenAIVideo(task *model.Task) ([]byte, error) {
 	var aliResp AliVideoResponse
-	if err := common.Unmarshal(task.Data, &aliResp); err != nil {
+	if err := common.Unmarshal([]byte(task.Data), &aliResp); err != nil {
 		return nil, errors.Wrap(err, "unmarshal ali response failed")
 	}
 

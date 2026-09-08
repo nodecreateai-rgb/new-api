@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"database/sql/driver"
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/QuantumNous/new-api/common"
@@ -12,7 +13,59 @@ import (
 	commonRelay "github.com/QuantumNous/new-api/relay/common"
 )
 
+
+func jsonBytesFromDB(val interface{}) ([]byte, error) {
+	if val == nil {
+		return nil, nil
+	}
+	switch v := val.(type) {
+	case []byte:
+		return v, nil
+	case string:
+		return []byte(v), nil
+	default:
+		return nil, fmt.Errorf("unsupported JSON column type %T", val)
+	}
+}
+
+// normalizeClickHouseJSONBytes recovers JSON accidentally stored as a
+// JSON array of byte ordinals (e.g. [123,34,...]) when []byte was bound
+// into a ClickHouse String column.
+func normalizeClickHouseJSONBytes(b []byte) []byte {
+	if len(b) == 0 || b[0] != '[' {
+		return b
+	}
+	var nums []byte
+	if err := common.Unmarshal(b, &nums); err != nil || len(nums) == 0 {
+		return b
+	}
+	if nums[0] != '{' && nums[0] != '[' && nums[0] != '"' {
+		return b
+	}
+	return nums
+}
+
 type TaskStatus string
+
+func (t TaskStatus) Value() (driver.Value, error) {
+	return string(t), nil
+}
+
+func (t *TaskStatus) Scan(value interface{}) error {
+	if value == nil {
+		*t = ""
+		return nil
+	}
+	switch v := value.(type) {
+	case string:
+		*t = TaskStatus(v)
+	case []byte:
+		*t = TaskStatus(v)
+	default:
+		return fmt.Errorf("unsupported TaskStatus type %T", value)
+	}
+	return nil
+}
 
 func (t TaskStatus) ToVideoStatus() string {
 	var status string
@@ -62,16 +115,58 @@ type Task struct {
 	Username   string                `json:"username,omitempty" gorm:"-"`
 	// 禁止返回给用户，内部可能包含key等隐私信息
 	PrivateData TaskPrivateData `json:"-" gorm:"column:private_data;type:json"`
-	Data        json.RawMessage `json:"data" gorm:"type:json"`
+	Data        JSONRaw         `json:"data" gorm:"type:json"`
+}
+
+// JSONRaw is json.RawMessage with ClickHouse-friendly Scan/Value (string or []byte).
+type JSONRaw json.RawMessage
+
+func (j JSONRaw) MarshalJSON() ([]byte, error) {
+	if len(j) == 0 {
+		return []byte("null"), nil
+	}
+	return j, nil
+}
+
+func (j *JSONRaw) UnmarshalJSON(data []byte) error {
+	if j == nil {
+		return fmt.Errorf("JSONRaw: UnmarshalJSON on nil pointer")
+	}
+	*j = append((*j)[0:0], data...)
+	return nil
+}
+
+func (j *JSONRaw) Scan(value interface{}) error {
+	bytesValue, err := jsonBytesFromDB(value)
+	if err != nil {
+		return err
+	}
+	bytesValue = normalizeClickHouseJSONBytes(bytesValue)
+	if len(bytesValue) == 0 {
+		*j = JSONRaw("{}")
+		return nil
+	}
+	*j = append(JSONRaw(nil), bytesValue...)
+	return nil
+}
+
+func (j JSONRaw) Value() (driver.Value, error) {
+	if len(j) == 0 {
+		return "{}", nil
+	}
+	return string(j), nil
 }
 
 func (t *Task) SetData(data any) {
 	b, _ := common.Marshal(data)
-	t.Data = json.RawMessage(b)
+	t.Data = JSONRaw(b)
 }
 
 func (t *Task) GetData(v any) error {
-	return common.Unmarshal(t.Data, &v)
+	if len(t.Data) == 0 {
+		return common.Unmarshal([]byte("{}"), &v)
+	}
+	return common.Unmarshal([]byte(t.Data), &v)
 }
 
 type Properties struct {
@@ -81,7 +176,11 @@ type Properties struct {
 }
 
 func (m *Properties) Scan(val interface{}) error {
-	bytesValue, _ := val.([]byte)
+	bytesValue, err := jsonBytesFromDB(val)
+	if err != nil {
+		return err
+	}
+	bytesValue = normalizeClickHouseJSONBytes(bytesValue)
 	if len(bytesValue) == 0 {
 		*m = Properties{}
 		return nil
@@ -91,9 +190,13 @@ func (m *Properties) Scan(val interface{}) error {
 
 func (m Properties) Value() (driver.Value, error) {
 	if m == (Properties{}) {
-		return nil, nil
+		return "{}", nil
 	}
-	return common.Marshal(m)
+	b, err := common.Marshal(m)
+	if err != nil {
+		return nil, err
+	}
+	return string(b), nil
 }
 
 type TaskPrivateData struct {
@@ -150,8 +253,13 @@ func GenerateTaskID() string {
 }
 
 func (p *TaskPrivateData) Scan(val interface{}) error {
-	bytesValue, _ := val.([]byte)
+	bytesValue, err := jsonBytesFromDB(val)
+	if err != nil {
+		return err
+	}
+	bytesValue = normalizeClickHouseJSONBytes(bytesValue)
 	if len(bytesValue) == 0 {
+		*p = TaskPrivateData{}
 		return nil
 	}
 	return common.Unmarshal(bytesValue, p)
@@ -159,9 +267,13 @@ func (p *TaskPrivateData) Scan(val interface{}) error {
 
 func (p TaskPrivateData) Value() (driver.Value, error) {
 	if (p == TaskPrivateData{}) {
-		return nil, nil
+		return "{}", nil
 	}
-	return common.Marshal(p)
+	b, err := common.Marshal(p)
+	if err != nil {
+		return nil, err
+	}
+	return string(b), nil
 }
 
 // SyncTaskQueryParams 用于包含所有搜索条件的结构体，可以根据需求添加更多字段
@@ -370,9 +482,63 @@ func GetByTaskIds(userId int, taskIds []any) ([]*Task, error) {
 }
 
 func (Task *Task) Insert() error {
-	var err error
-	err = DB.Create(Task).Error
-	return err
+	if common.UsingClickHouse {
+		return Task.insertClickHouse()
+	}
+	return DB.Create(Task).Error
+}
+
+func (Task *Task) insertClickHouse() error {
+	now := time.Now().Unix()
+	if Task.CreatedAt == 0 {
+		Task.CreatedAt = now
+	}
+	if Task.UpdatedAt == 0 {
+		Task.UpdatedAt = now
+	}
+	if Task.ID == 0 {
+		Task.ID = nextClickHouseTableID(DB, "tasks")
+	}
+	props, err := common.Marshal(Task.Properties)
+	if err != nil {
+		return fmt.Errorf("marshal task properties: %w", err)
+	}
+	priv, err := common.Marshal(Task.PrivateData)
+	if err != nil {
+		return fmt.Errorf("marshal task private_data: %w", err)
+	}
+	data := Task.Data
+	if len(data) == 0 {
+		data = JSONRaw("{}")
+	}
+	// ClickHouse GORM Create fails on several typed/JSON columns; insert primitives.
+	err = DB.Exec(
+		"INSERT INTO tasks (id, created_at, updated_at, task_id, platform, user_id, "+commonGroupCol+", channel_id, quota, action, status, fail_reason, submit_time, start_time, finish_time, progress, properties, private_data, data) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+		Task.ID,
+		Task.CreatedAt,
+		Task.UpdatedAt,
+		Task.TaskID,
+		string(Task.Platform),
+		Task.UserId,
+		Task.Group,
+		Task.ChannelId,
+		Task.Quota,
+		Task.Action,
+		string(Task.Status),
+		Task.FailReason,
+		Task.SubmitTime,
+		Task.StartTime,
+		Task.FinishTime,
+		Task.Progress,
+		string(props),
+		string(priv),
+		string(data),
+	).Error
+	if err != nil {
+		return fmt.Errorf("clickhouse insert task %s: %w", Task.TaskID, err)
+	}
+	common.SysLog(fmt.Sprintf("inserted clickhouse task id=%d task_id=%s platform=%s", Task.ID, Task.TaskID, Task.Platform))
+	return nil
 }
 
 type taskSnapshot struct {
@@ -382,7 +548,7 @@ type taskSnapshot struct {
 	FinishTime int64
 	FailReason string
 	ResultURL  string
-	Data       json.RawMessage
+	Data       JSONRaw
 }
 
 func (s taskSnapshot) Equal(other taskSnapshot) bool {

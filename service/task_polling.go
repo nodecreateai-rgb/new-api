@@ -276,7 +276,7 @@ func updateSunoTasks(ctx context.Context, channelId int, taskIds []string, taskM
 		if responseItem.Status == model.TaskStatusSuccess {
 			task.Progress = "100%"
 		}
-		task.Data = responseItem.Data
+		task.Data = model.JSONRaw(responseItem.Data)
 
 		err = task.Update()
 		if err != nil {
@@ -308,8 +308,8 @@ func taskNeedsUpdate(oldTask *model.Task, newTask dto.SunoDataResponse) bool {
 		return true
 	}
 
-	oldData, _ := common.Marshal(oldTask.Data)
-	newData, _ := common.Marshal(newTask.Data)
+	oldData, _ := common.Marshal([]byte(oldTask.Data))
+	newData, _ := common.Marshal([]byte(newTask.Data))
 
 	sort.Slice(oldData, func(i, j int) bool {
 		return oldData[i] < oldData[j]
@@ -445,7 +445,7 @@ func updateVideoSingleTask(ctx context.Context, adaptor TaskPollingAdaptor, ch *
 	if task.Platform == constant.TaskPlatformImage {
 		responseBody, taskResult.Url = normalizeImageResponseBodyForTask(task.TaskID, responseBody, taskResult.Url)
 	}
-	task.Data = redactVideoResponseBody(responseBody)
+	task.Data = model.JSONRaw(redactVideoResponseBody(responseBody))
 
 	logger.LogDebug(ctx, "updateVideoSingleTask taskResult: %+v", taskResult)
 

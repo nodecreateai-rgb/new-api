@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/QuantumNous/new-api/common"
+	"github.com/QuantumNous/new-api/constant"
 	"github.com/QuantumNous/new-api/setting"
 	"github.com/QuantumNous/new-api/setting/config"
 	"github.com/QuantumNous/new-api/setting/operation_setting"
@@ -31,7 +32,28 @@ func AllOption() ([]*Option, error) {
 	var options []*Option
 	var err error
 	err = DB.Find(&options).Error
-	return options, err
+	if err != nil {
+		return options, err
+	}
+	if !common.UsingClickHouse {
+		return options, nil
+	}
+	// ClickHouse MergeTree can accumulate duplicate keys after updates; keep the
+	// last row per key so option sync matches the latest written value.
+	deduped := make([]*Option, 0, len(options))
+	seen := make(map[string]int, len(options))
+	for _, opt := range options {
+		if opt == nil {
+			continue
+		}
+		if idx, ok := seen[opt.Key]; ok {
+			deduped[idx] = opt
+			continue
+		}
+		seen[opt.Key] = len(deduped)
+		deduped = append(deduped, opt)
+	}
+	return deduped, nil
 }
 
 func InitOptionMap() {
@@ -218,6 +240,8 @@ func ensureDopioRMBPricing() {
 		"sd2-c5":                             5,
 		"sd2-c6":                             0.5,
 		"sd2-c7":                             1,
+		"seedance-2.0-mini":                  0.5,
+		"seedance-2.0-mini-480p":             0.5,
 		"sd2-mini":                           0.6,
 		"sd2-fast":                           1,
 		"sd2.5":                              1.5,
@@ -509,6 +533,13 @@ func ensureDopioRMBPricing() {
 			changed = true
 		}
 		for model, price := range targetModelPrices {
+			// Keep dedicated ModelGroupPrice overrides (e.g. vip7/sd2.5=0.3)
+			// intact; the next loop applies those explicitly.
+			if overridePrices, ok := targetModelGroupPrices[group]; ok {
+				if _, hasOverride := overridePrices[model]; hasOverride {
+					continue
+				}
+			}
 			if groupPrices[model] != price {
 				groupPrices[model] = price
 				changed = true
@@ -550,52 +581,357 @@ func ensureDopioRMBPricing() {
 			return
 		}
 	}
-	if err := ensureChannelGroupAbilities(15, "vip6"); err != nil {
-		common.SysLog("failed to ensure vip6 channel abilities: " + err.Error())
-		return
-	}
-	if err := ensureExactGroupAbility(2, "vip7", "sd2-c7"); err != nil {
-		common.SysLog("failed to ensure vip7 sd2-c7 ability: " + err.Error())
-		return
-	}
-	if err := ensureExactGroupAbility(50, "vip7", "sd2.5"); err != nil {
-		common.SysLog("failed to ensure vip7 sd2.5 ability: " + err.Error())
-		return
-	}
-	if err := ensureSeedance720HiggsRouting(); err != nil {
-		common.SysLog("failed to enforce Seedance 720 gateway routing: " + err.Error())
-		return
-	}
-	if err := ensureAdobeSeedanceClassicRouting(); err != nil {
-		common.SysLog("failed to enforce classic Seedance gateway routing: " + err.Error())
-		return
-	}
+	// Route/channel ensure steps are independent: one missing upstream channel
+	// must not skip the rest (e.g. empty channel 15 used to block sd2.5 setup).
 	if err := ensureDolaSeedanceRouting(); err != nil {
 		common.SysLog("failed to enforce Dola Seedance gateway routing: " + err.Error())
-		return
 	}
-	if err := ensureSD2FastRouting(); err != nil {
-		common.SysLog("failed to enforce sd2-fast gateway routing: " + err.Error())
-		return
+	if err := ensureRoboneoMiniRouting(); err != nil {
+		common.SysLog("failed to enforce Roboneo Seedance Mini gateway routing: " + err.Error())
 	}
 	if err := ensureSD25Routing(); err != nil {
 		common.SysLog("failed to enforce sd2.5 gateway routing: " + err.Error())
-		return
+	}
+	if err := ensureSD2FastRouting(); err != nil {
+		common.SysLog("failed to enforce sd2-fast gateway routing: " + err.Error())
+	}
+	if err := ensureSeedance720HiggsRouting(); err != nil {
+		common.SysLog("failed to enforce Seedance 720 gateway routing: " + err.Error())
+	}
+	if err := ensureAdobeSeedanceClassicRouting(); err != nil {
+		common.SysLog("failed to enforce classic Seedance gateway routing: " + err.Error())
 	}
 	if err := ensureOAuth2APIRouting(); err != nil {
 		common.SysLog("failed to enforce oauth2 gateway routing: " + err.Error())
-		return
 	}
-	common.SysLog("enforced Dopio RMB pricing incl sd2.5=1.5 per call, vip6 sd2.5=1, sd2-fast=1 per call, vip6 Seedance 720p fast=1/full=2, banana=0.01, oauth2=0.1, sd2-c6=1, sd2-c7=1, sd2-c11=2.5, sd2-c12=3, Price=1, USDExchangeRate=1, quota_display_type=CNY")
+	if err := ensureChannelGroupAbilities(15, "vip6"); err != nil {
+		common.SysLog("failed to ensure vip6 channel abilities: " + err.Error())
+	}
+	common.SysLog("enforced Dopio RMB pricing incl sd2.5=1.5 per call, vip6 sd2.5=1, sd2-fast=1 per call, vip6 Seedance 720p fast=1/full=2, banana=0.01, oauth2=0.1, sd2-c6=0.5, seedance-2.0-mini=0.5, seedance-2.0-mini-480p=0.5, sd2-c7=1, sd2-c11=2.5, sd2-c12=3, Price=1, USDExchangeRate=1, quota_display_type=CNY")
+}
+
+func ensureRoboneoMiniRouting() error {
+	// Roboneo2API Seedance 2.0 Mini: 720p + 480p, fixed ¥0.5 per call (same as sd2-c6).
+	const neutralName = "Roboneo Seedance Mini"
+	const modelsCSV = "seedance-2.0-mini,seedance-2.0-mini-480p"
+	const mappingJSON = `{"seedance-2.0-mini":"seedance-2.0-mini","seedance-2.0-mini-480p":"seedance-2.0-mini-480p"}`
+	const groupsCSV = "default,vip,svip,vip1,vip2,vip3,vip6"
+	baseURL := strings.TrimSpace(os.Getenv("ROBONEO2API_BASE_URL"))
+	if baseURL == "" {
+		baseURL = "http://roboneo2api:38688"
+	}
+	key := strings.TrimSpace(os.Getenv("ROBONEO2API_GATEWAY_KEY"))
+	if key == "" {
+		key = strings.TrimSpace(os.Getenv("ROBONEO2API_API_KEY"))
+	}
+	if key == "" {
+		key = strings.TrimSpace(os.Getenv("ADOBE2API_GATEWAY_KEY"))
+	}
+	if key == "" {
+		if keyFile := strings.TrimSpace(os.Getenv("ROBONEO2API_GATEWAY_KEY_FILE")); keyFile != "" {
+			if raw, err := os.ReadFile(keyFile); err == nil {
+				key = strings.TrimSpace(string(raw))
+			}
+		}
+	}
+	if key == "" {
+		// Upstream may run with an empty ROBONEO2API_API_KEY (auth disabled).
+		key = "roboneo"
+	}
+
+	publicModels := []string{"seedance-2.0-mini", "seedance-2.0-mini-480p"}
+	groups := []string{"default", "vip", "svip", "vip1", "vip2", "vip3", "vip6"}
+
+	if common.UsingClickHouse {
+		return ensureRoboneoMiniRoutingClickHouse(neutralName, modelsCSV, mappingJSON, groupsCSV, baseURL, key, publicModels, groups)
+	}
+
+	var channel Channel
+	err := DB.Where("name = ?", neutralName).First(&channel).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		weight := uint64(100)
+		priority := int64(10)
+		mapping := mappingJSON
+		channel = Channel{
+			Type: constant.ChannelTypeSora, Key: key, Status: common.ChannelStatusEnabled,
+			Name: neutralName, Weight: &weight, CreatedTime: common.GetTimestamp(),
+			BaseURL: stringPtr(baseURL), Models: modelsCSV, Group: groupsCSV,
+			ModelMapping: &mapping, Priority: &priority,
+		}
+		if err := DB.Create(&channel).Error; err != nil {
+			return err
+		}
+		_ = DB.Model(&Channel{}).Where("id = ?", channel.Id).Update("auto_ban", 1).Error
+	} else if err != nil {
+		return err
+	} else {
+		if err := DB.Model(&Channel{}).Where("id = ?", channel.Id).Updates(map[string]any{
+			"type": constant.ChannelTypeSora, "key": key, "status": common.ChannelStatusEnabled,
+			"name": neutralName, "base_url": baseURL, "models": modelsCSV, "group": groupsCSV,
+			"model_mapping": mappingJSON, "priority": 10, "weight": 100, "auto_ban": 1,
+		}).Error; err != nil {
+			return err
+		}
+	}
+
+	if err := DB.Model(&Ability{}).Where("channel_id = ? AND model NOT IN ?", channel.Id, publicModels).
+		Update("enabled", false).Error; err != nil {
+		return err
+	}
+	for _, modelName := range publicModels {
+		if err := DB.Model(&Ability{}).Where("model = ? AND channel_id <> ?", modelName, channel.Id).
+			Update("enabled", false).Error; err != nil {
+			return err
+		}
+		allowed := map[string]struct{}{}
+		for _, group := range groups {
+			allowed[group] = struct{}{}
+			ability := Ability{Group: group, Model: modelName, ChannelId: channel.Id}
+			if err := DB.Where(commonGroupCol+" = ? AND model = ? AND channel_id = ?", group, modelName, channel.Id).
+				FirstOrCreate(&ability).Error; err != nil {
+				return err
+			}
+			if err := DB.Model(&Ability{}).Where(commonGroupCol+" = ? AND model = ? AND channel_id = ?", group, modelName, channel.Id).
+				Updates(map[string]any{"enabled": true, "priority": int64(10), "weight": uint64(100)}).Error; err != nil {
+				return err
+			}
+		}
+		var existing []Ability
+		if err := DB.Where("model = ? AND channel_id = ?", modelName, channel.Id).Find(&existing).Error; err != nil {
+			return err
+		}
+		for _, ability := range existing {
+			if _, ok := allowed[ability.Group]; ok {
+				continue
+			}
+			if err := DB.Model(&Ability{}).Where(commonGroupCol+" = ? AND model = ? AND channel_id = ?", ability.Group, modelName, channel.Id).
+				Update("enabled", false).Error; err != nil {
+				return err
+			}
+		}
+	}
+
+	endpoint := `{"openai-video":{"path":"/v1/videos","method":"POST"}}`
+	for _, publicModel := range publicModels {
+		var meta Model
+		err = DB.Unscoped().Where("model_name = ?", publicModel).First(&meta).Error
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			meta = Model{
+				ModelName: publicModel, Description: "", Icon: "", Tags: "video",
+				Endpoints: endpoint, Status: 1, SyncOfficial: 0,
+				CreatedTime: common.GetTimestamp(), UpdatedTime: common.GetTimestamp(),
+			}
+			if err := DB.Create(&meta).Error; err != nil {
+				return err
+			}
+			continue
+		}
+		if err != nil {
+			return err
+		}
+		if err := DB.Unscoped().Model(&Model{}).Where("id = ?", meta.Id).Updates(map[string]any{
+			"description": "", "icon": "", "tags": "video", "endpoints": endpoint,
+			"status": 1, "sync_official": 0, "deleted_at": nil, "updated_time": common.GetTimestamp(),
+		}).Error; err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// ensureRoboneoMiniRoutingClickHouse uses raw INSERTs: GORM Create/ALTER UPDATE on
+// ClickHouse native protocol often fails with "Unexpected packet" / *int AutoBan.
+func ensureRoboneoMiniRoutingClickHouse(neutralName, modelsCSV, mappingJSON, groupsCSV, baseURL, key string, publicModels, groups []string) error {
+	var channel Channel
+	err := DB.Where("name = ?", neutralName).First(&channel).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		id := nextClickHouseTableID(DB, "channels")
+		now := common.GetTimestamp()
+		info := `{"is_multi_key":false,"multi_key_size":0,"multi_key_status_list":null,"multi_key_polling_index":0,"multi_key_mode":""}`
+		if err := DB.Exec(`INSERT INTO channels (
+			id, type, key, status, name, weight, created_time, test_time, response_time,
+			base_url, other, balance, balance_updated_time, models, `+commonGroupCol+`, used_quota,
+			model_mapping, status_code_mapping, priority, auto_ban, other_info, channel_info, settings
+		) VALUES (?, ?, ?, ?, ?, ?, ?, 0, 0, ?, '', 0, 0, ?, ?, 0, ?, '', ?, 1, '', ?, '')`,
+			id, constant.ChannelTypeSora, key, common.ChannelStatusEnabled, neutralName, uint64(100), now,
+			baseURL, modelsCSV, groupsCSV, mappingJSON, int64(10), info,
+		).Error; err != nil {
+			return err
+		}
+		channel.Id = int(id)
+	} else if err != nil {
+		return err
+	}
+
+	var abilityCount int64
+	if err := DB.Model(&Ability{}).Where("channel_id = ?", channel.Id).Count(&abilityCount).Error; err != nil {
+		return err
+	}
+	if abilityCount == 0 {
+		for _, modelName := range publicModels {
+			for _, group := range groups {
+				if err := DB.Exec(
+					`INSERT INTO abilities (`+commonGroupCol+`, model, channel_id, enabled, priority, weight, tag) VALUES (?, ?, ?, 1, 10, 100, '')`,
+					group, modelName, channel.Id,
+				).Error; err != nil {
+					return err
+				}
+			}
+		}
+	}
+
+	endpoint := `{"openai-video":{"path":"/v1/videos","method":"POST"}}`
+	for _, publicModel := range publicModels {
+		var meta Model
+		err = DB.Unscoped().Where("model_name = ?", publicModel).First(&meta).Error
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			id := nextClickHouseTableID(DB, "models")
+			now := common.GetTimestamp()
+			if err := DB.Exec(
+				`INSERT INTO models (id, model_name, description, icon, tags, endpoints, status, sync_official, created_time, updated_time, name_rule)
+				 VALUES (?, ?, '', '', 'video', ?, 1, 0, ?, ?, 0)`,
+				id, publicModel, endpoint, now, now,
+			).Error; err != nil {
+				return err
+			}
+			continue
+		}
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func ensureDolaSeedanceRouting() error {
-	const channelID = 2
+	// Matches remote Dopio channel "Dola2API Seedance Video":
+	// sd2-c7 → seedance2-c1 (Dola), sd2-c6 → seedance2-c2 (Doubao).
+	const neutralName = "Dola2API Seedance Video"
+	const modelsCSV = "sd2-c7,sd2-c6"
+	const mappingJSON = `{"sd2-c7":"seedance2-c1","sd2-c6":"seedance2-c2"}`
+	const groupsCSV = "default,vip,svip,vip1,vip2,vip3,vip6,vip7"
 	baseURL := strings.TrimSpace(os.Getenv("DOLA2API_BASE_URL"))
 	if baseURL == "" {
 		baseURL = "http://dola2api:38472"
 	}
-	return DB.Model(&Channel{}).Where("id = ?", channelID).Update("base_url", baseURL).Error
+	key := strings.TrimSpace(os.Getenv("DOLA2API_GATEWAY_KEY"))
+	if key == "" {
+		key = strings.TrimSpace(os.Getenv("ADOBE2API_GATEWAY_KEY"))
+	}
+	if key == "" {
+		if keyFile := strings.TrimSpace(os.Getenv("DOLA2API_GATEWAY_KEY_FILE")); keyFile != "" {
+			if raw, err := os.ReadFile(keyFile); err == nil {
+				key = strings.TrimSpace(string(raw))
+			}
+		}
+	}
+
+	var channel Channel
+	err := DB.Where("name = ?", neutralName).First(&channel).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		if key == "" {
+			return fmt.Errorf("DOLA2API_GATEWAY_KEY (or ADOBE2API_GATEWAY_KEY) is required")
+		}
+		weight := uint64(100)
+		priority := int64(10)
+		autoBan := 1
+		mapping := mappingJSON
+		channel = Channel{
+			Type: constant.ChannelTypeSora, Key: key, Status: common.ChannelStatusEnabled,
+			Name: neutralName, Weight: &weight, CreatedTime: common.GetTimestamp(),
+			BaseURL: stringPtr(baseURL), Models: modelsCSV, Group: groupsCSV,
+			ModelMapping: &mapping, Priority: &priority, AutoBan: &autoBan,
+		}
+		if err := DB.Create(&channel).Error; err != nil {
+			return err
+		}
+	} else if err != nil {
+		return err
+	} else {
+		if key == "" {
+			key = channel.Key
+		}
+		if key == "" {
+			return fmt.Errorf("DOLA2API_GATEWAY_KEY (or ADOBE2API_GATEWAY_KEY) is required")
+		}
+		if err := DB.Model(&Channel{}).Where("id = ?", channel.Id).Updates(map[string]any{
+			"type": constant.ChannelTypeSora, "key": key, "status": common.ChannelStatusEnabled,
+			"name": neutralName, "base_url": baseURL, "models": modelsCSV, "group": groupsCSV,
+			"model_mapping": mappingJSON, "priority": 10, "weight": 100, "auto_ban": 1,
+		}).Error; err != nil {
+			return err
+		}
+	}
+
+	// Per-model group availability (aligned with remote abilities).
+	modelGroups := map[string][]string{
+		"sd2-c6": {"default", "vip", "svip", "vip1", "vip2", "vip3", "vip6"},
+		"sd2-c7": {"default", "vip", "svip", "vip1", "vip2", "vip3", "vip7"},
+	}
+	if err := DB.Model(&Ability{}).Where("channel_id = ? AND model NOT IN ?", channel.Id, []string{"sd2-c6", "sd2-c7"}).
+		Update("enabled", false).Error; err != nil {
+		return err
+	}
+	for modelName, groups := range modelGroups {
+		if err := DB.Model(&Ability{}).Where("model = ? AND channel_id <> ?", modelName, channel.Id).
+			Update("enabled", false).Error; err != nil {
+			return err
+		}
+		allowed := map[string]struct{}{}
+		for _, group := range groups {
+			allowed[group] = struct{}{}
+			ability := Ability{Group: group, Model: modelName, ChannelId: channel.Id}
+			if err := DB.Where(commonGroupCol+" = ? AND model = ? AND channel_id = ?", group, modelName, channel.Id).
+				FirstOrCreate(&ability).Error; err != nil {
+				return err
+			}
+			if err := DB.Model(&Ability{}).Where(commonGroupCol+" = ? AND model = ? AND channel_id = ?", group, modelName, channel.Id).
+				Updates(map[string]any{"enabled": true, "priority": int64(10), "weight": uint64(100)}).Error; err != nil {
+				return err
+			}
+		}
+		// Disable leftover groups on this channel for the model.
+		var existing []Ability
+		if err := DB.Where("model = ? AND channel_id = ?", modelName, channel.Id).Find(&existing).Error; err != nil {
+			return err
+		}
+		for _, ability := range existing {
+			if _, ok := allowed[ability.Group]; ok {
+				continue
+			}
+			if err := DB.Model(&Ability{}).Where(commonGroupCol+" = ? AND model = ? AND channel_id = ?", ability.Group, modelName, channel.Id).
+				Update("enabled", false).Error; err != nil {
+				return err
+			}
+		}
+	}
+
+	endpoint := `{"openai-video":{"path":"/v1/videos","method":"POST"}}`
+	for _, publicModel := range []string{"sd2-c6", "sd2-c7"} {
+		var meta Model
+		err = DB.Unscoped().Where("model_name = ?", publicModel).First(&meta).Error
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			meta = Model{
+				ModelName: publicModel, Description: "", Icon: "", Tags: "video",
+				Endpoints: endpoint, Status: 1, SyncOfficial: 0,
+				CreatedTime: common.GetTimestamp(), UpdatedTime: common.GetTimestamp(),
+			}
+			if err := DB.Create(&meta).Error; err != nil {
+				return err
+			}
+			continue
+		}
+		if err != nil {
+			return err
+		}
+		if err := DB.Unscoped().Model(&Model{}).Where("id = ?", meta.Id).Updates(map[string]any{
+			"description": "", "icon": "", "tags": "video", "endpoints": endpoint,
+			"status": 1, "sync_official": 0, "deleted_at": nil, "updated_time": common.GetTimestamp(),
+		}).Error; err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func ensureSD2FastRouting() error {
@@ -630,7 +966,7 @@ func ensureSD2FastRouting() error {
 		if key == "" {
 			return fmt.Errorf("SD2_FAST_GATEWAY_KEY is required")
 		}
-		weight := uint(100)
+		weight := uint64(100)
 		priority := int64(10)
 		autoBan := 0
 		mapping := fmt.Sprintf(`{"%s":"%s"}`, publicModel, upstreamModel)
@@ -671,7 +1007,7 @@ func ensureSD2FastRouting() error {
 			return err
 		}
 		if err := DB.Model(&Ability{}).Where(commonGroupCol+" = ? AND model = ? AND channel_id = ?", group, publicModel, channel.Id).
-			Updates(map[string]any{"enabled": true, "priority": int64(10), "weight": uint(100)}).Error; err != nil {
+			Updates(map[string]any{"enabled": true, "priority": int64(10), "weight": uint64(100)}).Error; err != nil {
 			return err
 		}
 	}
@@ -718,7 +1054,7 @@ func ensureSD25Routing() error {
 		if key == "" {
 			return fmt.Errorf("SD25_GATEWAY_KEY is required")
 		}
-		weight := uint(100)
+		weight := uint64(100)
 		priority := int64(10)
 		autoBan := 0
 		mapping := fmt.Sprintf(`{"%s":"%s"}`, publicModel, upstreamModel)
@@ -758,7 +1094,7 @@ func ensureSD25Routing() error {
 		if err := DB.Where(commonGroupCol+" = ? AND model = ? AND channel_id = ?", group, publicModel, channel.Id).FirstOrCreate(&ability).Error; err != nil {
 			return err
 		}
-		if err := DB.Model(&Ability{}).Where(commonGroupCol+" = ? AND model = ? AND channel_id = ?", group, publicModel, channel.Id).Updates(map[string]any{"enabled": true, "priority": int64(10), "weight": uint(100)}).Error; err != nil {
+		if err := DB.Model(&Ability{}).Where(commonGroupCol+" = ? AND model = ? AND channel_id = ?", group, publicModel, channel.Id).Updates(map[string]any{"enabled": true, "priority": int64(10), "weight": uint64(100)}).Error; err != nil {
 			return err
 		}
 	}
@@ -800,7 +1136,7 @@ func ensureOAuth2APIRouting() error {
 		if key == "" {
 			return fmt.Errorf("OAUTH2API_GATEWAY_KEY is required")
 		}
-		weight := uint(100)
+		weight := uint64(100)
 		priority := int64(10)
 		autoBan := 0
 		channel = Channel{
@@ -839,7 +1175,7 @@ func ensureOAuth2APIRouting() error {
 			return err
 		}
 		if err := DB.Model(&Ability{}).Where(commonGroupCol+" = ? AND model = ? AND channel_id = ?", group, publicModel, channel.Id).
-			Updates(map[string]any{"enabled": true, "priority": int64(10), "weight": uint(100)}).Error; err != nil {
+			Updates(map[string]any{"enabled": true, "priority": int64(10), "weight": uint64(100)}).Error; err != nil {
 			return err
 		}
 	}
@@ -908,7 +1244,7 @@ func ensureSeedance720HiggsRouting() error {
 		priority := int64(10)
 		if err := DB.Model(&Ability{}).
 			Where(commonGroupCol+" = ? AND model = ? AND channel_id = ?", group, publicModel, channelID).
-			Updates(map[string]any{"enabled": true, "priority": &priority, "weight": uint(100)}).Error; err != nil {
+			Updates(map[string]any{"enabled": true, "priority": &priority, "weight": uint64(100)}).Error; err != nil {
 			return err
 		}
 	}
@@ -973,7 +1309,7 @@ func ensureAdobeSeedanceClassicRouting() error {
 		err = DB.First(&channel, legacyChannelID).Error
 	}
 	if errors.Is(err, gorm.ErrRecordNotFound) {
-		weight := uint(100)
+		weight := uint64(100)
 		priority := int64(10)
 		autoBan := 0
 		channel = Channel{
@@ -1032,7 +1368,7 @@ func ensureAdobeSeedanceClassicRouting() error {
 			priority := int64(10)
 			if err := DB.Model(&Ability{}).
 				Where(commonGroupCol+" = ? AND model = ? AND channel_id = ?", group, publicModel, channelID).
-				Updates(map[string]any{"enabled": true, "priority": &priority, "weight": uint(100)}).Error; err != nil {
+				Updates(map[string]any{"enabled": true, "priority": &priority, "weight": uint64(100)}).Error; err != nil {
 				return err
 			}
 		}
@@ -1102,7 +1438,7 @@ func ensureExactGroupAbility(channelID int, group, modelName string) error {
 	ability := Ability{
 		Group: group, Model: modelName, ChannelId: channelID,
 		Enabled:  channel.Status == common.ChannelStatusEnabled,
-		Priority: channel.Priority, Weight: uint(channel.GetWeight()), Tag: channel.Tag,
+		Priority: channel.Priority, Weight: uint64(channel.GetWeight()), Tag: channel.Tag,
 	}
 	return DB.Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "group"}, {Name: "model"}, {Name: "channel_id"}},
@@ -1121,17 +1457,11 @@ func SyncOptions(frequency int) {
 func UpdateOption(key string, value string) error {
 	// Save to database first
 	if common.UsingClickHouse {
-		var option Option
-		err := DB.Where("`key` = ?", key).Take(&option).Error
-		if err != nil {
-			if errors.Is(err, gorm.ErrRecordNotFound) {
-				if err := DB.Create(&Option{Key: key, Value: value}).Error; err != nil {
-					return err
-				}
-			} else {
-				return err
-			}
-		} else if err := DB.Model(&Option{}).Where("`key` = ?", key).Update("value", value).Error; err != nil {
+		// MergeTree updates can leave duplicate key rows; replace with synced delete.
+		if err := DB.Exec("ALTER TABLE options DELETE WHERE `key` = ? SETTINGS mutations_sync = 1", key).Error; err != nil {
+			return err
+		}
+		if err := DB.Exec("INSERT INTO options (`key`, value) VALUES (?, ?)", key, value).Error; err != nil {
 			return err
 		}
 		return updateOptionMap(key, value)
@@ -1161,15 +1491,10 @@ func UpdateOptionsBulk(values map[string]string) error {
 	}
 	writeOne := func(tx *gorm.DB, k, v string) error {
 		if common.UsingClickHouse {
-			var option Option
-			err := tx.Where("`key` = ?", k).Take(&option).Error
-			if err != nil {
-				if errors.Is(err, gorm.ErrRecordNotFound) {
-					return tx.Create(&Option{Key: k, Value: v}).Error
-				}
+			if err := tx.Exec("ALTER TABLE options DELETE WHERE `key` = ? SETTINGS mutations_sync = 1", k).Error; err != nil {
 				return err
 			}
-			return tx.Model(&Option{}).Where("`key` = ?", k).Update("value", v).Error
+			return tx.Exec("INSERT INTO options (`key`, value) VALUES (?, ?)", k, v).Error
 		}
 		option := Option{Key: k}
 		if err := tx.FirstOrCreate(&option, Option{Key: k}).Error; err != nil {

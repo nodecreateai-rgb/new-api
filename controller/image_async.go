@@ -583,7 +583,7 @@ func imageTaskResponse(task *model.Task) map[string]any {
 	}
 	if task.Status == model.TaskStatusSuccess && len(task.Data) > 0 {
 		var result map[string]any
-		if common.Unmarshal(task.Data, &result) == nil {
+		if common.Unmarshal([]byte(task.Data), &result) == nil {
 			out["result"] = result
 			if d, ok := result["data"]; ok {
 				out["data"] = d

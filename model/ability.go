@@ -19,7 +19,7 @@ type Ability struct {
 	ChannelId int     `json:"channel_id" gorm:"primaryKey;autoIncrement:false;index"`
 	Enabled   bool    `json:"enabled"`
 	Priority  *int64  `json:"priority" gorm:"bigint;default:0;index"`
-	Weight    uint    `json:"weight" gorm:"default:0;index"`
+	Weight    uint64  `json:"weight" gorm:"default:0;index"`
 	Tag       *string `json:"tag" gorm:"index"`
 }
 
@@ -132,7 +132,7 @@ func GetChannel(group string, model string, retry int) (*Channel, error) {
 	channel := Channel{}
 	if len(abilities) > 0 {
 		// Randomly choose one
-		weightSum := uint(0)
+		weightSum := uint64(0)
 		for _, ability_ := range abilities {
 			weightSum += ability_.Weight + 10
 		}
@@ -171,7 +171,7 @@ func (channel *Channel) AddAbilities(tx *gorm.DB) error {
 				ChannelId: channel.Id,
 				Enabled:   channel.Status == common.ChannelStatusEnabled,
 				Priority:  channel.Priority,
-				Weight:    uint(channel.GetWeight()),
+				Weight:    uint64(channel.GetWeight()),
 				Tag:       channel.Tag,
 			}
 			abilities = append(abilities, ability)
@@ -243,7 +243,7 @@ func (channel *Channel) UpdateAbilities(tx *gorm.DB) error {
 				ChannelId: channel.Id,
 				Enabled:   channel.Status == common.ChannelStatusEnabled,
 				Priority:  channel.Priority,
-				Weight:    uint(channel.GetWeight()),
+				Weight:    uint64(channel.GetWeight()),
 				Tag:       channel.Tag,
 			}
 			abilities = append(abilities, ability)
@@ -278,7 +278,7 @@ func UpdateAbilityStatusByTag(tag string, status bool) error {
 	return DB.Model(&Ability{}).Where("tag = ?", tag).Select("enabled").Update("enabled", status).Error
 }
 
-func UpdateAbilityByTag(tag string, newTag *string, priority *int64, weight *uint) error {
+func UpdateAbilityByTag(tag string, newTag *string, priority *int64, weight *uint64) error {
 	ability := Ability{}
 	if newTag != nil {
 		ability.Tag = newTag
@@ -287,7 +287,7 @@ func UpdateAbilityByTag(tag string, newTag *string, priority *int64, weight *uin
 		ability.Priority = priority
 	}
 	if weight != nil {
-		ability.Weight = *weight
+		ability.Weight = uint64(*weight)
 	}
 	return DB.Model(&Ability{}).Where("tag = ?", tag).Updates(ability).Error
 }

@@ -71,7 +71,7 @@ func extractGeminiVideoURLFromTaskData(task *model.Task) string {
 		return ""
 	}
 	var payload map[string]any
-	if err := common.Unmarshal(task.Data, &payload); err != nil {
+	if err := common.Unmarshal([]byte(task.Data), &payload); err != nil {
 		return ""
 	}
 	return extractGeminiVideoURLFromMap(payload)

@@ -28,7 +28,7 @@ type Channel struct {
 	TestModel          *string `json:"test_model"`
 	Status             int     `json:"status" gorm:"default:1"`
 	Name               string  `json:"name" gorm:"index"`
-	Weight             *uint   `json:"weight" gorm:"default:0"`
+	Weight             *uint64 `json:"weight" gorm:"default:0"`
 	CreatedTime        int64   `json:"created_time" gorm:"bigint"`
 	TestTime           int64   `json:"test_time" gorm:"bigint"`
 	ResponseTime       int     `json:"response_time"` // in milliseconds
@@ -161,15 +161,34 @@ func ApplyChannelGroupFilter(query *gorm.DB, group string) *gorm.DB {
 	return query.Where(channelGroupFilterCondition(), channelGroupFilterPattern(group))
 }
 
-// Value implements driver.Valuer interface
+// Value implements driver.Valuer interface.
+// Return string so ClickHouse String columns store JSON text, not byte ordinals.
 func (c ChannelInfo) Value() (driver.Value, error) {
-	return common.Marshal(&c)
+	b, err := common.Marshal(&c)
+	if err != nil {
+		return nil, err
+	}
+	return string(b), nil
 }
 
-// Scan implements sql.Scanner interface
+// Scan implements sql.Scanner interface.
+// ClickHouse String/Nullable(String) columns arrive as string; MySQL/SQLite as []byte.
 func (c *ChannelInfo) Scan(value interface{}) error {
-	bytesValue, _ := value.([]byte)
-	return common.Unmarshal(bytesValue, c)
+	bytesValue, err := jsonBytesFromDB(value)
+	if err != nil {
+		*c = ChannelInfo{}
+		return nil
+	}
+	bytesValue = normalizeClickHouseJSONBytes(bytesValue)
+	if len(bytesValue) == 0 {
+		*c = ChannelInfo{}
+		return nil
+	}
+	if err := common.Unmarshal(bytesValue, c); err != nil {
+		*c = ChannelInfo{}
+		return nil
+	}
+	return nil
 }
 
 func (channel *Channel) GetKeys() []string {
@@ -796,7 +815,7 @@ func DisableChannelByTag(tag string) error {
 	return err
 }
 
-func EditChannelByTag(tag string, newTag *string, modelMapping *string, models *string, group *string, priority *int64, weight *uint, paramOverride *string, headerOverride *string) error {
+func EditChannelByTag(tag string, newTag *string, modelMapping *string, models *string, group *string, priority *int64, weight *uint64, paramOverride *string, headerOverride *string) error {
 	updateData := Channel{}
 	shouldReCreateAbilities := false
 	updatedTag := tag

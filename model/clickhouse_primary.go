@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/ClickHouse/clickhouse-go/v2"
@@ -160,11 +161,15 @@ func nextClickHouseTableID(db *gorm.DB, table string) int64 {
 		if cur > 0 {
 			return seq.Add(1)
 		}
-		var maxID int64
-		// Use a side session so we don't recurse into create callbacks.
-		sess := db.Session(&gorm.Session{NewDB: true, SkipHooks: true})
-		_ = sess.Raw("SELECT ifNull(max(id), 0) FROM " + quoteClickHouseIdent(table)).Scan(&maxID)
-		if seq.CompareAndSwap(0, maxID) {
+		// Seed from the current millisecond clock. Do NOT SELECT max(id) here:
+		// running a query from the GORM create callback (or interleaved with an
+		// INSERT on clickhouse-go native protocol) triggers
+		// "Unexpected packet Query received from client" and drops log/task rows.
+		seed := time.Now().UnixMilli()
+		if seed <= 0 {
+			seed = common.GetTimestamp()
+		}
+		if seq.CompareAndSwap(0, seed) {
 			return seq.Add(1)
 		}
 	}

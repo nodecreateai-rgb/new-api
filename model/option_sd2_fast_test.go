@@ -52,7 +52,13 @@ func TestDolaRoutingUsesNeutralPersistentAlias(t *testing.T) {
 		t.Fatal(err)
 	}
 	s := string(data)
-	for _, want := range []string{`os.Getenv("DOLA2API_BASE_URL")`, `baseURL = "http://dola2api:38472"`} {
+	for _, want := range []string{
+		`os.Getenv("DOLA2API_BASE_URL")`,
+		`baseURL = "http://dola2api:38472"`,
+		`const neutralName = "Dola2API Seedance Video"`,
+		`"sd2-c7":"seedance2-c1"`,
+		`"sd2-c6":"seedance2-c2"`,
+	} {
 		if !strings.Contains(s, want) {
 			t.Fatalf("missing %s", want)
 		}

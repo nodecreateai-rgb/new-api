@@ -96,6 +96,55 @@ const (
 	LogTypeRefund  = 6
 )
 
+func (log *Log) Insert() error {
+	if common.UsingLogDatabase(common.DatabaseTypeClickHouse) {
+		return log.insertClickHouse()
+	}
+	return LOG_DB.Create(log).Error
+}
+
+func (log *Log) insertClickHouse() error {
+	if log.CreatedAt == 0 {
+		log.CreatedAt = common.GetTimestamp()
+	}
+	if log.Id == 0 {
+		log.Id = int(nextClickHouseTableID(LOG_DB, "logs"))
+	}
+	isStream := uint8(0)
+	if log.IsStream {
+		isStream = 1
+	}
+	// GORM Create on ClickHouse native protocol fails with
+	// "Unexpected packet Query received from client"; insert primitives instead.
+	err := LOG_DB.Exec(
+		"INSERT INTO logs (id, user_id, created_at, type, content, username, token_name, model_name, quota, prompt_tokens, completion_tokens, use_time, is_stream, channel_id, token_id, "+logGroupCol+", ip, request_id, upstream_request_id, other) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+		log.Id,
+		log.UserId,
+		log.CreatedAt,
+		log.Type,
+		log.Content,
+		log.Username,
+		log.TokenName,
+		log.ModelName,
+		log.Quota,
+		log.PromptTokens,
+		log.CompletionTokens,
+		log.UseTime,
+		isStream,
+		log.ChannelId,
+		log.TokenId,
+		log.Group,
+		log.Ip,
+		log.RequestId,
+		log.UpstreamRequestId,
+		log.Other,
+	).Error
+	if err != nil {
+		return fmt.Errorf("clickhouse insert log id=%d: %w", log.Id, err)
+	}
+	return nil
+}
+
 func formatUserLogs(logs []*Log, startIdx int) {
 	for i := range logs {
 		logs[i].ChannelName = ""
@@ -134,7 +183,7 @@ func RecordLog(userId int, logType int, content string) {
 		Type:      logType,
 		Content:   content,
 	}
-	err := LOG_DB.Create(log).Error
+	err := log.Insert()
 	if err != nil {
 		common.SysLog("failed to record log: " + err.Error())
 	}
@@ -159,7 +208,7 @@ func RecordLogWithAdminInfo(userId int, logType int, content string, adminInfo m
 		}
 		log.Other = common.MapToJsonStr(other)
 	}
-	if err := LOG_DB.Create(log).Error; err != nil {
+	if err := log.Insert(); err != nil {
 		common.SysLog("failed to record log: " + err.Error())
 	}
 }
@@ -186,7 +235,7 @@ func RecordTopupLog(userId int, content string, callerIp string, paymentMethod s
 		Ip:        callerIp,
 		Other:     common.MapToJsonStr(other),
 	}
-	err := LOG_DB.Create(log).Error
+	err := log.Insert()
 	if err != nil {
 		common.SysLog("failed to record topup log: " + err.Error())
 	}
@@ -232,7 +281,7 @@ func RecordErrorLog(c *gin.Context, userId int, channelId int, modelName string,
 		UpstreamRequestId: upstreamRequestId,
 		Other:             otherStr,
 	}
-	err := LOG_DB.Create(log).Error
+	err := log.Insert()
 	if err != nil {
 		logger.LogError(c, "failed to record log: "+err.Error())
 	}
@@ -295,7 +344,7 @@ func RecordConsumeLog(c *gin.Context, userId int, params RecordConsumeLogParams)
 		UpstreamRequestId: upstreamRequestId,
 		Other:             otherStr,
 	}
-	err := LOG_DB.Create(log).Error
+	err := log.Insert()
 	if err != nil {
 		logger.LogError(c, "failed to record log: "+err.Error())
 	}
@@ -343,7 +392,7 @@ func RecordTaskBillingLog(params RecordTaskBillingLogParams) {
 		Group:     params.Group,
 		Other:     common.MapToJsonStr(params.Other),
 	}
-	err := LOG_DB.Create(log).Error
+	err := log.Insert()
 	if err != nil {
 		common.SysLog("failed to record task billing log: " + err.Error())
 	}

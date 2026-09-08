@@ -719,7 +719,7 @@ type ChannelTag struct {
 	Tag            string  `json:"tag"`
 	NewTag         *string `json:"new_tag"`
 	Priority       *int64  `json:"priority"`
-	Weight         *uint   `json:"weight"`
+	Weight         *uint64 `json:"weight"`
 	ModelMapping   *string `json:"model_mapping"`
 	Models         *string `json:"models"`
 	Groups         *string `json:"groups"`

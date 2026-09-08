@@ -133,7 +133,7 @@ func resolveTaskPricePatches(raw string) []string {
 	defaults := []string{
 		"sd2-c1", "sd2-c2", "sd2-c3", "sd2-c5", "sd2-c6", "sd2-c7",
 		"sd2.5", "sd2-c8", "sd2-c9", "sd2-c10", "sd2-c11", "sd2-c12", "sd2-mini", "sd2-fast",
-		"seedance-720", "seedance-2.0-fast-720p", "seedance-2.0-720p", "seedance-2.0-1080p",
+		"seedance-720", "seedance-2.0-mini", "seedance-2.0-mini-480p", "seedance-2.0-fast-720p", "seedance-2.0-720p", "seedance-2.0-1080p",
 		"gemini-omni", "happyhorse-1.1-720p", "happyhorse-1.1-1080p",
 		"wan2.7-720p", "wan2.7-1080p",
 		"viduq3-turbo-720p", "viduq3-turbo-1080p", "viduq3-pro-1080p",

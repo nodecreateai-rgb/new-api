@@ -622,7 +622,7 @@ func RelayTask(c *gin.Context) {
 			PerCallBilling:  !common.IsPerSecondTaskModel(relayInfo.OriginModelName),
 		}
 		task.Quota = result.Quota
-		task.Data = result.TaskData
+		task.Data = model.JSONRaw(result.TaskData)
 		task.Action = relayInfo.Action
 		if insertErr := task.Insert(); insertErr != nil {
 			common.SysError("insert task error: " + insertErr.Error())

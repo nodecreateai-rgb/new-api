@@ -135,6 +135,9 @@ func VideoProxy(c *gin.Context) {
 		} else if contentURL := privateVideoContentURL(baseURL, task.GetUpstreamTaskID()); contentURL != "" {
 			videoURL = contentURL
 			req.Header.Set("Authorization", "Bearer "+channel.Key)
+		} else if contentURL := roboneoStyleTaskContentURL(baseURL, task.GetUpstreamTaskID()); contentURL != "" {
+			videoURL = contentURL
+			req.Header.Set("Authorization", "Bearer "+channel.Key)
 		} else if outputURL := upstreamVideoOutputURL(baseURL, task.GetUpstreamTaskID()); outputURL != "" {
 			videoURL = outputURL
 		} else {
@@ -265,6 +268,21 @@ func privateVideoContentURL(baseURL, upstreamTaskID string) string {
 	return baseURL + "/v1/videos/task/task_" + url.PathEscape(upstreamTaskID) + "/content"
 }
 
+// roboneoStyleTaskContentURL matches roboneo2api / dola-style OpenAI video gateways
+// that serve bytes at /v1/task/task_<id>/content (and /v1/videos/task/...).
+func roboneoStyleTaskContentURL(baseURL, upstreamTaskID string) string {
+	baseURL = strings.TrimRight(strings.TrimSpace(baseURL), "/")
+	upstreamTaskID = strings.TrimSpace(upstreamTaskID)
+	if baseURL == "" || upstreamTaskID == "" || strings.Contains(strings.ToLower(baseURL), "api.openai.com") {
+		return ""
+	}
+	name := upstreamTaskID
+	if !strings.HasPrefix(name, "task_") {
+		name = "task_" + name
+	}
+	return baseURL + "/v1/task/" + url.PathEscape(name) + "/content"
+}
+
 func upstreamVideoOutputURL(baseURL, upstreamTaskID string) string {
 	baseURL = strings.TrimRight(strings.TrimSpace(baseURL), "/")
 	upstreamTaskID = strings.TrimSpace(upstreamTaskID)
@@ -336,7 +354,7 @@ func getStoredVideoURL(task *model.Task) string {
 	candidates := []string{task.GetResultURL()}
 	if len(task.Data) > 0 {
 		var payload map[string]any
-		if err := common.Unmarshal(task.Data, &payload); err == nil {
+		if err := common.Unmarshal([]byte(task.Data), &payload); err == nil {
 			candidates = append(candidates, findVideoURLInPayload(payload))
 		}
 	}
@@ -355,7 +373,7 @@ func storedTaskOutputURL(task *model.Task) string {
 		return ""
 	}
 	var payload map[string]any
-	if err := common.Unmarshal(task.Data, &payload); err != nil {
+	if err := common.Unmarshal([]byte(task.Data), &payload); err != nil {
 		return ""
 	}
 	localPath, _ := payload["local_path"].(string)

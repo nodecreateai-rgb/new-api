@@ -15,6 +15,12 @@ func SetVideoRouter(router *gin.Engine) {
 	{
 		videoProxyRouter.GET("/videos/:task_id/content", controller.VideoProxy)
 		videoProxyRouter.HEAD("/videos/:task_id/content", controller.VideoProxy)
+		// Roboneo / OpenAI-compatible upstreams expose /v1/task/{id}/content;
+		// keep the public alias so clients can follow either URL shape.
+		videoProxyRouter.GET("/task/:task_id/content", controller.VideoProxy)
+		videoProxyRouter.HEAD("/task/:task_id/content", controller.VideoProxy)
+		videoProxyRouter.GET("/tasks/:task_id/content", controller.VideoProxy)
+		videoProxyRouter.HEAD("/tasks/:task_id/content", controller.VideoProxy)
 	}
 
 	videoV1Router := router.Group("/v1")

@@ -378,7 +378,7 @@ func isNewAPIRelay(apiKey string) bool {
 
 func (a *TaskAdaptor) ConvertToOpenAIVideo(originTask *model.Task) ([]byte, error) {
 	var klingResp responsePayload
-	if err := common.Unmarshal(originTask.Data, &klingResp); err != nil {
+	if err := common.Unmarshal([]byte(originTask.Data), &klingResp); err != nil {
 		return nil, errors.Wrap(err, "unmarshal kling task data failed")
 	}
 
