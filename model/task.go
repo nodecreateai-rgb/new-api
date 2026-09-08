@@ -356,7 +356,10 @@ func TaskGetAllUserTask(userId int, startIdx int, num int, queryParams SyncTaskQ
 	}
 
 	// 获取数据
-	err = query.Omit("channel_id").Order("id desc").Limit(num).Offset(startIdx).Find(&tasks).Error
+	// Order by submit_time, not id: after ClickHouse ID seeding switched from
+	// millisecond clocks back to imported AUTO_INCREMENT, new rows have small
+	// ids while older CH-era rows keep huge ids — id DESC hides the newest tasks.
+	err = query.Omit("channel_id").Order("submit_time desc").Limit(num).Offset(startIdx).Find(&tasks).Error
 	if err != nil {
 		return nil
 	}
@@ -401,7 +404,7 @@ func TaskGetAllTasks(startIdx int, num int, queryParams SyncTaskQueryParams) []*
 	}
 
 	// 获取数据
-	err = query.Order("id desc").Limit(num).Offset(startIdx).Find(&tasks).Error
+	err = query.Order("submit_time desc").Limit(num).Offset(startIdx).Find(&tasks).Error
 	if err != nil {
 		return nil
 	}
