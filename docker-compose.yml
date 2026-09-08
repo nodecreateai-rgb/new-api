@@ -30,6 +30,8 @@ services:
       - PORT=3000
       - TZ=Asia/Shanghai
       - SQL_DSN=${SQL_DSN:-root:123456@tcp(mysql:3306)/new-api?charset=utf8mb4}
+      - LOG_SQL_DSN=${LOG_SQL_DSN:-}
+      - LOG_SQL_CLICKHOUSE_TTL_DAYS=${LOG_SQL_CLICKHOUSE_TTL_DAYS:-0}
       - REDIS_CONN_STRING=${REDIS_CONN_STRING:-redis://:123456@redis:6379}
       - SESSION_SECRET=${SESSION_SECRET:-}
       - ERROR_LOG_ENABLED=${ERROR_LOG_ENABLED:-true}

@@ -4,6 +4,7 @@ const (
 	DatabaseTypeMySQL      = "mysql"
 	DatabaseTypeSQLite     = "sqlite"
 	DatabaseTypePostgreSQL = "postgres"
+	DatabaseTypeClickHouse = "clickhouse"
 )
 
 var UsingSQLite = false
@@ -13,3 +14,8 @@ var UsingMySQL = false
 var UsingClickHouse = false
 
 var SQLitePath = "one-api.db?_busy_timeout=30000"
+
+// UsingLogDatabase reports whether the log database is the given type.
+func UsingLogDatabase(databaseType string) bool {
+	return LogSqlType == databaseType
+}

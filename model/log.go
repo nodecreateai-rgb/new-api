@@ -22,6 +22,13 @@ func applyExplicitLogTextFilter(tx *gorm.DB, column string, value string) (*gorm
 		return tx, nil
 	}
 	if strings.Contains(value, "%") {
+		if common.UsingLogDatabase(common.DatabaseTypeClickHouse) {
+			pattern, err := sanitizeClickHouseLikePattern(value)
+			if err != nil {
+				return nil, err
+			}
+			return tx.Where(column+" LIKE ?", pattern), nil
+		}
 		pattern, err := sanitizeLikePattern(value)
 		if err != nil {
 			return nil, err
@@ -29,6 +36,29 @@ func applyExplicitLogTextFilter(tx *gorm.DB, column string, value string) (*gorm
 		return tx.Where(column+" LIKE ? ESCAPE '!'", pattern), nil
 	}
 	return tx.Where(column+" = ?", value), nil
+}
+
+func sanitizeClickHouseLikePattern(input string) (string, error) {
+	input = strings.ReplaceAll(input, `\`, `\\`)
+	input = strings.ReplaceAll(input, `_`, `\_`)
+	if strings.Contains(input, "%%") {
+		return "", errors.New("搜索模式中不允许包含连续的 % 通配符")
+	}
+	count := strings.Count(input, "%")
+	if count > 2 {
+		return "", errors.New("搜索模式中最多允许包含 2 个 % 通配符")
+	}
+	if count > 0 {
+		stripped := strings.ReplaceAll(input, "%", "")
+		if len(stripped) < 2 {
+			return "", errors.New("使用模糊搜索时，关键词长度至少为 2 个字符")
+		}
+	}
+	return input, nil
+}
+
+func clickHouseLogOrder(prefix string) string {
+	return prefix + "created_at desc, " + prefix + "request_id desc"
 }
 
 type Log struct {
@@ -83,7 +113,11 @@ func formatUserLogs(logs []*Log, startIdx int) {
 }
 
 func GetLogByTokenId(tokenId int) (logs []*Log, err error) {
-	err = LOG_DB.Model(&Log{}).Where("token_id = ?", tokenId).Order("id desc").Limit(common.MaxRecentItems).Find(&logs).Error
+	order := "id desc"
+	if common.UsingLogDatabase(common.DatabaseTypeClickHouse) {
+		order = clickHouseLogOrder("")
+	}
+	err = LOG_DB.Model(&Log{}).Where("token_id = ?", tokenId).Order(order).Limit(common.MaxRecentItems).Find(&logs).Error
 	formatUserLogs(logs, 0)
 	return logs, err
 }
@@ -354,9 +388,18 @@ func GetAllLogs(logType int, startTimestamp int64, endTimestamp int64, modelName
 	if err != nil {
 		return nil, 0, err
 	}
-	err = tx.Order("logs.created_at desc, logs.id desc").Limit(num).Offset(startIdx).Find(&logs).Error
+	order := "logs.created_at desc, logs.id desc"
+	if common.UsingLogDatabase(common.DatabaseTypeClickHouse) {
+		order = clickHouseLogOrder("logs.")
+	}
+	err = tx.Order(order).Limit(num).Offset(startIdx).Find(&logs).Error
 	if err != nil {
 		return nil, 0, err
+	}
+	if common.UsingLogDatabase(common.DatabaseTypeClickHouse) {
+		for i := range logs {
+			logs[i].Id = startIdx + i + 1
+		}
 	}
 
 	channelIds := types.NewSet[int]()
@@ -438,7 +481,11 @@ func GetUserLogs(userId int, logType int, startTimestamp int64, endTimestamp int
 		common.SysError("failed to count user logs: " + err.Error())
 		return nil, 0, errors.New("查询日志失败")
 	}
-	err = tx.Order("logs.id desc").Limit(num).Offset(startIdx).Find(&logs).Error
+	order := "logs.id desc"
+	if common.UsingLogDatabase(common.DatabaseTypeClickHouse) {
+		order = clickHouseLogOrder("logs.")
+	}
+	err = tx.Order(order).Limit(num).Offset(startIdx).Find(&logs).Error
 	if err != nil {
 		common.SysError("failed to search user logs: " + err.Error())
 		return nil, 0, errors.New("查询日志失败")
@@ -511,7 +558,11 @@ func SumUsedQuota(logType int, startTimestamp int64, endTimestamp int64, modelNa
 }
 
 func SumUsedToken(logType int, startTimestamp int64, endTimestamp int64, modelName string, username string, tokenName string) (token int) {
-	tx := LOG_DB.Table("logs").Select("ifnull(sum(prompt_tokens),0) + ifnull(sum(completion_tokens),0)")
+	sumExpr := "ifnull(sum(prompt_tokens),0) + ifnull(sum(completion_tokens),0)"
+	if common.UsingLogDatabase(common.DatabaseTypeClickHouse) {
+		sumExpr = "COALESCE(sum(prompt_tokens),0) + COALESCE(sum(completion_tokens),0)"
+	}
+	tx := LOG_DB.Table("logs").Select(sumExpr)
 	if username != "" {
 		tx = tx.Where("username = ?", username)
 	}
@@ -533,6 +584,23 @@ func SumUsedToken(logType int, startTimestamp int64, endTimestamp int64, modelNa
 
 func DeleteOldLog(ctx context.Context, targetTimestamp int64, limit int) (int64, error) {
 	var total int64 = 0
+
+	if common.UsingLogDatabase(common.DatabaseTypeClickHouse) {
+		var count int64
+		if err := LOG_DB.WithContext(ctx).Model(&Log{}).Where("created_at < ?", targetTimestamp).Count(&count).Error; err != nil {
+			return 0, err
+		}
+		if count == 0 {
+			return 0, nil
+		}
+		if err := LOG_DB.WithContext(ctx).Exec(
+			"ALTER TABLE logs DELETE WHERE created_at < ? SETTINGS mutations_sync = 1",
+			targetTimestamp,
+		).Error; err != nil {
+			return 0, err
+		}
+		return count, nil
+	}
 
 	for {
 		if nil != ctx.Err() {
