@@ -277,9 +277,69 @@ func GetTokenByKey(key string, fromDB bool) (token *Token, err error) {
 }
 
 func (token *Token) Insert() error {
-	var err error
-	err = DB.Create(token).Error
-	return err
+	if common.UsingClickHouse {
+		return token.insertClickHouse()
+	}
+	return DB.Create(token).Error
+}
+
+// insertClickHouse writes the token with a raw INSERT. GORM Create on ClickHouse
+// native protocol often reports success without persisting the row and leaves the
+// shared connection broken ("Unexpected packet Query"), so newly created tokens
+// never show up in the list.
+func (token *Token) insertClickHouse() error {
+	if token.Id == 0 {
+		token.Id = int(nextClickHouseTableID(DB, "tokens"))
+	}
+	if token.Status == 0 {
+		token.Status = common.TokenStatusEnabled
+	}
+	if token.CreatedTime == 0 {
+		token.CreatedTime = common.GetTimestamp()
+	}
+	if token.AccessedTime == 0 {
+		token.AccessedTime = token.CreatedTime
+	}
+	allowIps := ""
+	if token.AllowIps != nil {
+		allowIps = *token.AllowIps
+	}
+	unlimitedQuota := uint8(0)
+	if token.UnlimitedQuota {
+		unlimitedQuota = 1
+	}
+	modelLimitsEnabled := uint8(0)
+	if token.ModelLimitsEnabled {
+		modelLimitsEnabled = 1
+	}
+	crossGroupRetry := uint8(0)
+	if token.CrossGroupRetry {
+		crossGroupRetry = 1
+	}
+	err := DB.Exec(
+		"INSERT INTO tokens (id, user_id, "+commonKeyCol+", status, name, created_time, accessed_time, expired_time, remain_quota, unlimited_quota, model_limits_enabled, model_limits, allow_ips, used_quota, "+commonGroupCol+", cross_group_retry) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+		token.Id,
+		token.UserId,
+		token.Key,
+		token.Status,
+		token.Name,
+		token.CreatedTime,
+		token.AccessedTime,
+		token.ExpiredTime,
+		token.RemainQuota,
+		unlimitedQuota,
+		modelLimitsEnabled,
+		token.ModelLimits,
+		allowIps,
+		token.UsedQuota,
+		token.Group,
+		crossGroupRetry,
+	).Error
+	if err != nil {
+		return fmt.Errorf("clickhouse insert token %s: %w", token.Name, err)
+	}
+	common.SysLog(fmt.Sprintf("inserted clickhouse token id=%d user_id=%d name=%s", token.Id, token.UserId, token.Name))
+	return nil
 }
 
 // Update Make sure your token's fields is completed, because this will update non-zero values

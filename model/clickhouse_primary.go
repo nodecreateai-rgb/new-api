@@ -2,6 +2,7 @@ package model
 
 import (
 	"context"
+	"database/sql"
 	"embed"
 	"fmt"
 	"os"
@@ -18,6 +19,10 @@ import (
 	"gorm.io/gorm/clause"
 	"gorm.io/gorm/schema"
 )
+
+// IDs at or above this are treated as millisecond-clock seeds from an earlier
+// ClickHouse strategy, not MySQL/PostgreSQL-style autoincrement values.
+const clickHouseLegacyIDCeiling int64 = 1_000_000_000_000
 
 //go:embed clickhouse_primary_schema.sql
 var clickHousePrimarySchemaFS embed.FS
@@ -161,16 +166,80 @@ func nextClickHouseTableID(db *gorm.DB, table string) int64 {
 		if cur > 0 {
 			return seq.Add(1)
 		}
-		// Seed from the current millisecond clock. Do NOT SELECT max(id) here:
-		// running a query from the GORM create callback (or interleaved with an
-		// INSERT on clickhouse-go native protocol) triggers
-		// "Unexpected packet Query received from client" and drops log/task rows.
-		seed := time.Now().UnixMilli()
+		// Prefer continuing imported AUTO_INCREMENT-style ids (1284, 1285, ...).
+		// Query max(id) on a dedicated connection — never on the same native
+		// connection that is mid-INSERT (that triggers "Unexpected packet Query").
+		seed := loadClickHouseTableIDSeed(db, table)
 		if seed <= 0 {
-			seed = common.GetTimestamp()
+			seed = time.Now().UnixMilli()
+			if seed <= 0 {
+				seed = common.GetTimestamp()
+			}
 		}
 		if seq.CompareAndSwap(0, seed) {
 			return seq.Add(1)
+		}
+	}
+}
+
+func loadClickHouseTableIDSeed(db *gorm.DB, table string) int64 {
+	if db == nil {
+		return 0
+	}
+	// Prefer max legacy id so new rows continue after the imported sequence.
+	if seed := queryClickHouseMaxID(db, table, clickHouseLegacyIDCeiling); seed > 0 {
+		return seed
+	}
+	// No legacy rows: continue from absolute max (may already be milli-scale).
+	return queryClickHouseMaxID(db, table, 0)
+}
+
+func queryClickHouseMaxID(db *gorm.DB, table string, below int64) int64 {
+	sqlDB, err := db.DB()
+	if err != nil {
+		return 0
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	conn, err := sqlDB.Conn(ctx)
+	if err != nil {
+		common.SysLog(fmt.Sprintf("clickhouse id seed conn %s: %v", table, err))
+		return 0
+	}
+	defer func() { _ = conn.Close() }()
+
+	q := fmt.Sprintf("SELECT max(id) FROM %s", quoteClickHouseIdent(table))
+	if below > 0 {
+		q = fmt.Sprintf("SELECT max(id) FROM %s WHERE id < %d", quoteClickHouseIdent(table), below)
+	}
+	var maxID sql.NullInt64
+	if err := conn.QueryRowContext(ctx, q).Scan(&maxID); err != nil {
+		common.SysLog(fmt.Sprintf("clickhouse id seed query %s: %v", table, err))
+		return 0
+	}
+	if !maxID.Valid || maxID.Int64 <= 0 {
+		return 0
+	}
+	return maxID.Int64
+}
+
+func seedClickHouseIDSeqs(db *gorm.DB, tables ...string) {
+	if db == nil {
+		return
+	}
+	for _, table := range tables {
+		table = strings.Trim(table, "`\"")
+		if table == "" {
+			continue
+		}
+		seed := loadClickHouseTableIDSeed(db, table)
+		if seed <= 0 {
+			continue
+		}
+		v, _ := chIDSeq.LoadOrStore(table, &atomic.Int64{})
+		seq := v.(*atomic.Int64)
+		if seq.CompareAndSwap(0, seed) {
+			common.SysLog(fmt.Sprintf("clickhouse id seq seeded %s=%d (next=%d)", table, seed, seed+1))
 		}
 	}
 }
@@ -225,6 +294,7 @@ func migrateClickHousePrimaryDB() error {
 		}
 	}
 	common.SysLog("clickhouse primary schema ready")
+	seedClickHouseIDSeqs(DB, "users", "tokens", "tasks", "channels", "models", "logs")
 	return nil
 }
 

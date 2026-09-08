@@ -422,7 +422,11 @@ func migrateClickHouseLogDB() error {
 	if err := LOG_DB.Exec(clickHouseLogCreateTableSQL(ttlDays)).Error; err != nil {
 		return err
 	}
-	return syncClickHouseLogTTL(ttlDays)
+	if err := syncClickHouseLogTTL(ttlDays); err != nil {
+		return err
+	}
+	seedClickHouseIDSeqs(LOG_DB, "logs")
+	return nil
 }
 
 func clickHouseLogTTLDays() int {

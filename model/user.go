@@ -395,24 +395,49 @@ func (user *User) Insert(inviterId int) error {
 		user.SetSetting(defaultSetting)
 	}
 
-	result := DB.Create(user)
-	if result.Error != nil {
-		return result.Error
+	if common.UsingClickHouse {
+		if user.Role == 0 {
+			user.Role = common.RoleCommonUser
+		}
+		if defaultSidebarConfig := generateDefaultSidebarConfigForRole(user.Role); defaultSidebarConfig != "" {
+			currentSetting := user.GetSetting()
+			currentSetting.SidebarModules = defaultSidebarConfig
+			user.SetSetting(currentSetting)
+		}
+		if err := user.insertClickHouse(); err != nil {
+			return err
+		}
+	} else {
+		result := DB.Create(user)
+		if result.Error != nil {
+			return result.Error
+		}
+	}
+	if user.Id == 0 {
+		return fmt.Errorf("user insert succeeded but id is empty")
 	}
 
-	// 用户创建成功后，根据角色初始化边栏配置
-	// 需要重新获取用户以确保有正确的ID和Role
-	var createdUser User
-	if err := DB.Where("username = ?", user.Username).First(&createdUser).Error; err == nil {
-		// 生成基于角色的默认边栏配置
-		defaultSidebarConfig := generateDefaultSidebarConfigForRole(createdUser.Role)
-		if defaultSidebarConfig != "" {
-			currentSetting := createdUser.GetSetting()
-			currentSetting.SidebarModules = defaultSidebarConfig
-			createdUser.SetSetting(currentSetting)
-			createdUser.Update(false)
-			common.SysLog(fmt.Sprintf("为新用户 %s (角色: %d) 初始化边栏配置", createdUser.Username, createdUser.Role))
+	// 用户创建成功后，根据角色初始化边栏配置。
+	// ClickHouse: sidebar is written in the initial INSERT above; avoid
+	// SELECT/UPDATE immediately after insert on the shared native connection.
+	if !common.UsingClickHouse {
+		var createdUser User
+		if err := DB.Where("username = ?", user.Username).First(&createdUser).Error; err == nil {
+			defaultSidebarConfig := generateDefaultSidebarConfigForRole(createdUser.Role)
+			if defaultSidebarConfig != "" {
+				currentSetting := createdUser.GetSetting()
+				currentSetting.SidebarModules = defaultSidebarConfig
+				createdUser.SetSetting(currentSetting)
+				if err := createdUser.Update(false); err != nil {
+					common.SysLog(fmt.Sprintf("为新用户 %s 初始化边栏配置失败: %v", createdUser.Username, err))
+				} else {
+					user.Setting = createdUser.Setting
+					common.SysLog(fmt.Sprintf("为新用户 %s (角色: %d) 初始化边栏配置", createdUser.Username, createdUser.Role))
+				}
+			}
 		}
+	} else {
+		common.SysLog(fmt.Sprintf("为新用户 %s (角色: %d) 初始化边栏配置", user.Username, user.Role))
 	}
 
 	if common.QuotaForNewUser > 0 {
@@ -457,6 +482,68 @@ func (user *User) InsertWithTx(tx *gorm.DB, inviterId int) error {
 		return result.Error
 	}
 
+	return nil
+}
+
+// insertClickHouse writes the user with a raw INSERT. GORM Create on ClickHouse
+// native protocol is flaky under concurrent task/log traffic and often leaves
+// the connection unable to run the follow-up SELECT ("Unexpected packet Query"),
+// so registration appears to fail even when the username check passed.
+func (user *User) insertClickHouse() error {
+	if user.CreatedAt == 0 {
+		user.CreatedAt = common.GetTimestamp()
+	}
+	if user.Id == 0 {
+		user.Id = int(nextClickHouseTableID(DB, "users"))
+	}
+	if user.Role == 0 {
+		user.Role = common.RoleCommonUser
+	}
+	if user.Status == 0 {
+		user.Status = common.UserStatusEnabled
+	}
+	if user.Group == "" {
+		user.Group = "default"
+	}
+	accessToken := ""
+	if user.AccessToken != nil {
+		accessToken = *user.AccessToken
+	}
+	err := DB.Exec(
+		"INSERT INTO users (id, username, password, display_name, role, status, email, github_id, discord_id, oidc_id, wechat_id, telegram_id, access_token, quota, used_quota, request_count, "+commonGroupCol+", aff_code, aff_count, aff_quota, aff_history, inviter_id, linux_do_id, setting, remark, stripe_customer, created_at, last_login_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+		user.Id,
+		user.Username,
+		user.Password,
+		user.DisplayName,
+		user.Role,
+		user.Status,
+		user.Email,
+		user.GitHubId,
+		user.DiscordId,
+		user.OidcId,
+		user.WeChatId,
+		user.TelegramId,
+		accessToken,
+		user.Quota,
+		user.UsedQuota,
+		user.RequestCount,
+		user.Group,
+		user.AffCode,
+		user.AffCount,
+		user.AffQuota,
+		user.AffHistoryQuota,
+		user.InviterId,
+		user.LinuxDOId,
+		user.Setting,
+		user.Remark,
+		user.StripeCustomer,
+		user.CreatedAt,
+		user.LastLoginAt,
+	).Error
+	if err != nil {
+		return fmt.Errorf("clickhouse insert user %s: %w", user.Username, err)
+	}
+	common.SysLog(fmt.Sprintf("inserted clickhouse user id=%d username=%s", user.Id, user.Username))
 	return nil
 }
 

@@ -191,11 +191,15 @@ func Register(c *gin.Context) {
 		return
 	}
 
-	// 获取插入后的用户ID
-	var insertedUser model.User
-	if err := model.DB.Where("username = ?", cleanUser.Username).First(&insertedUser).Error; err != nil {
-		common.ApiErrorI18n(c, i18n.MsgUserRegisterFailed)
-		return
+	// Prefer the ID assigned during Insert. Re-querying immediately after a
+	// ClickHouse INSERT on the shared native connection often fails with
+	// "Unexpected packet Query" / record not found.
+	insertedUser := cleanUser
+	if insertedUser.Id == 0 {
+		if err := model.DB.Where("username = ?", cleanUser.Username).First(&insertedUser).Error; err != nil {
+			common.ApiErrorI18n(c, i18n.MsgUserRegisterFailed)
+			return
+		}
 	}
 	// 生成默认令牌
 	if constant.GenerateDefaultToken {
