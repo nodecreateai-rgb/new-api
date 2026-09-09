@@ -80,7 +80,8 @@ func openClickHouseGorm(dsn string, isLog bool) (*gorm.DB, error) {
 
 	if isLog {
 		common.LogSqlType = common.DatabaseTypeClickHouse
-		common.UsingClickHouse = true
+		// Do not set UsingClickHouse here — that flag means the *primary* DB is
+		// ClickHouse. Log-only ClickHouse must keep primary dialect flags intact.
 		common.SysLog("using ClickHouse as log database")
 	} else {
 		common.UsingClickHouse = true

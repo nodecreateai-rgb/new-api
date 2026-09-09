@@ -577,9 +577,14 @@ func (t *Task) Snapshot() taskSnapshot {
 }
 
 func (Task *Task) Update() error {
-	var err error
-	err = DB.Save(Task).Error
-	return err
+	if common.UsingClickHouse {
+		// GORM Save falls back to INSERT when UPDATE reports 0 rows; ClickHouse
+		// never reports RowsAffected for lightweight UPDATE, so Save would
+		// duplicate tasks. Always use Updates by primary key.
+		Task.UpdatedAt = time.Now().Unix()
+		return DB.Model(Task).Where("id = ?", Task.ID).Select("*").Updates(Task).Error
+	}
+	return DB.Save(Task).Error
 }
 
 // UpdateWithStatus performs a conditional UPDATE guarded by fromStatus (CAS).
@@ -590,11 +595,38 @@ func (Task *Task) Update() error {
 // falls back to INSERT ON CONFLICT when the WHERE-guarded UPDATE matches
 // zero rows, which silently bypasses the CAS guard.
 func (t *Task) UpdateWithStatus(fromStatus TaskStatus) (bool, error) {
+	if common.UsingClickHouse {
+		return t.updateWithStatusClickHouse(fromStatus)
+	}
 	result := DB.Model(t).Where("status = ?", fromStatus).Select("*").Updates(t)
 	if result.Error != nil {
 		return false, result.Error
 	}
 	return result.RowsAffected > 0, nil
+}
+
+// updateWithStatusClickHouse emulates CAS without RowsAffected.
+// ClickHouse lightweight UPDATE always reports RowsAffected=0, which previously
+// made every terminal transition look like a lost race and skipped refunds.
+func (t *Task) updateWithStatusClickHouse(fromStatus TaskStatus) (bool, error) {
+	var curStatus string
+	if err := DB.Table("tasks").Where("id = ?", t.ID).Select("status").Limit(1).Scan(&curStatus).Error; err != nil {
+		return false, err
+	}
+	if TaskStatus(curStatus) != fromStatus {
+		return false, nil
+	}
+
+	t.UpdatedAt = time.Now().Unix()
+	if err := DB.Model(t).Where("id = ? AND status = ?", t.ID, fromStatus).Select("*").Updates(t).Error; err != nil {
+		return false, err
+	}
+
+	var after string
+	if err := DB.Table("tasks").Where("id = ?", t.ID).Select("status").Limit(1).Scan(&after).Error; err != nil {
+		return false, err
+	}
+	return TaskStatus(after) == t.Status, nil
 }
 
 // TaskBulkUpdate performs an unconditional bulk UPDATE by upstream task_id strings.

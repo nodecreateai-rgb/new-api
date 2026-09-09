@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/constant"
@@ -155,9 +156,19 @@ func RefundTaskQuota(ctx context.Context, task *model.Task, reason string) {
 		return
 	}
 
+	// ClickHouse CAS cannot rely on RowsAffected; concurrent pollers may both
+	// observe a won transition. Claim refund once via Redis when available.
+	if ok, err := common.RedisSetNX("task_refund:"+task.TaskID, "1", 48*time.Hour); err != nil {
+		logger.LogWarn(ctx, fmt.Sprintf("task refund claim error %s: %s", task.TaskID, err.Error()))
+	} else if !ok {
+		logger.LogWarn(ctx, fmt.Sprintf("task %s refund already claimed, skip", task.TaskID))
+		return
+	}
+
 	// 1. 退还资金来源（钱包或订阅）
 	if err := taskAdjustFunding(task, -quota); err != nil {
 		logger.LogWarn(ctx, fmt.Sprintf("退还资金来源失败 task %s: %s", task.TaskID, err.Error()))
+		_ = common.RedisDel("task_refund:" + task.TaskID)
 		return
 	}
 
@@ -203,6 +214,14 @@ func RecalculateTaskQuota(ctx context.Context, task *model.Task, actualQuota int
 		return
 	}
 
+	// Prevent double settle/refund under ClickHouse CAS false-positives.
+	if ok, err := common.RedisSetNX("task_settle:"+task.TaskID, "1", 48*time.Hour); err != nil {
+		logger.LogWarn(ctx, fmt.Sprintf("task settle claim error %s: %s", task.TaskID, err.Error()))
+	} else if !ok {
+		logger.LogWarn(ctx, fmt.Sprintf("task %s settle already claimed, skip", task.TaskID))
+		return
+	}
+
 	logger.LogInfo(ctx, fmt.Sprintf("任务 %s 差额结算：delta=%s（实际：%s，预扣：%s，%s）",
 		task.TaskID,
 		logger.LogQuota(quotaDelta),
@@ -214,6 +233,7 @@ func RecalculateTaskQuota(ctx context.Context, task *model.Task, actualQuota int
 	// 调整资金来源
 	if err := taskAdjustFunding(task, quotaDelta); err != nil {
 		logger.LogError(ctx, fmt.Sprintf("差额结算资金调整失败 task %s: %s", task.TaskID, err.Error()))
+		_ = common.RedisDel("task_settle:" + task.TaskID)
 		return
 	}
 

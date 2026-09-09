@@ -1,5 +1,7 @@
 package model
 
+import "github.com/QuantumNous/new-api/common"
+
 type Midjourney struct {
 	Id          int    `json:"id"`
 	Code        int    `json:"code"`
@@ -160,14 +162,34 @@ func (midjourney *Midjourney) Update() error {
 // UpdateWithStatus performs a conditional UPDATE guarded by fromStatus (CAS).
 // Returns (true, nil) if this caller won the update, (false, nil) if
 // another process already moved the task out of fromStatus.
-// UpdateWithStatus performs a conditional UPDATE guarded by fromStatus (CAS).
 // Uses Model().Select("*").Updates() to avoid GORM Save()'s INSERT fallback.
 func (midjourney *Midjourney) UpdateWithStatus(fromStatus string) (bool, error) {
+	if common.UsingClickHouse {
+		return midjourney.updateWithStatusClickHouse(fromStatus)
+	}
 	result := DB.Model(midjourney).Where("status = ?", fromStatus).Select("*").Updates(midjourney)
 	if result.Error != nil {
 		return false, result.Error
 	}
 	return result.RowsAffected > 0, nil
+}
+
+func (midjourney *Midjourney) updateWithStatusClickHouse(fromStatus string) (bool, error) {
+	var curStatus string
+	if err := DB.Table("midjourneys").Where("id = ?", midjourney.Id).Select("status").Limit(1).Scan(&curStatus).Error; err != nil {
+		return false, err
+	}
+	if curStatus != fromStatus {
+		return false, nil
+	}
+	if err := DB.Model(midjourney).Where("id = ? AND status = ?", midjourney.Id, fromStatus).Select("*").Updates(midjourney).Error; err != nil {
+		return false, err
+	}
+	var after string
+	if err := DB.Table("midjourneys").Where("id = ?", midjourney.Id).Select("status").Limit(1).Scan(&after).Error; err != nil {
+		return false, err
+	}
+	return after == midjourney.Status, nil
 }
 
 func MjBulkUpdate(mjIds []string, params map[string]any) error {
