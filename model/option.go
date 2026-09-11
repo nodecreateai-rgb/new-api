@@ -240,8 +240,8 @@ func ensureDopioRMBPricing() {
 		"sd2-c5":                             5,
 		"sd2-c6":                             0.5,
 		"sd2-c7":                             1,
-		"seedance-2.0-mini":                  0.3,
-		"seedance-2.0-mini-480p":             0.3,
+		"seedance-2.0-mini":                  0.5,
+		"seedance-2.0-mini-480p":             0.5,
 		"sd2-mini":                           0.6,
 		"sd2-fast":                           1,
 		"sd2.5":                              1.5,
@@ -554,12 +554,12 @@ func ensureDopioRMBPricing() {
 			groupPrices["sd2-fast"] = 1
 			changed = true
 		}
-		if groupPrices["seedance-2.0-mini"] != 0.3 {
-			groupPrices["seedance-2.0-mini"] = 0.3
+		if groupPrices["seedance-2.0-mini"] != 0.5 {
+			groupPrices["seedance-2.0-mini"] = 0.5
 			changed = true
 		}
-		if groupPrices["seedance-2.0-mini-480p"] != 0.3 {
-			groupPrices["seedance-2.0-mini-480p"] = 0.3
+		if groupPrices["seedance-2.0-mini-480p"] != 0.5 {
+			groupPrices["seedance-2.0-mini-480p"] = 0.5
 			changed = true
 		}
 		modelGroupPrices[group] = groupPrices
@@ -615,11 +615,11 @@ func ensureDopioRMBPricing() {
 	if err := ensureChannelGroupAbilities(15, "vip6"); err != nil {
 		common.SysLog("failed to ensure vip6 channel abilities: " + err.Error())
 	}
-	common.SysLog("enforced Dopio RMB pricing incl sd2.5=1.5 per call, vip6 sd2.5=1, sd2-fast=1 per call, vip6 Seedance 720p fast=1/full=2, banana=0.01, oauth2=0.1, sd2-c6=0.5, seedance-2.0-mini=0.3, seedance-2.0-mini-480p=0.3, sd2-c7=1, sd2-c11=2.5, sd2-c12=3, Price=1, USDExchangeRate=1, quota_display_type=CNY")
+	common.SysLog("enforced Dopio RMB pricing incl sd2.5=1.5 per call, vip6 sd2.5=1, sd2-fast=1 per call, vip6 Seedance 720p fast=1/full=2, banana=0.01, oauth2=0.1, sd2-c6=0.5, seedance-2.0-mini=0.5, seedance-2.0-mini-480p=0.5, sd2-c7=1, sd2-c11=2.5, sd2-c12=3, Price=1, USDExchangeRate=1, quota_display_type=CNY")
 }
 
 func ensureRoboneoMiniRouting() error {
-	// Roboneo2API Seedance 2.0 Mini: 720p + 480p, fixed ¥0.3 per call.
+	// Roboneo2API Seedance 2.0 Mini: 720p + 480p, fixed ¥0.5 per call.
 	const neutralName = "Roboneo Seedance Mini"
 	const modelsCSV = "seedance-2.0-mini,seedance-2.0-mini-480p"
 	const mappingJSON = `{"seedance-2.0-mini":"seedance-2.0-mini","seedance-2.0-mini-480p":"seedance-2.0-mini-480p"}`
