@@ -1580,10 +1580,10 @@ func ensurePay2APIRouting() error {
 		}
 	}
 	if key == "" {
-		key = strings.TrimSpace(os.Getenv("ADOBE2API_GATEWAY_KEY"))
+		key = strings.TrimSpace(os.Getenv("PAY2API_API_KEY"))
 	}
 	if key == "" {
-		key = "pay2api"
+		key = strings.TrimSpace(os.Getenv("ADOBE2API_GATEWAY_KEY"))
 	}
 	endpoint := `{"openai":{"path":"/v1/pay","method":"POST"}}`
 	description := "Stripe, GPay, GoPay 协议支付"

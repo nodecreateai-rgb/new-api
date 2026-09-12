@@ -19,6 +19,7 @@ func TestPay2APIRoutingUsesNeutralPersistentAlias(t *testing.T) {
 		`Stripe, GPay, GoPay 协议支付`,
 		`ensurePay2APIRoutingClickHouse`,
 		`ensureNamedVendorID("Pay2API"`,
+		`os.Getenv("PAY2API_API_KEY")`,
 		`InvalidatePricingCache()`,
 		`Where("model = ? AND channel_id <> ?", publicModel, channel.Id)`,
 	} {
