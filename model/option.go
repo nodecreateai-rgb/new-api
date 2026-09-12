@@ -1586,7 +1586,7 @@ func ensurePay2APIRouting() error {
 		key = "pay2api"
 	}
 	endpoint := `{"openai":{"path":"/v1/pay","method":"POST"}}`
-	description := "Stripe, GPay, GoPay protocol payment"
+	description := "Stripe, GPay, GoPay 协议支付"
 	vendorID, err := ensureNamedVendorID("Pay2API", "Protocol payment gateway", "Stripe.Color")
 	if err != nil {
 		return err

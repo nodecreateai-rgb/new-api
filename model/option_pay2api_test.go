@@ -16,7 +16,7 @@ func TestPay2APIRoutingUsesNeutralPersistentAlias(t *testing.T) {
 		`const publicModel = "pay"`,
 		`baseURL = "http://pay2api:8080"`,
 		`{"openai":{"path":"/v1/pay","method":"POST"}}`,
-		`Stripe, GPay, GoPay protocol payment`,
+		`Stripe, GPay, GoPay 协议支付`,
 		`ensurePay2APIRoutingClickHouse`,
 		`ensureNamedVendorID("Pay2API"`,
 		`InvalidatePricingCache()`,

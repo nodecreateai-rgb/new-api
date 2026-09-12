@@ -211,7 +211,7 @@ const renderType = (type, t) => {
     case 'pay':
       return (
         <Tag color='green' shape='circle' prefixIcon={<CreditCard size={14} />}>
-          {t('协议支付')}
+          {t('Stripe, GPay, GoPay 协议支付')}
         </Tag>
       );
     default:
@@ -250,7 +250,7 @@ const renderPlatform = (platform, t) => {
     case 'pay':
       return (
         <Tag color='green' shape='circle' prefixIcon={<CreditCard size={14} />}>
-          Pay
+          {t('Stripe, GPay, GoPay 协议支付')}
         </Tag>
       );
     default:

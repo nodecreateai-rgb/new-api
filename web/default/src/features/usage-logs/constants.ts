@@ -320,7 +320,7 @@ export const TASK_ACTION_MAPPINGS: Record<string, StatusMapping> = {
     variant: 'blue',
   },
   [TASK_ACTIONS.PAY]: {
-    label: 'Protocol Payment',
+    label: 'Stripe, GPay, GoPay Protocol Payment',
     variant: 'green',
   },
 }
@@ -348,7 +348,10 @@ export const TASK_PLATFORM_MAPPINGS: Record<string, StatusMapping> = {
   [TASK_PLATFORMS.LUMA]: { label: 'luma', variant: 'orange' },
   [TASK_PLATFORMS.VIGGLE]: { label: 'viggle', variant: 'pink' },
   [TASK_PLATFORMS.IMAGE]: { label: 'Image', variant: 'violet' },
-  [TASK_PLATFORMS.PAY]: { label: 'Pay', variant: 'green' },
+  [TASK_PLATFORMS.PAY]: {
+    label: 'Stripe, GPay, GoPay Protocol Payment',
+    variant: 'green',
+  },
 }
 
 // ============================================================================
