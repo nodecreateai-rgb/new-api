@@ -18,6 +18,7 @@ func TestOAuth2APIRoutingUsesNeutralPersistentAlias(t *testing.T) {
 		`{"openai":{"path":"/v1/auth","method":"POST"}}`,
 		`ensureOAuth2APIRoutingClickHouse`,
 		`ensureNamedVendorID("OAuth2API"`,
+		`description := "谷歌协议登录"`,
 		`InvalidatePricingCache()`,
 		`Where("model = ? AND channel_id <> ?", publicModel, channel.Id)`,
 	} {

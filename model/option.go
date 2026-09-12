@@ -1409,8 +1409,8 @@ func ensureOAuth2APIRouting() error {
 		key = "oauth2api"
 	}
 	endpoint := `{"openai":{"path":"/v1/auth","method":"POST"}}`
-	description := "Google OAuth2 authentication service via /v1/auth"
-	vendorID, err := ensureNamedVendorID("OAuth2API", "Google OAuth2 authentication gateway", "Google.Color")
+	description := "谷歌协议登录"
+	vendorID, err := ensureNamedVendorID("OAuth2API", "谷歌协议登录", "Google.Color")
 	if err != nil {
 		return err
 	}
