@@ -37,7 +37,12 @@ func relayHandler(c *gin.Context, info *relaycommon.RelayInfo) *types.NewAPIErro
 	switch info.RelayMode {
 	case relayconstant.RelayModeImagesGenerations, relayconstant.RelayModeImagesEdits:
 		if imageReq, ok := info.Request.(*dto.ImageRequest); ok {
-			if shouldRouteImageRequestToFelo(imageReq) && !imageAsyncRequested(imageReq) {
+			if shouldForceAir2APIAsync(imageReq) && !imageAsyncRequested(imageReq) {
+				async := true
+				imageReq.Async = &async
+				imageReq.ReturnTaskID = &async
+			}
+			if shouldRouteImageRequestToFelo(imageReq) && !imageAsyncRequested(imageReq) && !isAir2APIImageModel(imageReq.Model) {
 				async := true
 				imageReq.Async = &async
 				imageReq.ReturnTaskID = &async

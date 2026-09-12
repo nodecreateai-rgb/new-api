@@ -27,6 +27,7 @@ type Option struct {
 }
 
 const higgsSeedancePrice = 2.5
+const air2apiImagePrice = 0.05
 
 func AllOption() ([]*Option, error) {
 	var options []*Option
@@ -272,9 +273,12 @@ func ensureDopioRMBPricing() {
 		"kling-v3-4k":                        2,
 		"kling-3-pro":                        1,
 		"kling-o3":                           1,
-		"gpt-image-2":                        0.03,
-		"nano-banana-2":                      0.01,
-		"nano-banana-pro":                    0.01,
+		"gpt-image-2":                        air2apiImagePrice,
+		"gpt-image-2.5-flare":                air2apiImagePrice,
+		"gpt-image-2.5-sunburst":             air2apiImagePrice,
+		"nano-banana-2":                      air2apiImagePrice,
+		"nano-banana-2-lite":                 air2apiImagePrice,
+		"nano-banana-pro":                    air2apiImagePrice,
 		"oauth2":                        0.1,
 	}
 	targetGroupRatios := map[string]float64{
@@ -310,9 +314,12 @@ func ensureDopioRMBPricing() {
 			"kling-v3-720p": 0.5, "kling-v3-1080p": 1, "kling-v3-4k": 2,
 			"sd2-c6":          0.5,
 			"sd2-c7":          1,
-			"gpt-image-2":     0.03,
-			"nano-banana-2":   0.01,
-			"nano-banana-pro": 0.01,
+			"gpt-image-2":            air2apiImagePrice,
+			"gpt-image-2.5-flare":    air2apiImagePrice,
+			"gpt-image-2.5-sunburst": air2apiImagePrice,
+			"nano-banana-2":          air2apiImagePrice,
+			"nano-banana-2-lite":   air2apiImagePrice,
+			"nano-banana-pro":        air2apiImagePrice,
 		},
 		"vip1": {
 			"seedance-video-fast":                3,
@@ -328,9 +335,12 @@ func ensureDopioRMBPricing() {
 			"sd2-c8":                             3,
 			"sd2-c9":                             1,
 			"sd2-c10":                            0.5,
-			"gpt-image-2":                        0.03,
-			"nano-banana-2":                      0.01,
-			"nano-banana-pro":                    0.01,
+			"gpt-image-2":            air2apiImagePrice,
+			"gpt-image-2.5-flare":    air2apiImagePrice,
+			"gpt-image-2.5-sunburst": air2apiImagePrice,
+			"nano-banana-2":          air2apiImagePrice,
+			"nano-banana-2-lite":   air2apiImagePrice,
+			"nano-banana-pro":        air2apiImagePrice,
 		},
 		"vip": {
 			"seedance-video-fast":                3,
@@ -346,9 +356,12 @@ func ensureDopioRMBPricing() {
 			"sd2-c5":                             4,
 			"sd2-c6":                             0.5,
 			"sd2-c7":                             1,
-			"gpt-image-2":                        0.03,
-			"nano-banana-2":                      0.01,
-			"nano-banana-pro":                    0.01,
+			"gpt-image-2":            air2apiImagePrice,
+			"gpt-image-2.5-flare":    air2apiImagePrice,
+			"gpt-image-2.5-sunburst": air2apiImagePrice,
+			"nano-banana-2":          air2apiImagePrice,
+			"nano-banana-2-lite":   air2apiImagePrice,
+			"nano-banana-pro":        air2apiImagePrice,
 		},
 		"svip": {
 			"seedance-video-fast":                3,
@@ -364,9 +377,12 @@ func ensureDopioRMBPricing() {
 			"sd2-c5":                             2,
 			"sd2-c6":                             0.5,
 			"sd2-c7":                             1,
-			"gpt-image-2":                        0.03,
-			"nano-banana-2":                      0.01,
-			"nano-banana-pro":                    0.01,
+			"gpt-image-2":            air2apiImagePrice,
+			"gpt-image-2.5-flare":    air2apiImagePrice,
+			"gpt-image-2.5-sunburst": air2apiImagePrice,
+			"nano-banana-2":          air2apiImagePrice,
+			"nano-banana-2-lite":   air2apiImagePrice,
+			"nano-banana-pro":        air2apiImagePrice,
 		},
 		"vip2": {
 			"seedance-video-fast":                3,
@@ -385,9 +401,12 @@ func ensureDopioRMBPricing() {
 			"sd2-c7":          1,
 			"sd2-c11":         1.5,
 			"sd2-c12":         2,
-			"gpt-image-2":     0.03,
-			"nano-banana-2":   0.01,
-			"nano-banana-pro": 0.01,
+			"gpt-image-2":            air2apiImagePrice,
+			"gpt-image-2.5-flare":    air2apiImagePrice,
+			"gpt-image-2.5-sunburst": air2apiImagePrice,
+			"nano-banana-2":          air2apiImagePrice,
+			"nano-banana-2-lite":   air2apiImagePrice,
+			"nano-banana-pro":        air2apiImagePrice,
 		},
 		"vip3": {
 			"seedance-video-fast":                3,
@@ -603,6 +622,9 @@ func ensureDopioRMBPricing() {
 	if err := ensureSD2FastRouting(); err != nil {
 		common.SysLog("failed to enforce sd2-fast gateway routing: " + err.Error())
 	}
+	if err := ensureAir2APIImageRouting(); err != nil {
+		common.SysLog("failed to enforce air2api image gateway routing: " + err.Error())
+	}
 	if err := ensureSeedance720HiggsRouting(); err != nil {
 		common.SysLog("failed to enforce Seedance 720 gateway routing: " + err.Error())
 	}
@@ -615,7 +637,7 @@ func ensureDopioRMBPricing() {
 	if err := ensureChannelGroupAbilities(15, "vip6"); err != nil {
 		common.SysLog("failed to ensure vip6 channel abilities: " + err.Error())
 	}
-	common.SysLog("enforced Dopio RMB pricing incl sd2.5=1.5 per call, vip6 sd2.5=1, sd2-fast=1 per call, vip6 Seedance 720p fast=1/full=2, banana=0.01, oauth2=0.1, sd2-c6=0.5, seedance-2.0-mini=0.5, seedance-2.0-mini-480p=0.5, sd2-c7=1, sd2-c11=2.5, sd2-c12=3, Price=1, USDExchangeRate=1, quota_display_type=CNY")
+	common.SysLog("enforced Dopio RMB pricing incl sd2.5=1.5 per call, vip6 sd2.5=1, sd2-fast=1 per call, vip6 Seedance 720p fast=1/full=2, air2api-image=0.05, oauth2=0.1, sd2-c6=0.5, seedance-2.0-mini=0.5, seedance-2.0-mini-480p=0.5, sd2-c7=1, sd2-c11=2.5, sd2-c12=3, Price=1, USDExchangeRate=1, quota_display_type=CNY")
 }
 
 func ensureRoboneoMiniRouting() error {
@@ -1034,6 +1056,237 @@ func ensureSD2FastRouting() error {
 		"description": "", "icon": "", "tags": "video", "endpoints": endpoint,
 		"status": 1, "sync_official": 0, "deleted_at": nil, "updated_time": common.GetTimestamp(),
 	}).Error
+}
+
+func ensureAir2APIImageRouting() error {
+	const neutralName = "Air Image"
+	const modelsCSV = "gpt-image-2,gpt-image-2.5-flare,gpt-image-2.5-sunburst,nano-banana-2,nano-banana-2-lite,nano-banana-pro"
+	const mappingJSON = `{"gpt-image-2":"gpt-image-2","gpt-image-2.5-flare":"gpt-image-2.5-flare","gpt-image-2.5-sunburst":"gpt-image-2.5-sunburst","nano-banana-2":"nano-banana-2","nano-banana-2-lite":"nano-banana-2-lite","nano-banana-pro":"nano-banana-pro"}`
+	const groupsCSV = "default,vip,svip,vip1,vip2,vip3,vip6"
+	baseURL := strings.TrimSpace(os.Getenv("AIR2API_BASE_URL"))
+	if baseURL == "" {
+		baseURL = "http://domiex-air-yw9hej-air2api-1:38474"
+	}
+	key := strings.TrimSpace(os.Getenv("AIR2API_GATEWAY_KEY"))
+	if key == "" {
+		if keyFile := strings.TrimSpace(os.Getenv("AIR2API_GATEWAY_KEY_FILE")); keyFile != "" {
+			if raw, err := os.ReadFile(keyFile); err == nil {
+				key = strings.TrimSpace(string(raw))
+			}
+		}
+	}
+	if key == "" {
+		key = strings.TrimSpace(os.Getenv("SD2_FAST_GATEWAY_KEY"))
+	}
+	if key == "" {
+		key = strings.TrimSpace(os.Getenv("ADOBE2API_GATEWAY_KEY"))
+	}
+
+	publicModels := []string{
+		"gpt-image-2",
+		"gpt-image-2.5-flare",
+		"gpt-image-2.5-sunburst",
+		"nano-banana-2",
+		"nano-banana-2-lite",
+		"nano-banana-pro",
+	}
+	groups := []string{"default", "vip", "svip", "vip1", "vip2", "vip3", "vip6"}
+	modelDescriptions := map[string]string{
+		"gpt-image-2":            "OpenAI GPT Image 2 文生图/图生图（Air.inc 异步）",
+		"gpt-image-2.5-flare":    "OpenAI GPT Image 2.5 Flare 快速通用图像（Air.inc 异步）",
+		"gpt-image-2.5-sunburst": "OpenAI GPT Image 2.5 Sunburst 高质量图像（Air.inc 异步）",
+		"nano-banana-2":          "Google Gemini 3.1 Flash 图像（Air.inc 异步）",
+		"nano-banana-2-lite":     "Google Gemini 3.1 Flash Lite 轻量图像（Air.inc 异步）",
+		"nano-banana-pro":        "Google Gemini 3 Pro 高级图像（Air.inc 异步）",
+	}
+	endpoint := `{"openai-image":{"path":"/v1/images/generations","method":"POST"}}`
+
+	if common.UsingClickHouse {
+		return ensureAir2APIImageRoutingClickHouse(neutralName, modelsCSV, mappingJSON, groupsCSV, baseURL, key, publicModels, groups, modelDescriptions, endpoint)
+	}
+
+	var channel Channel
+	err := DB.Where("name = ?", neutralName).First(&channel).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		if key == "" {
+			return fmt.Errorf("AIR2API_GATEWAY_KEY is required")
+		}
+		weight := uint64(100)
+		priority := int64(10)
+		autoBan := 0
+		mapping := mappingJSON
+		channel = Channel{
+			Type: 1, Key: key, Status: common.ChannelStatusEnabled, Name: neutralName,
+			Weight: &weight, CreatedTime: common.GetTimestamp(), BaseURL: stringPtr(baseURL),
+			Models: modelsCSV, Group: groupsCSV, ModelMapping: &mapping,
+			Priority: &priority, AutoBan: &autoBan,
+		}
+		if err := DB.Create(&channel).Error; err != nil {
+			return err
+		}
+	} else if err != nil {
+		return err
+	} else {
+		if key == "" {
+			key = channel.Key
+		}
+		if key == "" {
+			return fmt.Errorf("AIR2API_GATEWAY_KEY is required")
+		}
+		if err := DB.Model(&Channel{}).Where("id = ?", channel.Id).Updates(map[string]any{
+			"type": 1, "key": key, "status": common.ChannelStatusEnabled, "name": neutralName,
+			"base_url": baseURL, "models": modelsCSV, "group": groupsCSV,
+			"model_mapping": mappingJSON, "priority": 10, "weight": 100, "auto_ban": 0,
+		}).Error; err != nil {
+			return err
+		}
+	}
+
+	if err := DB.Model(&Ability{}).Where("channel_id = ? AND model NOT IN ?", channel.Id, publicModels).
+		Update("enabled", false).Error; err != nil {
+		return err
+	}
+	for _, modelName := range publicModels {
+		if err := DB.Model(&Ability{}).Where("model = ? AND channel_id <> ?", modelName, channel.Id).
+			Update("enabled", false).Error; err != nil {
+			return err
+		}
+		allowed := map[string]struct{}{}
+		for _, group := range groups {
+			allowed[group] = struct{}{}
+			ability := Ability{Group: group, Model: modelName, ChannelId: channel.Id}
+			if err := DB.Where(commonGroupCol+" = ? AND model = ? AND channel_id = ?", group, modelName, channel.Id).
+				FirstOrCreate(&ability).Error; err != nil {
+				return err
+			}
+			if err := DB.Model(&Ability{}).Where(commonGroupCol+" = ? AND model = ? AND channel_id = ?", group, modelName, channel.Id).
+				Updates(map[string]any{"enabled": true, "priority": int64(10), "weight": uint64(100)}).Error; err != nil {
+				return err
+			}
+		}
+		var existing []Ability
+		if err := DB.Where("model = ? AND channel_id = ?", modelName, channel.Id).Find(&existing).Error; err != nil {
+			return err
+		}
+		for _, ability := range existing {
+			if _, ok := allowed[ability.Group]; ok {
+				continue
+			}
+			if err := DB.Model(&Ability{}).Where(commonGroupCol+" = ? AND model = ? AND channel_id = ?", ability.Group, modelName, channel.Id).
+				Update("enabled", false).Error; err != nil {
+				return err
+			}
+		}
+	}
+
+	for _, publicModel := range publicModels {
+		desc := modelDescriptions[publicModel]
+		var meta Model
+		err = DB.Unscoped().Where("model_name = ?", publicModel).First(&meta).Error
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			meta = Model{
+				ModelName: publicModel, Description: desc, Icon: "", Tags: "image,drawing",
+				Endpoints: endpoint, Status: 1, SyncOfficial: 0,
+				CreatedTime: common.GetTimestamp(), UpdatedTime: common.GetTimestamp(),
+			}
+			if err := DB.Create(&meta).Error; err != nil {
+				return err
+			}
+			continue
+		}
+		if err != nil {
+			return err
+		}
+		if err := DB.Unscoped().Model(&Model{}).Where("id = ?", meta.Id).Updates(map[string]any{
+			"description": desc, "icon": "", "tags": "image,drawing", "endpoints": endpoint,
+			"status": 1, "sync_official": 0, "deleted_at": nil, "updated_time": common.GetTimestamp(),
+		}).Error; err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func ensureAir2APIImageRoutingClickHouse(neutralName, modelsCSV, mappingJSON, groupsCSV, baseURL, key string, publicModels, groups []string, modelDescriptions map[string]string, endpoint string) error {
+	var channel Channel
+	err := DB.Where("name = ?", neutralName).First(&channel).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		if key == "" {
+			return fmt.Errorf("AIR2API_GATEWAY_KEY is required")
+		}
+		id := nextClickHouseTableID(DB, "channels")
+		now := common.GetTimestamp()
+		info := `{"is_multi_key":false,"multi_key_size":0,"multi_key_status_list":null,"multi_key_polling_index":0,"multi_key_mode":""}`
+		if err := DB.Exec(`INSERT INTO channels (
+			id, type, key, status, name, weight, created_time, test_time, response_time,
+			base_url, other, balance, balance_updated_time, models, `+commonGroupCol+`, used_quota,
+			model_mapping, status_code_mapping, priority, auto_ban, other_info, channel_info, settings
+		) VALUES (?, ?, ?, ?, ?, ?, ?, 0, 0, ?, '', 0, 0, ?, ?, 0, ?, '', ?, 0, '', ?, '')`,
+			id, 1, key, common.ChannelStatusEnabled, neutralName, uint64(100), now,
+			baseURL, modelsCSV, groupsCSV, mappingJSON, int64(10), info,
+		).Error; err != nil {
+			return err
+		}
+		channel.Id = int(id)
+	} else if err != nil {
+		return err
+	} else if err := DB.Exec(`ALTER TABLE channels UPDATE
+		type = 1, key = ?, status = ?, base_url = ?, models = ?, `+commonGroupCol+` = ?, model_mapping = ?, priority = 10, weight = 100, auto_ban = 0
+		WHERE id = ?`, key, common.ChannelStatusEnabled, baseURL, modelsCSV, groupsCSV, mappingJSON, channel.Id).Error; err != nil {
+		return err
+	}
+
+	for _, modelName := range publicModels {
+		if err := DB.Model(&Ability{}).Where("model = ? AND channel_id <> ?", modelName, channel.Id).
+			Update("enabled", false).Error; err != nil {
+			return err
+		}
+		for _, group := range groups {
+			var count int64
+			if err := DB.Model(&Ability{}).Where(commonGroupCol+" = ? AND model = ? AND channel_id = ?", group, modelName, channel.Id).Count(&count).Error; err != nil {
+				return err
+			}
+			if count == 0 {
+				if err := DB.Exec(
+					`INSERT INTO abilities (`+commonGroupCol+`, model, channel_id, enabled, priority, weight, tag) VALUES (?, ?, ?, 1, 10, 100, '')`,
+					group, modelName, channel.Id,
+				).Error; err != nil {
+					return err
+				}
+			} else if err := DB.Model(&Ability{}).Where(commonGroupCol+" = ? AND model = ? AND channel_id = ?", group, modelName, channel.Id).
+				Updates(map[string]any{"enabled": true, "priority": int64(10), "weight": uint64(100)}).Error; err != nil {
+				return err
+			}
+		}
+	}
+
+	for _, publicModel := range publicModels {
+		desc := modelDescriptions[publicModel]
+		var meta Model
+		err = DB.Unscoped().Where("model_name = ?", publicModel).First(&meta).Error
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			id := nextClickHouseTableID(DB, "models")
+			now := common.GetTimestamp()
+			if err := DB.Exec(
+				`INSERT INTO models (id, model_name, description, icon, tags, endpoints, status, sync_official, created_time, updated_time, name_rule)
+				 VALUES (?, ?, ?, '', 'image,drawing', ?, 1, 0, ?, ?, 0)`,
+				id, publicModel, desc, endpoint, now, now,
+			).Error; err != nil {
+				return err
+			}
+			continue
+		}
+		if err != nil {
+			return err
+		}
+		if err := DB.Unscoped().Model(&Model{}).Where("id = ?", meta.Id).Updates(map[string]any{
+			"description": desc, "tags": "image,drawing", "endpoints": endpoint,
+			"status": 1, "sync_official": 0, "deleted_at": nil, "updated_time": common.GetTimestamp(),
+		}).Error; err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func ensureSD25Routing() error {

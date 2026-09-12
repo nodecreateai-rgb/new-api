@@ -92,7 +92,7 @@ func jsonRawHasValue(raw []byte) bool {
 }
 
 func shouldRouteImageRequestToFelo(req *dto.ImageRequest) bool {
-	return req != nil && strings.EqualFold(strings.TrimSpace(req.Model), "gpt-image-2") && imageRequestHasReferences(req)
+	return req != nil && strings.EqualFold(strings.TrimSpace(req.Model), "gpt-image-2") && imageRequestHasReferences(req) && !isAir2APIImageModel(req.Model)
 }
 
 func RelayImageAsync(c *gin.Context, info *relaycommon.RelayInfo, req *dto.ImageRequest) *types.NewAPIError {
@@ -143,7 +143,8 @@ func RelayImageAsync(c *gin.Context, info *relaycommon.RelayInfo, req *dto.Image
 		info.TaskRelayInfo = &relaycommon.TaskRelayInfo{}
 	}
 	info.TaskRelayInfo.PublicTaskID = publicTaskID
-	feloRoute := shouldRouteImageRequestToFelo(req)
+	air2apiRoute := shouldForceAir2APIAsync(req)
+	feloRoute := shouldRouteImageRequestToFelo(req) && !air2apiRoute
 	info.Action = imageActionFromPath(c.Request.URL.Path)
 	if feloRoute {
 		info.Action = "edit_image"
@@ -169,7 +170,7 @@ func RelayImageAsync(c *gin.Context, info *relaycommon.RelayInfo, req *dto.Image
 	}
 	service.LogTaskConsumption(c, info)
 
-	go runImageAsyncTask(publicTaskID, c.GetInt("channel_id"), common.GetContextKeyString(c, constant.ContextKeyChannelKey), contentType, bodyBytes, feloRoute)
+	go runImageAsyncTask(publicTaskID, c.GetInt("channel_id"), common.GetContextKeyString(c, constant.ContextKeyChannelKey), contentType, bodyBytes, feloRoute, air2apiRoute)
 	c.JSON(http.StatusAccepted, imageAcceptedTaskResponse(task))
 	return nil
 }
@@ -240,7 +241,7 @@ func imageAcceptedTaskResponse(task *model.Task) map[string]any {
 	return map[string]any{"id": task.TaskID, "task_id": task.TaskID, "taskId": task.TaskID, "object": "task", "kind": imageKindFromAction(task.Action), "status": "queued", "created": task.SubmitTime, "updated": time.Now().Unix(), "task_url": imageTaskURL(task)}
 }
 
-func runImageAsyncTask(publicTaskID string, channelID int, key string, contentType string, requestBody []byte, routeToFelo bool) {
+func runImageAsyncTask(publicTaskID string, channelID int, key string, contentType string, requestBody []byte, routeToFelo, routeToAir2API bool) {
 	ctx := context.Background()
 	task, exists, err := model.GetByOnlyTaskId(publicTaskID)
 	if err != nil || !exists {
@@ -254,7 +255,10 @@ func runImageAsyncTask(publicTaskID string, channelID int, key string, contentTy
 	}
 	baseURL := ch.GetBaseURL()
 	urlPath := "/v1/images/generations"
-	if task.Action == "edit_image" && !routeToFelo {
+	if routeToAir2API || isAir2APIBaseURL(baseURL) {
+		routeToAir2API = true
+		urlPath = "/v1/images"
+	} else if task.Action == "edit_image" && !routeToFelo {
 		urlPath = "/v1/images/edits"
 	}
 	if routeToFelo {
@@ -268,7 +272,7 @@ func runImageAsyncTask(publicTaskID string, channelID int, key string, contentTy
 	task.StartTime = time.Now().Unix()
 	_, _ = task.UpdateWithStatus(preStatus)
 
-	asyncBody, asyncContentType, err := ensureAsyncPayload(contentType, requestBody, routeToFelo)
+	asyncBody, asyncContentType, err := ensureAsyncPayload(contentType, requestBody, routeToFelo, routeToAir2API)
 	if err != nil {
 		failImageTask(ctx, task, model.TaskStatusInProgress, err.Error())
 		return
@@ -375,13 +379,13 @@ func imageFeloBaseURL() string {
 }
 
 func imageFeloTaskBaseURL(task *model.Task, fallback string) string {
-	if task != nil && task.PrivateData.UpstreamTaskID != "" && task.Action == "edit_image" {
+	if task != nil && task.PrivateData.UpstreamTaskID != "" && task.Action == "edit_image" && !isAir2APIBaseURL(fallback) {
 		return imageFeloBaseURL()
 	}
 	return fallback
 }
 
-func ensureAsyncPayload(contentType string, body []byte, routeToFelo bool) ([]byte, string, error) {
+func ensureAsyncPayload(contentType string, body []byte, routeToFelo, routeToAir2API bool) ([]byte, string, error) {
 	if strings.Contains(strings.ToLower(contentType), "multipart/form-data") {
 		if routeToFelo {
 			return feloJSONPayloadFromMultipart(contentType, body)
@@ -391,6 +395,13 @@ func ensureAsyncPayload(contentType string, body []byte, routeToFelo bool) ([]by
 	var m map[string]any
 	if err := common.Unmarshal(body, &m); err != nil {
 		return nil, contentType, err
+	}
+	if routeToAir2API {
+		delete(m, "async")
+		delete(m, "async_task")
+		delete(m, "return_task_id")
+		out, err := common.Marshal(m)
+		return out, "application/json", err
 	}
 	m["async"] = true
 	m["return_task_id"] = true
@@ -636,11 +647,11 @@ func (a *imageTaskAdaptor) FetchTask(baseURL string, key string, body map[string
 	if taskID == "" {
 		taskID = asString(body["id"])
 	}
-	if asString(body["action"]) == "edit_image" {
+	if asString(body["action"]) == "edit_image" && !isAir2APIBaseURL(baseURL) {
 		baseURL = imageFeloBaseURL()
 		key = ""
 	}
-	req, err := http.NewRequest(http.MethodGet, strings.TrimRight(baseURL, "/")+"/v1/task/"+taskID, nil)
+	req, err := http.NewRequest(http.MethodGet, strings.TrimRight(baseURL, "/")+"/v1/tasks/"+taskID, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -668,7 +679,7 @@ func (a *imageTaskAdaptor) ParseTaskResult(respBody []byte) (*relaycommon.TaskIn
 	default:
 		return nil, fmt.Errorf("unknown image task status %q", status)
 	}
-	if p := asString(m["progress"]); p != "" {
+	if p := imageProgressString(m["progress"]); p != "" {
 		taskInfo.Progress = p
 	}
 	if taskInfo.Progress == "" {
@@ -681,7 +692,7 @@ func (a *imageTaskAdaptor) ParseTaskResult(respBody []byte) (*relaycommon.TaskIn
 			taskInfo.Progress = "100%"
 		}
 	}
-	taskInfo.Reason = sanitizeImageTaskPublicError(firstString(m["error"], m["message"]))
+	taskInfo.Reason = sanitizeImageTaskPublicError(imageTaskErrorMessage(m))
 	if b, err := common.Marshal(m); err == nil {
 		taskInfo.RemoteUrl = string(b)
 	}
@@ -701,7 +712,38 @@ func extractImageResultURL(m map[string]any) string {
 			return u
 		}
 	}
-	return firstString(m["url"], m["result_url"], m["output_url"])
+	return firstString(m["url"], m["result_url"], m["output_url"], m["image_url"], m["remote_url"])
+}
+
+func imageProgressString(v any) string {
+	switch t := v.(type) {
+	case string:
+		s := strings.TrimSpace(t)
+		if s == "" {
+			return ""
+		}
+		if strings.HasSuffix(s, "%") {
+			return s
+		}
+		return s + "%"
+	case float64:
+		return fmt.Sprintf("%.0f%%", t)
+	case int:
+		return fmt.Sprintf("%d%%", t)
+	case int64:
+		return fmt.Sprintf("%d%%", t)
+	default:
+		return ""
+	}
+}
+
+func imageTaskErrorMessage(m map[string]any) string {
+	if errObj, ok := m["error"].(map[string]any); ok {
+		if msg := firstString(errObj["message"], errObj["error"]); msg != "" {
+			return msg
+		}
+	}
+	return firstString(m["error"], m["message"])
 }
 
 func extractImageURLFromAny(v any) string {

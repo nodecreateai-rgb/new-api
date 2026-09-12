@@ -24,7 +24,7 @@ func TestShouldRouteImageRequestToFeloOnlyGPTImage2WithReferences(t *testing.T) 
 
 func TestEnsureAsyncPayloadForFeloJSONMapsImageURLToReferenceImages(t *testing.T) {
 	body := []byte(`{"model":"gpt-image-2","prompt":"改成赛博朋克","image_url":{"url":"https://example.com/ref.png"},"size":"1536x864","quality":"high"}`)
-	out, contentType, err := ensureAsyncPayload("application/json", body, true)
+	out, contentType, err := ensureAsyncPayload("application/json", body, true, false)
 	if err != nil {
 		t.Fatalf("ensureAsyncPayload failed: %v", err)
 	}
@@ -73,7 +73,7 @@ func TestEnsureAsyncPayloadForFeloMultipartConvertsFilesToReferenceImages(t *tes
 		t.Fatal(err)
 	}
 
-	out, contentType, err := ensureAsyncPayload(writer.FormDataContentType(), body.Bytes(), true)
+	out, contentType, err := ensureAsyncPayload(writer.FormDataContentType(), body.Bytes(), true, false)
 	if err != nil {
 		t.Fatalf("ensureAsyncPayload failed: %v", err)
 	}
