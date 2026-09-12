@@ -29,13 +29,13 @@ func TestOAuth2APIRoutingUsesNeutralPersistentAlias(t *testing.T) {
 	}
 }
 
-func TestOAuth2AuthPriceIsZeroPointTwoPerCall(t *testing.T) {
+func TestOAuth2AuthPriceIsZeroPointThreePerCall(t *testing.T) {
 	data, err := os.ReadFile("option.go")
 	if err != nil {
 		t.Fatal(err)
 	}
 	s := string(data)
-	for _, want := range []string{`"oauth2":                        0.2`, `oauth2=0.2`} {
+	for _, want := range []string{`"oauth2":                        0.3`, `oauth2=0.3`} {
 		if !strings.Contains(s, want) {
 			t.Fatalf("missing %s", want)
 		}
