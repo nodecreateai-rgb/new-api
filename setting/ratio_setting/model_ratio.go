@@ -283,6 +283,7 @@ var defaultModelRatio = map[string]float64{
 }
 
 var defaultModelPrice = map[string]float64{
+	"oauth2":                         0.2,
 	"pay":                            0.5,
 	"suno_music":                     0.1,
 	"suno_lyrics":                    0.01,
