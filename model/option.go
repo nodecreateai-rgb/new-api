@@ -623,7 +623,7 @@ func ensureDopioRMBPricing() {
 		common.SysLog("failed to enforce sd2-fast gateway routing: " + err.Error())
 	}
 	if err := ensureAir2APIImageRouting(); err != nil {
-		common.SysLog("failed to enforce air2api image gateway routing: " + err.Error())
+		common.SysLog("failed to enforce image omni gateway routing: " + err.Error())
 	}
 	if err := ensureSeedance720HiggsRouting(); err != nil {
 		common.SysLog("failed to enforce Seedance 720 gateway routing: " + err.Error())
@@ -637,7 +637,7 @@ func ensureDopioRMBPricing() {
 	if err := ensureChannelGroupAbilities(15, "vip6"); err != nil {
 		common.SysLog("failed to ensure vip6 channel abilities: " + err.Error())
 	}
-	common.SysLog("enforced Dopio RMB pricing incl sd2.5=1.5 per call, vip6 sd2.5=1, sd2-fast=1 per call, vip6 Seedance 720p fast=1/full=2, air2api-image=0.05, oauth2=0.1, sd2-c6=0.5, seedance-2.0-mini=0.5, seedance-2.0-mini-480p=0.5, sd2-c7=1, sd2-c11=2.5, sd2-c12=3, Price=1, USDExchangeRate=1, quota_display_type=CNY")
+	common.SysLog("enforced Dopio RMB pricing incl sd2.5=1.5 per call, vip6 sd2.5=1, sd2-fast=1 per call, vip6 Seedance 720p fast=1/full=2, image-omni=0.05, oauth2=0.1, sd2-c6=0.5, seedance-2.0-mini=0.5, seedance-2.0-mini-480p=0.5, sd2-c7=1, sd2-c11=2.5, sd2-c12=3, Price=1, USDExchangeRate=1, quota_display_type=CNY")
 }
 
 func ensureRoboneoMiniRouting() error {
@@ -1059,7 +1059,8 @@ func ensureSD2FastRouting() error {
 }
 
 func ensureAir2APIImageRouting() error {
-	const neutralName = "Air Image"
+	const neutralName = "Image Omni"
+	const legacyChannelName = "Air Image"
 	const modelsCSV = "gpt-image-2,gpt-image-2.5-flare,gpt-image-2.5-sunburst,nano-banana-2,nano-banana-2-lite,nano-banana-pro"
 	const mappingJSON = `{"gpt-image-2":"gpt-image-2","gpt-image-2.5-flare":"gpt-image-2.5-flare","gpt-image-2.5-sunburst":"gpt-image-2.5-sunburst","nano-banana-2":"nano-banana-2","nano-banana-2-lite":"nano-banana-2-lite","nano-banana-pro":"nano-banana-pro"}`
 	const groupsCSV = "default,vip,svip,vip1,vip2,vip3,vip6"
@@ -1092,12 +1093,12 @@ func ensureAir2APIImageRouting() error {
 	}
 	groups := []string{"default", "vip", "svip", "vip1", "vip2", "vip3", "vip6"}
 	modelDescriptions := map[string]string{
-		"gpt-image-2":            "OpenAI GPT Image 2 文生图/图生图（Air.inc 异步）",
-		"gpt-image-2.5-flare":    "OpenAI GPT Image 2.5 Flare 快速通用图像（Air.inc 异步）",
-		"gpt-image-2.5-sunburst": "OpenAI GPT Image 2.5 Sunburst 高质量图像（Air.inc 异步）",
-		"nano-banana-2":          "Google Gemini 3.1 Flash 图像（Air.inc 异步）",
-		"nano-banana-2-lite":     "Google Gemini 3.1 Flash Lite 轻量图像（Air.inc 异步）",
-		"nano-banana-pro":        "Google Gemini 3 Pro 高级图像（Air.inc 异步）",
+		"gpt-image-2":            "OpenAI GPT Image 2 文生图/图生图（异步）",
+		"gpt-image-2.5-flare":    "OpenAI GPT Image 2.5 Flare 快速通用图像（异步）",
+		"gpt-image-2.5-sunburst": "OpenAI GPT Image 2.5 Sunburst 高质量图像（异步）",
+		"nano-banana-2":          "Google Gemini 3.1 Flash 图像（异步）",
+		"nano-banana-2-lite":     "Google Gemini 3.1 Flash Lite 轻量图像（异步）",
+		"nano-banana-pro":        "Google Gemini 3 Pro 高级图像（异步）",
 	}
 	endpoint := `{"openai-image":{"path":"/v1/images/generations","method":"POST"}}`
 
@@ -1107,6 +1108,9 @@ func ensureAir2APIImageRouting() error {
 
 	var channel Channel
 	err := DB.Where("name = ?", neutralName).First(&channel).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		err = DB.Where("name = ?", legacyChannelName).First(&channel).Error
+	}
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		if key == "" {
 			return fmt.Errorf("AIR2API_GATEWAY_KEY is required")
@@ -1208,8 +1212,12 @@ func ensureAir2APIImageRouting() error {
 }
 
 func ensureAir2APIImageRoutingClickHouse(neutralName, modelsCSV, mappingJSON, groupsCSV, baseURL, key string, publicModels, groups []string, modelDescriptions map[string]string, endpoint string) error {
+	const legacyChannelName = "Air Image"
 	var channel Channel
 	err := DB.Where("name = ?", neutralName).First(&channel).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		err = DB.Where("name = ?", legacyChannelName).First(&channel).Error
+	}
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		if key == "" {
 			return fmt.Errorf("AIR2API_GATEWAY_KEY is required")
@@ -1231,8 +1239,8 @@ func ensureAir2APIImageRoutingClickHouse(neutralName, modelsCSV, mappingJSON, gr
 	} else if err != nil {
 		return err
 	} else if err := DB.Exec(`ALTER TABLE channels UPDATE
-		type = 1, key = ?, status = ?, base_url = ?, models = ?, `+commonGroupCol+` = ?, model_mapping = ?, priority = 10, weight = 100, auto_ban = 0
-		WHERE id = ?`, key, common.ChannelStatusEnabled, baseURL, modelsCSV, groupsCSV, mappingJSON, channel.Id).Error; err != nil {
+		type = 1, key = ?, status = ?, name = ?, base_url = ?, models = ?, `+commonGroupCol+` = ?, model_mapping = ?, priority = 10, weight = 100, auto_ban = 0
+		WHERE id = ?`, key, common.ChannelStatusEnabled, neutralName, baseURL, modelsCSV, groupsCSV, mappingJSON, channel.Id).Error; err != nil {
 		return err
 	}
 
