@@ -1476,7 +1476,8 @@ func stringPtr(value string) *string { return &value }
 func ensurePay2APIRouting() error {
 	const publicModel = "pay"
 	const neutralName = "Pay2API"
-	const groups = "default,vip,svip,vip1,vip2,vip3,vip6"
+	const groupsCSV = "default,vip,svip,vip1,vip2,vip3,vip6"
+	groups := []string{"default", "vip", "svip", "vip1", "vip2", "vip3", "vip6"}
 	baseURL := strings.TrimSpace(os.Getenv("PAY2API_BASE_URL"))
 	if baseURL == "" {
 		baseURL = "http://pay2api:8080"
@@ -1492,18 +1493,28 @@ func ensurePay2APIRouting() error {
 	if key == "" {
 		key = strings.TrimSpace(os.Getenv("ADOBE2API_GATEWAY_KEY"))
 	}
+	if key == "" {
+		key = "pay2api"
+	}
+	endpoint := `{"openai":{"path":"/v1/pay","method":"POST"}}`
+	description := "Stripe, GPay, GoPay protocol payment"
+	vendorID, err := ensureNamedVendorID("Pay2API", "Protocol payment gateway", "Stripe.Color")
+	if err != nil {
+		return err
+	}
+	if common.UsingClickHouse {
+		return ensurePay2APIRoutingClickHouse(neutralName, publicModel, groupsCSV, baseURL, key, groups, endpoint, description, vendorID)
+	}
+
 	var channel Channel
-	err := DB.Where("name = ?", neutralName).First(&channel).Error
+	err = DB.Where("name = ?", neutralName).First(&channel).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
-		if key == "" {
-			return fmt.Errorf("PAY2API_GATEWAY_KEY is required")
-		}
 		weight := uint64(100)
 		priority := int64(10)
 		autoBan := 0
 		channel = Channel{
 			Type: 1, Key: key, Status: common.ChannelStatusEnabled, Name: neutralName, Weight: &weight,
-			CreatedTime: common.GetTimestamp(), BaseURL: stringPtr(baseURL), Models: publicModel, Group: groups,
+			CreatedTime: common.GetTimestamp(), BaseURL: stringPtr(baseURL), Models: publicModel, Group: groupsCSV,
 			Priority: &priority, AutoBan: &autoBan,
 		}
 		if err := DB.Create(&channel).Error; err != nil {
@@ -1511,19 +1522,11 @@ func ensurePay2APIRouting() error {
 		}
 	} else if err != nil {
 		return err
-	} else {
-		if key == "" {
-			key = channel.Key
-		}
-		if key == "" {
-			return fmt.Errorf("PAY2API_GATEWAY_KEY is required")
-		}
-		if err := DB.Model(&Channel{}).Where("id = ?", channel.Id).Updates(map[string]any{
-			"type": 1, "key": key, "status": common.ChannelStatusEnabled, "name": neutralName, "base_url": baseURL,
-			"models": publicModel, "group": groups, "priority": 10, "weight": 100, "auto_ban": 0,
-		}).Error; err != nil {
-			return err
-		}
+	} else if err := DB.Model(&Channel{}).Where("id = ?", channel.Id).Updates(map[string]any{
+		"type": 1, "key": key, "status": common.ChannelStatusEnabled, "name": neutralName, "base_url": baseURL,
+		"models": publicModel, "group": groupsCSV, "priority": 10, "weight": 100, "auto_ban": 0,
+	}).Error; err != nil {
+		return err
 	}
 	if err := DB.Model(&Ability{}).Where("channel_id = ? AND model <> ?", channel.Id, publicModel).Update("enabled", false).Error; err != nil {
 		return err
@@ -1531,7 +1534,7 @@ func ensurePay2APIRouting() error {
 	if err := DB.Model(&Ability{}).Where("model = ? AND channel_id <> ?", publicModel, channel.Id).Update("enabled", false).Error; err != nil {
 		return err
 	}
-	for _, group := range strings.Split(groups, ",") {
+	for _, group := range groups {
 		ability := Ability{Group: group, Model: publicModel, ChannelId: channel.Id}
 		if err := DB.Where(commonGroupCol+" = ? AND model = ? AND channel_id = ?", group, publicModel, channel.Id).FirstOrCreate(&ability).Error; err != nil {
 			return err
@@ -1541,24 +1544,139 @@ func ensurePay2APIRouting() error {
 			return err
 		}
 	}
-	endpoint := `{"openai":{"path":"/v1/pay","method":"POST"}}`
-	description := "Stripe, GPay, GoPay protocol payment"
-	var meta Model
-	err = DB.Unscoped().Where("model_name = ?", publicModel).First(&meta).Error
+	return ensurePay2APIMarketplaceModel(publicModel, endpoint, description, vendorID)
+}
+
+func ensurePay2APIRoutingClickHouse(neutralName, publicModel, groupsCSV, baseURL, key string, groups []string, endpoint, description string, vendorID int) error {
+	var channel Channel
+	err := DB.Where("name = ?", neutralName).First(&channel).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
-		meta = Model{
-			ModelName: publicModel, Description: description, Icon: "", Tags: "pay",
-			Endpoints: endpoint, Status: 1, SyncOfficial: 0, CreatedTime: common.GetTimestamp(), UpdatedTime: common.GetTimestamp(),
+		id := nextClickHouseTableID(DB, "channels")
+		now := common.GetTimestamp()
+		info := `{"is_multi_key":false,"multi_key_size":0,"multi_key_status_list":null,"multi_key_polling_index":0,"multi_key_mode":""}`
+		if err := DB.Exec(`INSERT INTO channels (
+			id, type, key, status, name, weight, created_time, test_time, response_time,
+			base_url, other, balance, balance_updated_time, models, `+commonGroupCol+`, used_quota,
+			model_mapping, status_code_mapping, priority, auto_ban, other_info, channel_info, settings
+		) VALUES (?, ?, ?, ?, ?, ?, ?, 0, 0, ?, '', 0, 0, ?, ?, 0, '', '', ?, 0, '', ?, '')`,
+			id, 1, key, common.ChannelStatusEnabled, neutralName, uint64(100), now,
+			baseURL, publicModel, groupsCSV, int64(10), info,
+		).Error; err != nil {
+			return err
 		}
-		return DB.Create(&meta).Error
-	}
-	if err != nil {
+		channel.Id = int(id)
+	} else if err != nil {
+		return err
+	} else if err := DB.Exec(`ALTER TABLE channels UPDATE
+		type = 1, key = ?, status = ?, name = ?, base_url = ?, models = ?, `+commonGroupCol+` = ?, priority = 10, weight = 100, auto_ban = 0
+		WHERE id = ?`, key, common.ChannelStatusEnabled, neutralName, baseURL, publicModel, groupsCSV, channel.Id).Error; err != nil {
 		return err
 	}
-	return DB.Unscoped().Model(&Model{}).Where("id = ?", meta.Id).Updates(map[string]any{
-		"description": description, "icon": "", "tags": "pay", "endpoints": endpoint,
+
+	for _, group := range groups {
+		var count int64
+		if err := DB.Model(&Ability{}).Where(commonGroupCol+" = ? AND model = ? AND channel_id = ?", group, publicModel, channel.Id).Count(&count).Error; err != nil {
+			return err
+		}
+		if count == 0 {
+			if err := DB.Exec(
+				`INSERT INTO abilities (`+commonGroupCol+`, model, channel_id, enabled, priority, weight, tag) VALUES (?, ?, ?, 1, 10, 100, '')`,
+				group, publicModel, channel.Id,
+			).Error; err != nil {
+				return err
+			}
+		} else if err := DB.Model(&Ability{}).Where(commonGroupCol+" = ? AND model = ? AND channel_id = ?", group, publicModel, channel.Id).
+			Updates(map[string]any{"enabled": true, "priority": int64(10), "weight": uint64(100)}).Error; err != nil {
+			return err
+		}
+	}
+	return ensurePay2APIMarketplaceModelClickHouse(publicModel, endpoint, description, vendorID)
+}
+
+func ensurePay2APIMarketplaceModel(publicModel, endpoint, description string, vendorID int) error {
+	var meta Model
+	err := DB.Unscoped().Where("model_name = ?", publicModel).First(&meta).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		meta = Model{
+			ModelName: publicModel, Description: description, Icon: "", Tags: "pay,payment",
+			VendorID: vendorID, Endpoints: endpoint, Status: 1, SyncOfficial: 0,
+			CreatedTime: common.GetTimestamp(), UpdatedTime: common.GetTimestamp(),
+		}
+		if err := meta.Insert(); err != nil {
+			return err
+		}
+	} else if err != nil {
+		return err
+	} else if err := DB.Unscoped().Model(&Model{}).Where("id = ?", meta.Id).Updates(map[string]any{
+		"description": description, "icon": "", "tags": "pay,payment", "vendor_id": vendorID, "endpoints": endpoint,
 		"status": 1, "sync_official": 0, "deleted_at": nil, "updated_time": common.GetTimestamp(),
-	}).Error
+	}).Error; err != nil {
+		return err
+	}
+	InvalidatePricingCache()
+	return nil
+}
+
+func ensurePay2APIMarketplaceModelClickHouse(publicModel, endpoint, description string, vendorID int) error {
+	var meta Model
+	err := DB.Unscoped().Where("model_name = ?", publicModel).First(&meta).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		id := nextClickHouseTableID(DB, "models")
+		now := common.GetTimestamp()
+		if err := DB.Exec(
+			`INSERT INTO models (id, model_name, description, icon, tags, vendor_id, endpoints, status, sync_official, created_time, updated_time, name_rule)
+			 VALUES (?, ?, ?, '', 'pay,payment', ?, ?, 1, 0, ?, ?, 0)`,
+			id, publicModel, description, vendorID, endpoint, now, now,
+		).Error; err != nil {
+			return err
+		}
+	} else if err != nil {
+		return err
+	} else if err := DB.Unscoped().Model(&Model{}).Where("id = ?", meta.Id).Updates(map[string]any{
+		"description": description, "tags": "pay,payment", "vendor_id": vendorID, "endpoints": endpoint,
+		"status": 1, "sync_official": 0, "deleted_at": nil, "updated_time": common.GetTimestamp(),
+	}).Error; err != nil {
+		return err
+	}
+	InvalidatePricingCache()
+	return nil
+}
+
+func ensureNamedVendorID(name, description, icon string) (int, error) {
+	var vendor Vendor
+	err := DB.Where("name = ?", name).First(&vendor).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		if common.UsingClickHouse {
+			id := nextClickHouseTableID(DB, "vendors")
+			now := common.GetTimestamp()
+			if err := DB.Exec(
+				`INSERT INTO vendors (id, name, description, icon, status, created_time, updated_time) VALUES (?, ?, ?, ?, 1, ?, ?)`,
+				id, name, description, icon, now, now,
+			).Error; err != nil {
+				return 0, err
+			}
+			return int(id), nil
+		}
+		vendor = Vendor{Name: name, Description: description, Icon: icon, Status: 1}
+		if err := vendor.Insert(); err != nil {
+			return 0, err
+		}
+		return vendor.Id, nil
+	}
+	if err != nil {
+		return 0, err
+	}
+	if description != "" || icon != "" {
+		updates := map[string]any{"updated_time": common.GetTimestamp()}
+		if description != "" {
+			updates["description"] = description
+		}
+		if icon != "" {
+			updates["icon"] = icon
+		}
+		_ = DB.Model(&Vendor{}).Where("id = ?", vendor.Id).Updates(updates).Error
+	}
+	return vendor.Id, nil
 }
 
 func ensureSeedance720HiggsRouting() error {
