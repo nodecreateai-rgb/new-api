@@ -1403,10 +1403,10 @@ func ensureOAuth2APIRouting() error {
 		}
 	}
 	if key == "" {
-		key = strings.TrimSpace(os.Getenv("ADOBE2API_GATEWAY_KEY"))
+		key = strings.TrimSpace(os.Getenv("GOOGLE2API_API_KEY"))
 	}
 	if key == "" {
-		key = "oauth2api"
+		key = strings.TrimSpace(os.Getenv("ADOBE2API_GATEWAY_KEY"))
 	}
 	endpoint := `{"openai":{"path":"/v1/auth","method":"POST"}}`
 	description := "谷歌协议登录"
