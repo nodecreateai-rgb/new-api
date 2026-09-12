@@ -29,17 +29,20 @@ const ContentModal = ({
   setIsModalOpen,
   modalContent,
   isVideo,
+  isImage,
 }) => {
   const { t } = useTranslation();
   const [videoError, setVideoError] = useState(false);
+  const [imageError, setImageError] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    if (isModalOpen && isVideo) {
+    if (isModalOpen && (isVideo || isImage)) {
       setVideoError(false);
+      setImageError(false);
       setIsLoading(true);
     }
-  }, [isModalOpen, isVideo]);
+  }, [isModalOpen, isVideo, isImage]);
 
   const handleVideoError = () => {
     setVideoError(true);
@@ -47,6 +50,15 @@ const ContentModal = ({
   };
 
   const handleVideoLoaded = () => {
+    setIsLoading(false);
+  };
+
+  const handleImageError = () => {
+    setImageError(true);
+    setIsLoading(false);
+  };
+
+  const handleImageLoaded = () => {
     setIsLoading(false);
   };
 
@@ -152,6 +164,67 @@ const ContentModal = ({
     );
   };
 
+  const renderImageContent = () => {
+    if (imageError) {
+      return (
+        <div style={{ textAlign: 'center', padding: '40px' }}>
+          <Text
+            type='tertiary'
+            style={{ display: 'block', marginBottom: '16px' }}
+          >
+            {t('图片无法加载，请尝试在新标签页中打开')}
+          </Text>
+          <div style={{ marginTop: '20px' }}>
+            <Button
+              icon={<IconExternalOpen />}
+              onClick={handleOpenInNewTab}
+              style={{ marginRight: '8px' }}
+            >
+              {t('在新标签页中打开')}
+            </Button>
+            <Button icon={<IconCopy />} onClick={handleCopyUrl}>
+              {t('复制链接')}
+            </Button>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div style={{ position: 'relative', height: '100%' }}>
+        {isLoading && (
+          <div
+            style={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              zIndex: 10,
+            }}
+          >
+            <Spin size='large' />
+          </div>
+        )}
+        <img
+          src={modalContent}
+          alt={t('图片预览')}
+          style={{
+            width: '100%',
+            height: '100%',
+            maxWidth: '100%',
+            maxHeight: '100%',
+            objectFit: 'contain',
+          }}
+          onError={handleImageError}
+          onLoad={handleImageLoaded}
+          onLoadStart={() => setIsLoading(true)}
+        />
+      </div>
+    );
+  };
+
+  const isMediaPreview = isVideo || isImage;
+
   return (
     <Modal
       visible={isModalOpen}
@@ -159,16 +232,18 @@ const ContentModal = ({
       onCancel={() => setIsModalOpen(false)}
       closable={null}
       bodyStyle={{
-        height: isVideo ? '70vh' : '400px',
+        height: isMediaPreview ? '70vh' : '400px',
         maxHeight: '80vh',
         overflow: 'auto',
-        padding: isVideo && videoError ? '0' : '24px',
+        padding: isMediaPreview && (videoError || imageError) ? '0' : '24px',
       }}
-      width={isVideo ? '90vw' : 800}
-      style={isVideo ? { maxWidth: 960 } : undefined}
+      width={isMediaPreview ? '90vw' : 800}
+      style={isMediaPreview ? { maxWidth: 960 } : undefined}
     >
       {isVideo ? (
         renderVideoContent()
+      ) : isImage ? (
+        renderImageContent()
       ) : (
         <p style={{ whiteSpace: 'pre-line' }}>{modalContent}</p>
       )}

@@ -182,6 +182,11 @@ export const TASK_ACTIONS = {
   FIRST_TAIL_GENERATE: 'firstTailGenerate', // 首尾生视频
   REFERENCE_GENERATE: 'referenceGenerate', // 参照生视频
   REMIX_GENERATE: 'remixGenerate', // 视频 Remix
+
+  // Image generation
+  GENERATE_IMAGE: 'generate_image', // 文生图
+  EDIT_IMAGE: 'edit_image', // 图生图
+  GENERATE_IMAGE_VIDEO: 'generate_image_video', // 图生视频
 } as const
 
 /**
@@ -206,6 +211,7 @@ export const TASK_PLATFORMS = {
   RUNWAY: 'runway',
   LUMA: 'luma',
   VIGGLE: 'viggle',
+  IMAGE: 'image',
 } as const
 
 // ============================================================================
@@ -297,6 +303,18 @@ export const TASK_ACTION_MAPPINGS: Record<string, StatusMapping> = {
     label: 'Video Remix',
     variant: 'blue',
   },
+  [TASK_ACTIONS.GENERATE_IMAGE]: {
+    label: 'Text to Image',
+    variant: 'violet',
+  },
+  [TASK_ACTIONS.EDIT_IMAGE]: {
+    label: 'Image to Image',
+    variant: 'violet',
+  },
+  [TASK_ACTIONS.GENERATE_IMAGE_VIDEO]: {
+    label: 'Image to Video',
+    variant: 'blue',
+  },
 }
 
 /**
@@ -321,6 +339,7 @@ export const TASK_PLATFORM_MAPPINGS: Record<string, StatusMapping> = {
   [TASK_PLATFORMS.RUNWAY]: { label: 'runway', variant: 'violet' },
   [TASK_PLATFORMS.LUMA]: { label: 'luma', variant: 'orange' },
   [TASK_PLATFORMS.VIGGLE]: { label: 'viggle', variant: 'pink' },
+  [TASK_PLATFORMS.IMAGE]: { label: 'Image', variant: 'violet' },
 }
 
 // ============================================================================

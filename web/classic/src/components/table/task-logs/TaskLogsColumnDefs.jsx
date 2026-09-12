@@ -33,6 +33,7 @@ import {
   Hash,
   Video,
   Sparkles,
+  Image,
 } from 'lucide-react';
 import {
   TASK_ACTION_FIRST_TAIL_GENERATE,
@@ -90,6 +91,60 @@ function renderDuration(submit_time, finishTime) {
   );
 }
 
+const parseTaskDataObject = (data) => {
+  if (data && typeof data === 'object' && !Array.isArray(data)) {
+    return data;
+  }
+  if (typeof data !== 'string') return null;
+  try {
+    const parsed = JSON.parse(data);
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+      ? parsed
+      : null;
+  } catch {
+    return null;
+  }
+};
+
+const getFirstImageUrl = (record) => {
+  if (typeof record.result_url === 'string' && record.result_url) {
+    return record.result_url;
+  }
+
+  const parsed = parseTaskDataObject(record.data);
+  if (parsed) {
+    for (const key of ['url', 'output_url', 'image_url', 'result_url']) {
+      if (typeof parsed[key] === 'string' && parsed[key]) {
+        return parsed[key];
+      }
+    }
+
+    if (parsed.result && typeof parsed.result === 'object') {
+      for (const key of ['url', 'output_url', 'image_url', 'result_url']) {
+        if (typeof parsed.result[key] === 'string' && parsed.result[key]) {
+          return parsed.result[key];
+        }
+      }
+    }
+
+    const data = Array.isArray(parsed.data)
+      ? parsed.data
+      : parsed.result &&
+          typeof parsed.result === 'object' &&
+          Array.isArray(parsed.result.data)
+        ? parsed.result.data
+        : [];
+    const first = data.find((item) => item && typeof item === 'object');
+    const url = first?.url || first?.output_url || first?.image_url;
+    if (typeof url === 'string' && url) return url;
+  }
+
+  if (record.task_id) {
+    return `/v1/videos/${record.task_id}/content`;
+  }
+  return '';
+};
+
 const renderType = (type, t) => {
   switch (type) {
     case 'MUSIC':
@@ -134,6 +189,24 @@ const renderType = (type, t) => {
           {t('视频Remix')}
         </Tag>
       );
+    case 'generate_image':
+      return (
+        <Tag color='violet' shape='circle' prefixIcon={<Image size={14} />}>
+          {t('文生图')}
+        </Tag>
+      );
+    case 'edit_image':
+      return (
+        <Tag color='violet' shape='circle' prefixIcon={<Image size={14} />}>
+          {t('图生图')}
+        </Tag>
+      );
+    case 'generate_image_video':
+      return (
+        <Tag color='blue' shape='circle' prefixIcon={<Video size={14} />}>
+          {t('图生视频')}
+        </Tag>
+      );
     default:
       return (
         <Tag color='white' shape='circle' prefixIcon={<HelpCircle size={14} />}>
@@ -159,6 +232,12 @@ const renderPlatform = (platform, t) => {
       return (
         <Tag color='green' shape='circle'>
           Suno
+        </Tag>
+      );
+    case 'image':
+      return (
+        <Tag color='violet' shape='circle' prefixIcon={<Image size={14} />}>
+          {t('图片')}
         </Tag>
       );
     default:
@@ -241,6 +320,7 @@ export const getTaskLogsColumns = ({
   isAdminUser,
   openVideoModal,
   openAudioModal,
+  openImageModal,
 }) => {
   return [
     {
@@ -416,14 +496,37 @@ export const getTaskLogsColumns = ({
           record.action === TASK_ACTION_REMIX_GENERATE;
         const isSuccess = record.status === 'SUCCESS';
         const resultUrl = record.result_url;
-        const hasResultUrl = typeof resultUrl === 'string' && /^https?:\/\//.test(resultUrl);
+        const hasResultUrl =
+          typeof resultUrl === 'string' &&
+          (resultUrl.startsWith('/') || /^https?:\/\//.test(resultUrl));
+        const isImageTask = record.platform === 'image';
+        if (isSuccess && isImageTask) {
+          const imageUrl = getFirstImageUrl(record);
+          if (imageUrl) {
+            return (
+              <a
+                href='#'
+                onClick={(e) => {
+                  e.preventDefault();
+                  openImageModal(imageUrl);
+                }}
+              >
+                {t('点击预览图片')}
+              </a>
+            );
+          }
+        }
         if (isSuccess && isVideoTask && hasResultUrl) {
+          const videoUrl =
+            resultUrl.startsWith('/') || resultUrl.startsWith('http')
+              ? resultUrl
+              : `/v1/videos/${record.task_id}/content`;
           return (
             <a
               href='#'
               onClick={(e) => {
                 e.preventDefault();
-                openVideoModal(resultUrl);
+                openVideoModal(videoUrl);
               }}
             >
               {t('点击预览视频')}

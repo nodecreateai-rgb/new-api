@@ -19,7 +19,7 @@ For commercial licensing, please contact support@quantumnous.com
 /* eslint-disable react-refresh/only-export-components */
 import { useState, useMemo } from 'react'
 import type { ColumnDef } from '@tanstack/react-table'
-import { Music } from 'lucide-react'
+import { ImageIcon, Music } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { getUserAvatarFallback, getUserAvatarStyle } from '@/lib/avatar'
 import { formatTimestampToDate } from '@/lib/format'
@@ -28,12 +28,17 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { DataTableColumnHeader } from '@/components/data-table'
 import { StatusBadge } from '@/components/status-badge'
 import { TASK_ACTIONS, TASK_STATUS } from '../../constants'
-import { taskActionMapper, taskStatusMapper } from '../../lib/mappers'
+import {
+  taskActionMapper,
+  taskPlatformMapper,
+  taskStatusMapper,
+} from '../../lib/mappers'
 import type { TaskLog } from '../../types'
 import {
   AudioPreviewDialog,
   type AudioClip,
 } from '../dialogs/audio-preview-dialog'
+import { ImageDialog } from '../dialogs/image-dialog'
 import { FailReasonDialog } from '../dialogs/fail-reason-dialog'
 import { useUsageLogsContext } from '../usage-logs-provider'
 import {
@@ -90,19 +95,67 @@ function parseTaskDataObject(data: unknown): Record<string, unknown> | null {
 
 function getFirstImageUrl(log: TaskLog): string {
   if (typeof log.result_url === 'string' && log.result_url) return log.result_url
+
   const parsed = parseTaskDataObject(log.data)
-  const data = Array.isArray(parsed?.data)
-    ? parsed?.data
-    : parsed?.result &&
-        typeof parsed.result === 'object' &&
-        Array.isArray((parsed.result as Record<string, unknown>).data)
-      ? ((parsed.result as Record<string, unknown>).data as unknown[])
-      : []
-  const first = data.find((item) => item && typeof item === 'object') as
-    | Record<string, unknown>
-    | undefined
-  const url = first?.url || first?.output_url
-  return typeof url === 'string' ? url : ''
+  if (parsed) {
+    for (const key of ['url', 'output_url', 'image_url', 'result_url']) {
+      const value = parsed[key]
+      if (typeof value === 'string' && value) return value
+    }
+
+    if (parsed.result && typeof parsed.result === 'object') {
+      const result = parsed.result as Record<string, unknown>
+      for (const key of ['url', 'output_url', 'image_url', 'result_url']) {
+        const value = result[key]
+        if (typeof value === 'string' && value) return value
+      }
+    }
+
+    const data = Array.isArray(parsed.data)
+      ? parsed.data
+      : parsed.result &&
+          typeof parsed.result === 'object' &&
+          Array.isArray((parsed.result as Record<string, unknown>).data)
+        ? ((parsed.result as Record<string, unknown>).data as unknown[])
+        : []
+    const first = data.find((item) => item && typeof item === 'object') as
+      | Record<string, unknown>
+      | undefined
+    const url = first?.url || first?.output_url || first?.image_url
+    if (typeof url === 'string' && url) return url
+  }
+
+  if (log.task_id) return `/v1/videos/${log.task_id}/content`
+  return ''
+}
+
+function ImagePreviewCell({ log }: { log: TaskLog }) {
+  const { t } = useTranslation()
+  const [open, setOpen] = useState(false)
+  const imageUrl = useMemo(() => getFirstImageUrl(log), [log])
+
+  if (!imageUrl) return null
+
+  return (
+    <>
+      <button
+        type='button'
+        className='group flex items-center gap-1 text-left text-xs'
+        onClick={() => setOpen(true)}
+      >
+        <ImageIcon className='text-muted-foreground size-3' />
+        <span className='text-foreground leading-snug group-hover:underline'>
+          {t('Click to preview image')}
+        </span>
+      </button>
+      <ImageDialog
+        imageUrl={imageUrl}
+        taskId={log.task_id}
+        open={open}
+        onOpenChange={setOpen}
+      />
+    </>
+  )
 }
 
 function AudioPreviewCell({ log }: { log: TaskLog }) {
@@ -256,7 +309,7 @@ export function useTaskLogsColumns(isAdmin: boolean): ColumnDef<TaskLog>[] {
               className='border-border/60 bg-muted/30 max-w-full truncate rounded-md border px-1.5 py-0.5 font-mono'
             />
             <span className='text-muted-foreground/60 truncate text-[11px]'>
-              {t(log.platform)}
+              {t(taskPlatformMapper.getLabel(log.platform))}
               {getTaskModelName(log) ? ` · ${getTaskModelName(log)}` : ''} ·{' '}
               {t(taskActionMapper.getLabel(log.action))}
             </span>
@@ -329,19 +382,10 @@ export function useTaskLogsColumns(isAdmin: boolean): ColumnDef<TaskLog>[] {
         const isImageTask = log.platform === 'image'
 
         if (isSuccess && isImageTask) {
-          const imageUrl = getFirstImageUrl(log)
-          if (imageUrl) {
-            return (
-              <a
-                href={imageUrl}
-                target='_blank'
-                rel='noopener noreferrer'
-                className='text-foreground text-xs hover:underline'
-              >
-                {t('Click to preview image')}
-              </a>
-            )
+          if (!getFirstImageUrl(log)) {
+            return <span className='text-muted-foreground/60 text-xs'>-</span>
           }
+          return <ImagePreviewCell log={log} />
         }
 
         if (isSuccess && isVideoTask && resultUrl) {

@@ -51,6 +51,12 @@ const TaskLogsPage = () => {
         setIsModalOpen={taskLogsData.setIsAudioModalOpen}
         audioClips={taskLogsData.audioClips}
       />
+      <ContentModal
+        isModalOpen={taskLogsData.isImageModalOpen}
+        setIsModalOpen={taskLogsData.setIsImageModalOpen}
+        modalContent={taskLogsData.imageUrl}
+        isImage={true}
+      />
 
       <Layout>
         <CardPro

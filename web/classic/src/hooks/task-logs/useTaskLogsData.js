@@ -76,6 +76,10 @@ export const useTaskLogsData = () => {
   const [isAudioModalOpen, setIsAudioModalOpen] = useState(false);
   const [audioClips, setAudioClips] = useState([]);
 
+  // Image preview modal state
+  const [isImageModalOpen, setIsImageModalOpen] = useState(false);
+  const [imageUrl, setImageUrl] = useState('');
+
   // User info modal state
   const [showUserInfo, setShowUserInfoModal] = useState(false);
   const [userInfoData, setUserInfoData] = useState(null);
@@ -286,6 +290,11 @@ export const useTaskLogsData = () => {
     setIsAudioModalOpen(true);
   };
 
+  const openImageModal = (url) => {
+    setImageUrl(url);
+    setIsImageModalOpen(true);
+  };
+
   // User info function
   const showUserInfoFunc = async (userId) => {
     if (!isAdminUser) {
@@ -333,6 +342,11 @@ export const useTaskLogsData = () => {
     setIsAudioModalOpen,
     audioClips,
 
+    // Image preview modal
+    isImageModalOpen,
+    setIsImageModalOpen,
+    imageUrl,
+
     // Form state
     formApi,
     setFormApi,
@@ -367,6 +381,7 @@ export const useTaskLogsData = () => {
     openContentModal,
     openVideoModal,
     openAudioModal,
+    openImageModal,
     enrichLogs,
     syncPageData,
 
