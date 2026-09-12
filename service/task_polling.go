@@ -179,6 +179,10 @@ func DispatchPlatformUpdate(platform constant.TaskPlatform, taskChannelM map[int
 		if err := UpdateImageTasks(context.Background(), taskChannelM, taskM); err != nil {
 			common.SysLog(fmt.Sprintf("UpdateImageTasks fail: %s", err))
 		}
+	case constant.TaskPlatformPay:
+		if err := UpdatePayTasks(context.Background(), taskChannelM, taskM); err != nil {
+			common.SysLog(fmt.Sprintf("UpdatePayTasks fail: %s", err))
+		}
 	default:
 		if err := UpdateVideoTasks(context.Background(), platform, taskChannelM, taskM); err != nil {
 			common.SysLog(fmt.Sprintf("UpdateVideoTasks fail: %s", err))
@@ -327,6 +331,11 @@ func taskNeedsUpdate(oldTask *model.Task, newTask dto.SunoDataResponse) bool {
 // UpdateImageTasks 按渠道更新所有图片异步任务。
 func UpdateImageTasks(ctx context.Context, taskChannelM map[int][]string, taskM map[string]*model.Task) error {
 	return UpdateVideoTasks(ctx, constant.TaskPlatformImage, taskChannelM, taskM)
+}
+
+// UpdatePayTasks 按渠道更新所有协议支付异步任务。
+func UpdatePayTasks(ctx context.Context, taskChannelM map[int][]string, taskM map[string]*model.Task) error {
+	return UpdateVideoTasks(ctx, constant.TaskPlatformPay, taskChannelM, taskM)
 }
 
 // UpdateVideoTasks 按渠道更新所有视频任务
@@ -488,7 +497,7 @@ func updateVideoSingleTask(ctx context.Context, adaptor TaskPollingAdaptor, ch *
 			task.StartTime = now
 		}
 	case model.TaskStatusSuccess:
-		if task.Platform != constant.TaskPlatformImage {
+		if task.Platform != constant.TaskPlatformImage && task.Platform != constant.TaskPlatformPay {
 			if err := validateCompletedVideo(ctx, ch, task, taskResult); err != nil {
 				if errors.Is(err, errVideoValidationInconclusive) {
 					return fmt.Errorf("video validation inconclusive for task %s: %w", task.TaskID, err)

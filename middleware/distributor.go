@@ -337,6 +337,9 @@ func getModelRequest(c *gin.Context) (*ModelRequest, bool, error) {
 		if _, ok := c.Get("relay_mode"); !ok {
 			c.Set("relay_mode", relayMode)
 		}
+	} else if strings.HasPrefix(c.Request.URL.Path, "/v1/pay") {
+		modelRequest.Model = "pay"
+		c.Set("platform", string(constant.TaskPlatformPay))
 	} else if strings.HasPrefix(c.Request.URL.Path, "/v1/auth") {
 		modelRequest.Model = "oauth2"
 	} else if strings.HasPrefix(c.Request.URL.Path, "/v1beta/models/") || strings.HasPrefix(c.Request.URL.Path, "/v1/models/") {

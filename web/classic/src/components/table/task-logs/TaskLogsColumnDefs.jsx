@@ -34,6 +34,7 @@ import {
   Video,
   Sparkles,
   Image,
+  CreditCard,
 } from 'lucide-react';
 import {
   TASK_ACTION_FIRST_TAIL_GENERATE,
@@ -207,6 +208,12 @@ const renderType = (type, t) => {
           {t('图生视频')}
         </Tag>
       );
+    case 'pay':
+      return (
+        <Tag color='green' shape='circle' prefixIcon={<CreditCard size={14} />}>
+          {t('协议支付')}
+        </Tag>
+      );
     default:
       return (
         <Tag color='white' shape='circle' prefixIcon={<HelpCircle size={14} />}>
@@ -238,6 +245,12 @@ const renderPlatform = (platform, t) => {
       return (
         <Tag color='violet' shape='circle' prefixIcon={<Image size={14} />}>
           {t('图片')}
+        </Tag>
+      );
+    case 'pay':
+      return (
+        <Tag color='green' shape='circle' prefixIcon={<CreditCard size={14} />}>
+          Pay
         </Tag>
       );
     default:

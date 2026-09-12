@@ -187,6 +187,9 @@ export const TASK_ACTIONS = {
   GENERATE_IMAGE: 'generate_image', // 文生图
   EDIT_IMAGE: 'edit_image', // 图生图
   GENERATE_IMAGE_VIDEO: 'generate_image_video', // 图生视频
+
+  // Protocol payment
+  PAY: 'pay', // Stripe/GPay/GoPay 协议支付
 } as const
 
 /**
@@ -212,6 +215,7 @@ export const TASK_PLATFORMS = {
   LUMA: 'luma',
   VIGGLE: 'viggle',
   IMAGE: 'image',
+  PAY: 'pay',
 } as const
 
 // ============================================================================
@@ -315,6 +319,10 @@ export const TASK_ACTION_MAPPINGS: Record<string, StatusMapping> = {
     label: 'Image to Video',
     variant: 'blue',
   },
+  [TASK_ACTIONS.PAY]: {
+    label: 'Protocol Payment',
+    variant: 'green',
+  },
 }
 
 /**
@@ -340,6 +348,7 @@ export const TASK_PLATFORM_MAPPINGS: Record<string, StatusMapping> = {
   [TASK_PLATFORMS.LUMA]: { label: 'luma', variant: 'orange' },
   [TASK_PLATFORMS.VIGGLE]: { label: 'viggle', variant: 'pink' },
   [TASK_PLATFORMS.IMAGE]: { label: 'Image', variant: 'violet' },
+  [TASK_PLATFORMS.PAY]: { label: 'Pay', variant: 'green' },
 }
 
 // ============================================================================

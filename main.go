@@ -124,6 +124,9 @@ func main() {
 		if platform == constant.TaskPlatformImage {
 			return controller.NewImageTaskAdaptor()
 		}
+		if platform == constant.TaskPlatformPay {
+			return controller.NewPayTaskAdaptor()
+		}
 		a := relay.GetTaskAdaptor(platform)
 		if a == nil {
 			return nil

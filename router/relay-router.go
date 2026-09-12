@@ -92,6 +92,11 @@ func SetRelayRouter(router *gin.Engine) {
 		authRouter.POST("/auth", controller.RelayAuth)
 	}
 	{
+		payRouter := relayV1Router.Group("")
+		payRouter.Use(middleware.Distribute())
+		payRouter.POST("/pay", controller.RelayPay)
+	}
+	{
 		//http router
 		httpRouter := relayV1Router.Group("")
 		httpRouter.Use(middleware.Distribute())

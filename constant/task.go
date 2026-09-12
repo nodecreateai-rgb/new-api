@@ -11,6 +11,7 @@ const (
 	TaskPlatformSuno       TaskPlatform = "suno"
 	TaskPlatformMidjourney              = "mj"
 	TaskPlatformImage                   = "image"
+	TaskPlatformPay                     = "pay"
 )
 
 func (p TaskPlatform) Value() (driver.Value, error) {
@@ -36,6 +37,7 @@ func (p *TaskPlatform) Scan(value interface{}) error {
 const (
 	SunoActionMusic  = "MUSIC"
 	SunoActionLyrics = "LYRICS"
+	PayActionPay     = "pay"
 
 	TaskActionGenerate          = "generate"
 	TaskActionTextGenerate      = "textGenerate"

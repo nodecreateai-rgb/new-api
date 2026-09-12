@@ -37,9 +37,9 @@ func SetVideoRouter(router *gin.Engine) {
 		videoV1Router.POST("/videos", controller.RelayTask)
 		// Image-model tasks submitted via /v1/videos are stored in New-API as image tasks; fetch them
 		// locally first, then fall through to the upstream video fetcher for real video tasks.
-		videoV1Router.GET("/videos/:task_id", controller.ImageOrRelayTaskFetch)
-		videoV1Router.GET("/tasks/:task_id", controller.ImageOrRelayTaskFetch)
-		videoV1Router.GET("/task/:task_id", controller.ImageOrRelayTaskFetch)
+		videoV1Router.GET("/videos/:task_id", controller.PayOrRelayTaskFetch)
+		videoV1Router.GET("/tasks/:task_id", controller.PayOrRelayTaskFetch)
+		videoV1Router.GET("/task/:task_id", controller.PayOrRelayTaskFetch)
 	}
 
 	klingV1Router := router.Group("/kling/v1")
