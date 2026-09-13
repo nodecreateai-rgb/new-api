@@ -18,6 +18,8 @@ func TestSD2MiniUsesFixedPerRequestBilling(t *testing.T) {
 	require.False(t, a.UseRequestBillingRatios(&relaycommon.RelayInfo{OriginModelName: "seedance-2.0-mini-480p"}))
 	require.False(t, a.UseRequestBillingRatios(&relaycommon.RelayInfo{OriginModelName: "seedance-720"}))
 	require.False(t, a.UseRequestBillingRatios(&relaycommon.RelayInfo{OriginModelName: "kling-o3"}))
+	require.False(t, a.UseRequestBillingRatios(&relaycommon.RelayInfo{OriginModelName: "seedance-2.0-fast"}))
+	require.False(t, a.UseRequestBillingRatios(&relaycommon.RelayInfo{OriginModelName: "sora-2"}))
 }
 
 func TestKlingO3UpstreamBodyPassesDurationAspectAndImages(t *testing.T) {
