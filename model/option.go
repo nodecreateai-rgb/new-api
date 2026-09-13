@@ -295,10 +295,12 @@ func ensureDopioRMBPricing() {
 		"vip2":    1,
 		"vip6":    1,
 		"vip7":    1,
+		"vip8":    1,
 	}
 	targetUserUsableGroups := map[string]string{
 		"vip6": "VIP6分组",
 		"vip7": "VIP7分组",
+		"vip8": "VIP8分组",
 	}
 	// Fixed per-group RMB prices for Dopio video aliases. ModelGroupPrice
 	// overrides ModelPrice and resets group ratio to 1 during billing, which is
@@ -431,6 +433,11 @@ func ensureDopioRMBPricing() {
 		"vip7": {
 			"sd2-c7": 0.3,
 			"sd2.5":  0.3,
+		},
+		"vip8": {
+			"seedance-2.0":      0.5,
+			"seedance-2.0-fast": 0.5,
+			"seedance-2.5":      0.7,
 		},
 	}
 	for group := range targetModelGroupPrices {
@@ -1694,7 +1701,7 @@ func ensureYoroll2APIRouting() error {
 	const neutralName = "Creative Video"
 	const modelsCSV = "seedance-2.0,seedance-2.0-fast,seedance-2.5,sora-2,minimax-h3-max"
 	const mappingJSON = `{"seedance-2.0":"seedance-2.0","seedance-2.0-fast":"seedance-2.0-fast","seedance-2.5":"seedance-2.5","sora-2":"sora-2","minimax-h3-max":"minimax-h3-max"}`
-	const groupsCSV = "default,vip,svip,vip1,vip2,vip3,vip6"
+	const groupsCSV = "default,vip,svip,vip1,vip2,vip3,vip6,vip8"
 	baseURL := strings.TrimSpace(os.Getenv("YOROLL2API_BASE_URL"))
 	if baseURL == "" {
 		baseURL = "http://172.17.0.1:38692"
@@ -1721,7 +1728,7 @@ func ensureYoroll2APIRouting() error {
 		"sora-2",
 		"minimax-h3-max",
 	}
-	groups := []string{"default", "vip", "svip", "vip1", "vip2", "vip3", "vip6"}
+	groups := []string{"default", "vip", "svip", "vip1", "vip2", "vip3", "vip6", "vip8"}
 	modelDescriptions := map[string]string{
 		"seedance-2.0":      "Seedance 2.0 标准版文生视频/图生视频（异步）",
 		"seedance-2.0-fast": "Seedance 2.0 Fast 快速文生视频/图生视频（异步）",
