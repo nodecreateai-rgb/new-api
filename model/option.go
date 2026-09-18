@@ -293,11 +293,13 @@ func ensureDopioRMBPricing() {
 		"vip6":    1,
 		"vip7":    1,
 		"vip8":    1,
+		"vip9":    1,
 	}
 	targetUserUsableGroups := map[string]string{
 		"vip6": "VIP6分组",
 		"vip7": "VIP7分组",
 		"vip8": "VIP8分组",
+		"vip9": "VIP9分组",
 	}
 	// Fixed per-group RMB prices for Dopio video aliases. ModelGroupPrice
 	// overrides ModelPrice and resets group ratio to 1 during billing, which is
@@ -432,6 +434,10 @@ func ensureDopioRMBPricing() {
 			"sd2.5":  0.3,
 		},
 		"vip8": {},
+		"vip9": {
+			"seedance-2.0": 1,
+			"seedance-2.5": 2,
+		},
 	}
 	for group := range targetModelGroupPrices {
 		targetModelGroupPrices[group]["seedance-720"] = higgsSeedancePrice
@@ -1730,10 +1736,10 @@ func ensureStoryhubSeedanceRouting() error {
 	const neutralName = "StoryHub Seedance Video"
 	const modelsCSV = "seedance-2.0,seedance-2.5"
 	const mappingJSON = `{"seedance-2.0":"seedance-2.0","seedance-2.5":"seedance-2.5"}`
-	const groupsCSV = "default,vip,svip,vip1,vip2,vip3,vip6,vip8"
+	const groupsCSV = "default,vip,svip,vip1,vip2,vip3,vip6,vip8,vip9"
 	baseURL := strings.TrimSpace(os.Getenv("STORYHUB2API_BASE_URL"))
 	if baseURL == "" {
-		baseURL = "http://172.17.0.1:38690"
+		baseURL = "http://storyhub2api:38690"
 	}
 	key := strings.TrimSpace(os.Getenv("STORYHUB2API_GATEWAY_KEY"))
 	if key == "" {
@@ -1751,7 +1757,7 @@ func ensureStoryhubSeedanceRouting() error {
 	}
 
 	publicModels := []string{"seedance-2.0", "seedance-2.5"}
-	groups := []string{"default", "vip", "svip", "vip1", "vip2", "vip3", "vip6", "vip8"}
+	groups := []string{"default", "vip", "svip", "vip1", "vip2", "vip3", "vip6", "vip8", "vip9"}
 	modelDescriptions := map[string]string{
 		"seedance-2.0": "Seedance 2.0 文生/图生视频（异步，¥1.5/次）",
 		"seedance-2.5": "Seedance 2.5 文生/图生视频（异步，¥3/次）",
