@@ -188,8 +188,8 @@ export const TASK_ACTIONS = {
   EDIT_IMAGE: 'edit_image', // 图生图
   GENERATE_IMAGE_VIDEO: 'generate_image_video', // 图生视频
 
-  // Protocol payment
-  PAY: 'pay', // Stripe/GPay/GoPay 协议支付
+  // Stripe, GPay, GoPay 协议支付
+  PAY: 'pay',
 } as const
 
 /**

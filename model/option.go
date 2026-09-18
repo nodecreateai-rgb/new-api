@@ -279,13 +279,10 @@ func ensureDopioRMBPricing() {
 		"nano-banana-2":                      air2apiImagePrice,
 		"nano-banana-2-lite":                 air2apiImagePrice,
 		"nano-banana-pro":                    air2apiImagePrice,
-		"oauth2":                        0.3,
-		"pay":                           0.5,
-		"seedance-2.0":                  0.8,
-		"seedance-2.0-fast":             0.8,
-		"seedance-2.5":                  1,
-		"sora-2":                        0.5,
-		"minimax-h3-max":                0.5,
+		"oauth2":             0.3,
+		"pay":                0.5,
+		"seedance-2.0":       1.5,
+		"seedance-2.5":       3,
 	}
 	targetGroupRatios := map[string]float64{
 		"default": 1,
@@ -434,11 +431,7 @@ func ensureDopioRMBPricing() {
 			"sd2-c7": 0.3,
 			"sd2.5":  0.3,
 		},
-		"vip8": {
-			"seedance-2.0":      0.5,
-			"seedance-2.0-fast": 0.5,
-			"seedance-2.5":      0.7,
-		},
+		"vip8": {},
 	}
 	for group := range targetModelGroupPrices {
 		targetModelGroupPrices[group]["seedance-720"] = higgsSeedancePrice
@@ -477,7 +470,7 @@ func ensureDopioRMBPricing() {
 		}
 	}
 	changed := false
-	for _, staleModel := range []string{"happy-horse-1.1", "happyhorse-1.1", "kling-v3", "wan2.7", "viduq3", "seedance-video-fast", "seedance-video-standard", "seedance-video-fast-per-second", "seedance-video-standard-per-second"} {
+	for _, staleModel := range []string{"happy-horse-1.1", "happyhorse-1.1", "kling-v3", "wan2.7", "viduq3", "seedance-video-fast", "seedance-video-standard", "seedance-video-fast-per-second", "seedance-video-standard-per-second", "seedance-2.0-fast", "seedance-2.0-480p", "sora-2", "minimax-h3-max"} {
 		if _, exists := prices[staleModel]; exists {
 			delete(prices, staleModel)
 			changed = true
@@ -554,7 +547,7 @@ func ensureDopioRMBPricing() {
 	}
 	changed = false
 	for group, groupPrices := range modelGroupPrices {
-		for _, staleModel := range []string{"happy-horse-1.1", "happyhorse-1.1", "kling-v3", "wan2.7", "viduq3", "seedance-video-fast", "seedance-video-standard", "seedance-video-fast-per-second", "seedance-video-standard-per-second"} {
+		for _, staleModel := range []string{"happy-horse-1.1", "happyhorse-1.1", "kling-v3", "wan2.7", "viduq3", "seedance-video-fast", "seedance-video-standard", "seedance-video-fast-per-second", "seedance-video-standard-per-second", "seedance-2.0-480p"} {
 			if _, exists := groupPrices[staleModel]; exists {
 				delete(groupPrices, staleModel)
 				changed = true
@@ -650,8 +643,11 @@ func ensureDopioRMBPricing() {
 	if err := ensurePay2APIRouting(); err != nil {
 		common.SysLog("failed to enforce pay2api gateway routing: " + err.Error())
 	}
-	if err := ensureYoroll2APIRouting(); err != nil {
-		common.SysLog("failed to enforce creative video gateway routing: " + err.Error())
+	if err := retireSeedance480Model(); err != nil {
+		common.SysLog("failed to retire seedance 480p model: " + err.Error())
+	}
+	if err := ensureStoryhubSeedanceRouting(); err != nil {
+		common.SysLog("failed to enforce StoryHub Seedance gateway routing: " + err.Error())
 	}
 	if err := ensureChannelGroupAbilities(15, "vip6"); err != nil {
 		common.SysLog("failed to ensure vip6 channel abilities: " + err.Error())
@@ -1697,49 +1693,73 @@ func ensurePay2APIRoutingClickHouse(neutralName, publicModel, groupsCSV, baseURL
 	return ensurePay2APIMarketplaceModelClickHouse(publicModel, endpoint, description, vendorID)
 }
 
-func ensureYoroll2APIRouting() error {
-	const neutralName = "Creative Video"
-	const modelsCSV = "seedance-2.0,seedance-2.0-fast,seedance-2.5,sora-2,minimax-h3-max"
-	const mappingJSON = `{"seedance-2.0":"seedance-2.0","seedance-2.0-fast":"seedance-2.0-fast","seedance-2.5":"seedance-2.5","sora-2":"sora-2","minimax-h3-max":"minimax-h3-max"}`
-	const groupsCSV = "default,vip,svip,vip1,vip2,vip3,vip6,vip8"
-	baseURL := strings.TrimSpace(os.Getenv("YOROLL2API_BASE_URL"))
-	if baseURL == "" {
-		baseURL = "http://172.17.0.1:38692"
+func retireSeedance480Model() error {
+	const modelName = "seedance-2.0-480p"
+	const channelName = "Seedance 2.0 480p"
+	const legacyChannelName = "Creative Video"
+
+	if err := DB.Model(&Ability{}).Where("model = ?", modelName).Update("enabled", false).Error; err != nil {
+		return err
 	}
-	key := strings.TrimSpace(os.Getenv("YOROLL2API_GATEWAY_KEY"))
+
+	var channel Channel
+	err := DB.Where("name = ?", channelName).First(&channel).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		err = DB.Where("name = ?", legacyChannelName).First(&channel).Error
+	}
+	if err == nil {
+		if common.UsingClickHouse {
+			if err := DB.Exec(`ALTER TABLE channels UPDATE status = ? WHERE id = ?`, common.ChannelStatusManuallyDisabled, channel.Id).Error; err != nil {
+				return err
+			}
+		} else if err := DB.Model(&Channel{}).Where("id = ?", channel.Id).Update("status", common.ChannelStatusManuallyDisabled).Error; err != nil {
+			return err
+		}
+	} else if !errors.Is(err, gorm.ErrRecordNotFound) {
+		return err
+	}
+
+	if err := retireMarketplaceModels([]string{modelName, "seedance-2.0-fast", "sora-2", "minimax-h3-max"}); err != nil {
+		return err
+	}
+	InvalidatePricingCache()
+	return nil
+}
+
+func ensureStoryhubSeedanceRouting() error {
+	const neutralName = "StoryHub Seedance Video"
+	const modelsCSV = "seedance-2.0,seedance-2.5"
+	const mappingJSON = `{"seedance-2.0":"seedance-2.0","seedance-2.5":"seedance-2.5"}`
+	const groupsCSV = "default,vip,svip,vip1,vip2,vip3,vip6,vip8"
+	baseURL := strings.TrimSpace(os.Getenv("STORYHUB2API_BASE_URL"))
+	if baseURL == "" {
+		baseURL = "http://172.17.0.1:38690"
+	}
+	key := strings.TrimSpace(os.Getenv("STORYHUB2API_GATEWAY_KEY"))
 	if key == "" {
-		if keyFile := strings.TrimSpace(os.Getenv("YOROLL2API_GATEWAY_KEY_FILE")); keyFile != "" {
+		if keyFile := strings.TrimSpace(os.Getenv("STORYHUB2API_GATEWAY_KEY_FILE")); keyFile != "" {
 			if raw, err := os.ReadFile(keyFile); err == nil {
 				key = strings.TrimSpace(string(raw))
 			}
 		}
 	}
 	if key == "" {
-		key = strings.TrimSpace(os.Getenv("YOROLL2API_API_KEY"))
+		key = strings.TrimSpace(os.Getenv("STORYHUB2API_API_KEY"))
 	}
 	if key == "" {
-		key = "creative-video"
+		key = "storyhub"
 	}
 
-	publicModels := []string{
-		"seedance-2.0",
-		"seedance-2.0-fast",
-		"seedance-2.5",
-		"sora-2",
-		"minimax-h3-max",
-	}
+	publicModels := []string{"seedance-2.0", "seedance-2.5"}
 	groups := []string{"default", "vip", "svip", "vip1", "vip2", "vip3", "vip6", "vip8"}
 	modelDescriptions := map[string]string{
-		"seedance-2.0":      "Seedance 2.0 标准版文生视频/图生视频（异步）",
-		"seedance-2.0-fast": "Seedance 2.0 Fast 快速文生视频/图生视频（异步）",
-		"seedance-2.5":      "Seedance 2.5 高质量长视频生成（异步）",
-		"sora-2":            "OpenAI Sora 2 文生视频/图生视频（异步）",
-		"minimax-h3-max":    "MiniMax H3 Max 高质量视频生成（异步）",
+		"seedance-2.0": "Seedance 2.0 文生/图生视频（异步，¥1.5/次）",
+		"seedance-2.5": "Seedance 2.5 文生/图生视频（异步，¥3/次）",
 	}
 	endpoint := `{"openai-video":{"path":"/v1/videos","method":"POST"}}`
 
 	if common.UsingClickHouse {
-		return ensureYoroll2APIRoutingClickHouse(neutralName, modelsCSV, mappingJSON, groupsCSV, baseURL, key, publicModels, groups, modelDescriptions, endpoint)
+		return ensureStoryhubSeedanceRoutingClickHouse(neutralName, modelsCSV, mappingJSON, groupsCSV, baseURL, key, publicModels, groups, modelDescriptions, endpoint)
 	}
 
 	var channel Channel
@@ -1834,7 +1854,7 @@ func ensureYoroll2APIRouting() error {
 	return nil
 }
 
-func ensureYoroll2APIRoutingClickHouse(neutralName, modelsCSV, mappingJSON, groupsCSV, baseURL, key string, publicModels, groups []string, modelDescriptions map[string]string, endpoint string) error {
+func ensureStoryhubSeedanceRoutingClickHouse(neutralName, modelsCSV, mappingJSON, groupsCSV, baseURL, key string, publicModels, groups []string, modelDescriptions map[string]string, endpoint string) error {
 	var channel Channel
 	err := DB.Where("name = ?", neutralName).First(&channel).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -1857,6 +1877,11 @@ func ensureYoroll2APIRoutingClickHouse(neutralName, modelsCSV, mappingJSON, grou
 	} else if err := DB.Exec(`ALTER TABLE channels UPDATE
 		type = ?, key = ?, status = ?, name = ?, base_url = ?, models = ?, `+commonGroupCol+` = ?, model_mapping = ?, priority = 10, weight = 100, auto_ban = 0
 		WHERE id = ?`, constant.ChannelTypeSora, key, common.ChannelStatusEnabled, neutralName, baseURL, modelsCSV, groupsCSV, mappingJSON, channel.Id).Error; err != nil {
+		return err
+	}
+
+	if err := DB.Model(&Ability{}).Where("channel_id = ? AND model NOT IN ?", channel.Id, publicModels).
+		Update("enabled", false).Error; err != nil {
 		return err
 	}
 
@@ -1912,6 +1937,16 @@ func ensureYoroll2APIRoutingClickHouse(neutralName, modelsCSV, mappingJSON, grou
 	}
 	InvalidatePricingCache()
 	return nil
+}
+
+func retireMarketplaceModels(models []string) error {
+	if len(models) == 0 {
+		return nil
+	}
+	now := common.GetTimestamp()
+	return DB.Unscoped().Model(&Model{}).Where("model_name IN ?", models).Updates(map[string]any{
+		"status": 0, "deleted_at": gorm.DeletedAt{Time: time.Unix(now, 0), Valid: true}, "updated_time": now,
+	}).Error
 }
 
 func ensurePay2APIMarketplaceModel(publicModel, endpoint, description string, vendorID int) error {
