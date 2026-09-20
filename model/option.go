@@ -439,8 +439,8 @@ func ensureDopioRMBPricing() {
 		"vip9": {
 			"seedance-2.0":    1,
 			"seedance-2.5":    2,
-			"seedance-2.0-c1": 2.5,
-			"seedance-2.5-c1": 4,
+			"seedance-2.0-c1": 1.5,
+			"seedance-2.5-c1": 3,
 		},
 	}
 	for group := range targetModelGroupPrices {
