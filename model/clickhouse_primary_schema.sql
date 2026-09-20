@@ -289,7 +289,11 @@ CREATE TABLE IF NOT EXISTS `tasks` (
   `progress` Nullable(String),
   `properties` Nullable(String),
   `private_data` Nullable(String),
-  `data` Nullable(String)
+  `data` Nullable(String),
+  INDEX idx_task_id task_id TYPE bloom_filter(0.01) GRANULARITY 4,
+  INDEX idx_user_id user_id TYPE bloom_filter(0.01) GRANULARITY 4,
+  INDEX idx_status status TYPE set(100) GRANULARITY 4,
+  PROJECTION proj_task_lookup (SELECT * ORDER BY task_id, user_id)
 ) ENGINE=MergeTree ORDER BY (`id`) SETTINGS enable_block_number_column=1, enable_block_offset_column=1;
 
 CREATE TABLE IF NOT EXISTS `tokens` (

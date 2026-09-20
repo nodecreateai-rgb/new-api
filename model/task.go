@@ -5,6 +5,7 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/QuantumNous/new-api/common"
@@ -227,7 +228,29 @@ func (t *Task) GetUpstreamTaskID() string {
 	if t.PrivateData.UpstreamTaskID != "" {
 		return t.PrivateData.UpstreamTaskID
 	}
+	if id := upstreamIDFromTaskData(t.Data); id != "" && id != t.TaskID {
+		return id
+	}
 	return t.TaskID
+}
+
+func upstreamIDFromTaskData(data JSONRaw) string {
+	if len(data) == 0 {
+		return ""
+	}
+	var payload map[string]any
+	if err := common.Unmarshal([]byte(data), &payload); err != nil {
+		return ""
+	}
+	for _, key := range []string{"id", "task_id", "taskId"} {
+		id, _ := payload[key].(string)
+		id = strings.TrimSpace(id)
+		if id == "" {
+			continue
+		}
+		return id
+	}
+	return ""
 }
 
 // GetResultURL 获取任务结果 URL（视频地址等）
@@ -428,13 +451,15 @@ func GetTimedOutUnfinishedTasks(cutoffUnix int64, limit int) []*Task {
 
 func GetAllUnFinishSyncTasks(limit int) []*Task {
 	var tasks []*Task
-	var err error
-	// get all tasks progress is not 100%
-	// Poll every unfinished task. A hard LIMIT makes some rows permanently starve
-	// after restart whenever the backlog is larger than the configured batch:
-	// the same subset is selected every cycle while other 40%-55% tasks never get
-	// requested again. Task/channel fan-out is already independent downstream.
-	err = DB.Where("progress != ?", "100%").Where("status != ?", TaskStatusFailure).Where("status != ?", TaskStatusSuccess).Order("id DESC").Find(&tasks).Error
+	// Filter by status (set index) instead of progress != '100%', which scans the
+	// whole table on ClickHouse MergeTree ordered by id.
+	err := DB.Where("status IN ?", []TaskStatus{
+		TaskStatusNotStart,
+		TaskStatusSubmitted,
+		TaskStatusQueued,
+		TaskStatusInProgress,
+		TaskStatusUnknown,
+	}).Order("id DESC").Find(&tasks).Error
 	if err != nil {
 		return nil
 	}
@@ -445,12 +470,23 @@ func GetByOnlyTaskId(taskId string) (*Task, bool, error) {
 	if taskId == "" {
 		return nil, false, nil
 	}
+	if cacheGetTaskMiss(0, taskId) {
+		return nil, false, nil
+	}
+	if cached, ok := cacheGetTask(taskCacheKeyOnly(taskId)); ok {
+		return cached, true, nil
+	}
 	var task *Task
 	var err error
-	err = DB.Where("task_id = ?", taskId).First(&task).Error
+	err = findTaskByFilter(map[string]any{"task_id": taskId}, &task)
 	exist, err := RecordExist(err)
 	if err != nil {
 		return nil, false, err
+	}
+	if exist && task != nil {
+		cacheSetTaskLookup(task)
+	} else {
+		cacheSetTaskMiss(0, taskId)
 	}
 	return task, exist, err
 }
@@ -459,13 +495,27 @@ func GetByTaskId(userId int, taskId string) (*Task, bool, error) {
 	if taskId == "" {
 		return nil, false, nil
 	}
+	// user_id=0 hits projection poorly (user_id AND task_id); use task_id-only path.
+	if userId <= 0 {
+		return GetByOnlyTaskId(taskId)
+	}
+	if cacheGetTaskMiss(userId, taskId) {
+		return nil, false, nil
+	}
+	if cached, ok := cacheGetTask(taskCacheKeyUser(userId, taskId)); ok {
+		return cached, true, nil
+	}
 	var task *Task
 	var err error
-	err = DB.Where("user_id = ? and task_id = ?", userId, taskId).
-		First(&task).Error
+	err = findTaskByFilter(map[string]any{"user_id": userId, "task_id": taskId}, &task)
 	exist, err := RecordExist(err)
 	if err != nil {
 		return nil, false, err
+	}
+	if exist && task != nil {
+		cacheSetTaskLookup(task)
+	} else {
+		cacheSetTaskMiss(userId, taskId)
 	}
 	return task, exist, err
 }
@@ -541,10 +591,11 @@ func (Task *Task) insertClickHouse() error {
 		return fmt.Errorf("clickhouse insert task %s: %w", Task.TaskID, err)
 	}
 	common.SysLog(fmt.Sprintf("inserted clickhouse task id=%d task_id=%s platform=%s", Task.ID, Task.TaskID, Task.Platform))
+	cacheSetTaskLookup(Task)
 	return nil
 }
 
-type taskSnapshot struct {
+type TaskSnapshot struct {
 	Status     TaskStatus
 	Progress   string
 	StartTime  int64
@@ -554,7 +605,7 @@ type taskSnapshot struct {
 	Data       JSONRaw
 }
 
-func (s taskSnapshot) Equal(other taskSnapshot) bool {
+func (s TaskSnapshot) Equal(other TaskSnapshot) bool {
 	return s.Status == other.Status &&
 		s.Progress == other.Progress &&
 		s.StartTime == other.StartTime &&
@@ -564,8 +615,26 @@ func (s taskSnapshot) Equal(other taskSnapshot) bool {
 		bytes.Equal(s.Data, other.Data)
 }
 
-func (t *Task) Snapshot() taskSnapshot {
-	return taskSnapshot{
+// NeedsPersist decides whether an in-flight task should write to ClickHouse.
+// Upstream JSON often changes every poll (elapsed_ms, updated_at) without
+// meaningful progress; persisting that creates mutation storms on ClickHouse.
+func (s TaskSnapshot) NeedsPersist(other TaskSnapshot, terminal bool) bool {
+	if s.Status != other.Status ||
+		s.Progress != other.Progress ||
+		s.StartTime != other.StartTime ||
+		s.FinishTime != other.FinishTime ||
+		s.FailReason != other.FailReason ||
+		s.ResultURL != other.ResultURL {
+		return true
+	}
+	if terminal {
+		return !bytes.Equal(s.Data, other.Data)
+	}
+	return false
+}
+
+func (t *Task) Snapshot() TaskSnapshot {
+	return TaskSnapshot{
 		Status:     t.Status,
 		Progress:   t.Progress,
 		StartTime:  t.StartTime,
@@ -582,9 +651,17 @@ func (Task *Task) Update() error {
 		// never reports RowsAffected for lightweight UPDATE, so Save would
 		// duplicate tasks. Always use Updates by primary key.
 		Task.UpdatedAt = time.Now().Unix()
-		return DB.Model(Task).Where("id = ?", Task.ID).Select("*").Updates(Task).Error
+		err := DB.Model(Task).Where("id = ?", Task.ID).Select("*").Updates(Task).Error
+		if err == nil {
+			RefreshTaskCache(Task)
+		}
+		return err
 	}
-	return DB.Save(Task).Error
+	err := DB.Save(Task).Error
+	if err == nil {
+		RefreshTaskCache(Task)
+	}
+	return err
 }
 
 // UpdateWithStatus performs a conditional UPDATE guarded by fromStatus (CAS).
@@ -602,13 +679,47 @@ func (t *Task) UpdateWithStatus(fromStatus TaskStatus) (bool, error) {
 	if result.Error != nil {
 		return false, result.Error
 	}
+	if result.RowsAffected > 0 {
+		RefreshTaskCache(t)
+	}
 	return result.RowsAffected > 0, nil
+}
+
+// UpdateProgress persists in-flight task fields without CAS read-back.
+// Background polling calls this when status is unchanged; skipping the two
+// extra SELECT status queries cuts ClickHouse load by ~2/3 on progress writes.
+func (t *Task) UpdateProgress(fromStatus TaskStatus) error {
+	if t.Status != fromStatus {
+		_, err := t.UpdateWithStatus(fromStatus)
+		return err
+	}
+	t.UpdatedAt = time.Now().Unix()
+	if common.UsingClickHouse {
+		err := DB.Model(t).Where("id = ? AND status = ?", t.ID, fromStatus).Select("*").Updates(t).Error
+		if err == nil {
+			RefreshTaskCache(t)
+		}
+		return err
+	}
+	result := DB.Model(t).Where("status = ?", fromStatus).Select("*").Updates(t)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected > 0 {
+		RefreshTaskCache(t)
+	}
+	return nil
 }
 
 // updateWithStatusClickHouse emulates CAS without RowsAffected.
 // ClickHouse lightweight UPDATE always reports RowsAffected=0, which previously
 // made every terminal transition look like a lost race and skipped refunds.
 func (t *Task) updateWithStatusClickHouse(fromStatus TaskStatus) (bool, error) {
+	// In-progress updates with unchanged status use the fast path above.
+	if t.Status == fromStatus && t.Status != TaskStatusSuccess && t.Status != TaskStatusFailure {
+		return true, t.UpdateProgress(fromStatus)
+	}
+
 	var curStatus string
 	if err := DB.Table("tasks").Where("id = ?", t.ID).Select("status").Limit(1).Scan(&curStatus).Error; err != nil {
 		return false, err
@@ -626,7 +737,11 @@ func (t *Task) updateWithStatusClickHouse(fromStatus TaskStatus) (bool, error) {
 	if err := DB.Table("tasks").Where("id = ?", t.ID).Select("status").Limit(1).Scan(&after).Error; err != nil {
 		return false, err
 	}
-	return TaskStatus(after) == t.Status, nil
+	won := TaskStatus(after) == t.Status
+	if won {
+		RefreshTaskCache(t)
+	}
+	return won, nil
 }
 
 // TaskBulkUpdate performs an unconditional bulk UPDATE by upstream task_id strings.
@@ -635,9 +750,13 @@ func TaskBulkUpdate(taskIds []string, params map[string]any) error {
 	if len(taskIds) == 0 {
 		return nil
 	}
-	return DB.Model(&Task{}).
+	err := DB.Model(&Task{}).
 		Where("task_id in (?)", taskIds).
 		Updates(params).Error
+	if err == nil {
+		invalidateTaskCaches(taskIds...)
+	}
+	return err
 }
 
 // TaskBulkUpdateByID performs an unconditional bulk UPDATE by primary key IDs.

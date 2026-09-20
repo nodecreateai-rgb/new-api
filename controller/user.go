@@ -21,6 +21,7 @@ import (
 
 	"github.com/QuantumNous/new-api/constant"
 
+	"github.com/bytedance/gopkg/util/gopool"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 )
@@ -957,62 +958,59 @@ func ManageUser(c *gin.Context) {
 			"admin_id":       adminId,
 			"admin_username": adminName,
 		}
+		var newQuota int
+		var quotaErr error
 		switch req.Mode {
 		case "add":
 			if req.Value <= 0 {
 				common.ApiErrorI18n(c, i18n.MsgUserQuotaChangeZero)
 				return
 			}
-			if err := model.IncreaseUserQuota(user.Id, req.Value, true); err != nil {
-				common.ApiError(c, err)
-				return
+			newQuota, quotaErr = model.AdminIncreaseUserQuota(user.Id, req.Value)
+			if quotaErr == nil {
+				logContent := fmt.Sprintf("管理员增加用户额度 %s", logger.LogQuota(req.Value))
+				userId := user.Id
+				gopool.Go(func() {
+					model.RecordLogWithAdminInfo(userId, model.LogTypeManage, logContent, adminInfo)
+				})
 			}
-			if common.BatchUpdateEnabled {
-				model.FlushBatchUpdate()
-			}
-			if err := model.InvalidateUserCache(user.Id); err != nil {
-				common.SysLog(fmt.Sprintf("failed to invalidate user cache for user %d: %s", user.Id, err.Error()))
-			}
-			model.RecordLogWithAdminInfo(user.Id, model.LogTypeManage,
-				fmt.Sprintf("管理员增加用户额度 %s", logger.LogQuota(req.Value)), adminInfo)
 		case "subtract":
 			if req.Value <= 0 {
 				common.ApiErrorI18n(c, i18n.MsgUserQuotaChangeZero)
 				return
 			}
-			if err := model.DecreaseUserQuota(user.Id, req.Value, true); err != nil {
-				common.ApiError(c, err)
-				return
+			newQuota, quotaErr = model.AdminDecreaseUserQuota(user.Id, req.Value)
+			if quotaErr == nil {
+				logContent := fmt.Sprintf("管理员减少用户额度 %s", logger.LogQuota(req.Value))
+				userId := user.Id
+				gopool.Go(func() {
+					model.RecordLogWithAdminInfo(userId, model.LogTypeManage, logContent, adminInfo)
+				})
 			}
-			if common.BatchUpdateEnabled {
-				model.FlushBatchUpdate()
-			}
-			if err := model.InvalidateUserCache(user.Id); err != nil {
-				common.SysLog(fmt.Sprintf("failed to invalidate user cache for user %d: %s", user.Id, err.Error()))
-			}
-			model.RecordLogWithAdminInfo(user.Id, model.LogTypeManage,
-				fmt.Sprintf("管理员减少用户额度 %s", logger.LogQuota(req.Value)), adminInfo)
 		case "override":
 			oldQuota := user.Quota
-			if err := model.DB.Model(&model.User{}).Where("id = ?", user.Id).Update("quota", req.Value).Error; err != nil {
-				common.ApiError(c, err)
-				return
+			newQuota, quotaErr = model.AdminOverrideUserQuota(user.Id, req.Value)
+			if quotaErr == nil {
+				logContent := fmt.Sprintf("管理员覆盖用户额度从 %s 为 %s", logger.LogQuota(oldQuota), logger.LogQuota(req.Value))
+				userId := user.Id
+				gopool.Go(func() {
+					model.RecordLogWithAdminInfo(userId, model.LogTypeManage, logContent, adminInfo)
+				})
 			}
-			if common.BatchUpdateEnabled {
-				model.FlushBatchUpdate()
-			}
-			if err := model.InvalidateUserCache(user.Id); err != nil {
-				common.SysLog(fmt.Sprintf("failed to invalidate user cache for user %d: %s", user.Id, err.Error()))
-			}
-			model.RecordLogWithAdminInfo(user.Id, model.LogTypeManage,
-				fmt.Sprintf("管理员覆盖用户额度从 %s 为 %s", logger.LogQuota(oldQuota), logger.LogQuota(req.Value)), adminInfo)
 		default:
 			common.ApiErrorI18n(c, i18n.MsgInvalidParams)
+			return
+		}
+		if quotaErr != nil {
+			common.ApiError(c, quotaErr)
 			return
 		}
 		c.JSON(http.StatusOK, gin.H{
 			"success": true,
 			"message": "",
+			"data": gin.H{
+				"quota": newQuota,
+			},
 		})
 		return
 	}

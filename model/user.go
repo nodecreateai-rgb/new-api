@@ -971,17 +971,30 @@ func IncreaseUserQuota(id int, quota int, db bool) (err error) {
 	if quota < 0 {
 		return errors.New("quota 不能为负数！")
 	}
-	gopool.Go(func() {
-		err := cacheIncrUserQuota(id, int64(quota))
-		if err != nil {
-			common.SysLog("failed to increase user quota: " + err.Error())
-		}
-	})
 	if !db && common.BatchUpdateEnabled {
+		gopool.Go(func() {
+			if err := cacheIncrUserQuota(id, int64(quota)); err != nil {
+				common.SysLog("failed to increase user quota: " + err.Error())
+			}
+		})
 		addNewRecord(BatchUpdateTypeUserQuota, id, quota)
 		return nil
 	}
-	return increaseUserQuota(id, quota)
+	if err := increaseUserQuota(id, quota); err != nil {
+		return err
+	}
+	if db {
+		_, err = refreshUserQuotaCacheAfterWrite(id)
+	}
+	return err
+}
+
+// AdminIncreaseUserQuota is the admin-panel fast path: one DB write then cache refresh.
+func AdminIncreaseUserQuota(id int, quota int) (newQuota int, err error) {
+	if err := IncreaseUserQuota(id, quota, true); err != nil {
+		return 0, err
+	}
+	return GetUserQuota(id, true)
 }
 
 func increaseUserQuota(id int, quota int) (err error) {
@@ -996,17 +1009,38 @@ func DecreaseUserQuota(id int, quota int, db bool) (err error) {
 	if quota < 0 {
 		return errors.New("quota 不能为负数！")
 	}
-	gopool.Go(func() {
-		err := cacheDecrUserQuota(id, int64(quota))
-		if err != nil {
-			common.SysLog("failed to decrease user quota: " + err.Error())
-		}
-	})
 	if !db && common.BatchUpdateEnabled {
+		gopool.Go(func() {
+			if err := cacheDecrUserQuota(id, int64(quota)); err != nil {
+				common.SysLog("failed to decrease user quota: " + err.Error())
+			}
+		})
 		addNewRecord(BatchUpdateTypeUserQuota, id, -quota)
 		return nil
 	}
-	return decreaseUserQuota(id, quota)
+	if err := decreaseUserQuota(id, quota); err != nil {
+		return err
+	}
+	if db {
+		_, err = refreshUserQuotaCacheAfterWrite(id)
+	}
+	return err
+}
+
+// AdminDecreaseUserQuota is the admin-panel fast path: one DB write then cache refresh.
+func AdminDecreaseUserQuota(id int, quota int) (newQuota int, err error) {
+	if err := DecreaseUserQuota(id, quota, true); err != nil {
+		return 0, err
+	}
+	return GetUserQuota(id, true)
+}
+
+// AdminOverrideUserQuota sets absolute quota for admin override mode.
+func AdminOverrideUserQuota(id int, quota int) (newQuota int, err error) {
+	if err := DB.Model(&User{}).Where("id = ?", id).Update("quota", quota).Error; err != nil {
+		return 0, err
+	}
+	return refreshUserQuotaCacheAfterWrite(id)
 }
 
 func decreaseUserQuota(id int, quota int) (err error) {

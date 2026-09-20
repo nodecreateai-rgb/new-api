@@ -88,7 +88,7 @@ func VideoProxy(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(c.Request.Context(), 60*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 180*time.Second)
 	defer cancel()
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "", nil)
 	if err != nil {
@@ -126,24 +126,36 @@ func VideoProxy(c *gin.Context) {
 			return
 		}
 	case constant.ChannelTypeOpenAI, constant.ChannelTypeSora:
-		if directURL := strings.TrimSpace(task.PrivateData.UpstreamResultURL); directURL != "" {
-			videoURL = directURL
-		} else if directURL := getStoredVideoURL(task); directURL != "" {
-			videoURL = directURL
-		} else if directURL := resolveUpstreamTaskVideoURL(c.Request.Context(), client, baseURL, channel.Key, task.GetUpstreamTaskID()); directURL != "" {
-			videoURL = directURL
-		} else if contentURL := privateVideoContentURL(baseURL, task.GetUpstreamTaskID()); contentURL != "" {
-			videoURL = contentURL
-			req.Header.Set("Authorization", "Bearer "+channel.Key)
-		} else if contentURL := roboneoStyleTaskContentURL(baseURL, task.GetUpstreamTaskID()); contentURL != "" {
-			videoURL = contentURL
-			req.Header.Set("Authorization", "Bearer "+channel.Key)
-		} else if outputURL := upstreamVideoOutputURL(baseURL, task.GetUpstreamTaskID()); outputURL != "" {
-			videoURL = outputURL
-		} else {
-			videoURL = fmt.Sprintf("%s/v1/videos/%s/content", baseURL, task.GetUpstreamTaskID())
-			req.Header.Set("Authorization", "Bearer "+channel.Key)
+		upstreamID := task.GetUpstreamTaskID()
+		localCandidates := make([]string, 0, 4)
+		if directURL := getStoredVideoURL(task); directURL != "" {
+			localCandidates = append(localCandidates, directURL)
 		}
+		if outputURL := upstreamVideoOutputURL(baseURL, upstreamID); outputURL != "" {
+			localCandidates = append(localCandidates, outputURL)
+		}
+		if contentURL := privateVideoContentURL(baseURL, upstreamID); contentURL != "" {
+			localCandidates = append(localCandidates, contentURL)
+		}
+		if contentURL := roboneoStyleTaskContentURL(baseURL, upstreamID); contentURL != "" {
+			localCandidates = append(localCandidates, contentURL)
+		}
+		localCandidates = append(localCandidates, fmt.Sprintf("%s/v1/videos/%s/content", strings.TrimRight(baseURL, "/"), upstreamID))
+		if directURL := strings.TrimSpace(task.PrivateData.UpstreamResultURL); directURL != "" {
+			localCandidates = append(localCandidates, directURL)
+		}
+		if err := fetchFirstAvailableVideo(c, req, client, ctx, task, baseURL, channel.Key, localCandidates); err == nil {
+			return
+		}
+		remoteCandidates := make([]string, 0, 2)
+		if directURL := resolveUpstreamTaskVideoURL(c.Request.Context(), client, baseURL, channel.Key, upstreamID); directURL != "" {
+			remoteCandidates = append(remoteCandidates, directURL)
+		}
+		if err := fetchFirstAvailableVideo(c, req, client, ctx, task, baseURL, channel.Key, remoteCandidates); err != nil {
+			logger.LogError(c.Request.Context(), fmt.Sprintf("Failed to fetch video content for task %s: %s", taskID, err.Error()))
+			videoProxyError(c, http.StatusBadGateway, "server_error", "Failed to fetch video content")
+		}
+		return
 	default:
 		videoURL = getStoredVideoURL(task)
 	}
@@ -223,6 +235,103 @@ func VideoProxy(c *gin.Context) {
 	if _, err = io.Copy(c.Writer, resp.Body); err != nil {
 		logger.LogError(c.Request.Context(), fmt.Sprintf("Failed to stream video content: %s", err.Error()))
 	}
+}
+
+func uniqueNonEmptyURLs(urls []string) []string {
+	seen := make(map[string]struct{}, len(urls))
+	out := make([]string, 0, len(urls))
+	for _, raw := range urls {
+		raw = strings.TrimSpace(raw)
+		if raw == "" {
+			continue
+		}
+		if _, ok := seen[raw]; ok {
+			continue
+		}
+		seen[raw] = struct{}{}
+		out = append(out, raw)
+	}
+	return out
+}
+
+func videoURLNeedsAuth(videoURL string) bool {
+	parsed, err := url.Parse(videoURL)
+	if err != nil {
+		return false
+	}
+	path := parsed.Path
+	return strings.Contains(path, "/v1/task/") || strings.Contains(path, "/v1/videos/")
+}
+
+func fetchFirstAvailableVideo(c *gin.Context, req *http.Request, client *http.Client, ctx context.Context, task *model.Task, baseURL, apiKey string, candidates []string) error {
+	var lastStatus int
+	var lastURL string
+	for _, candidate := range uniqueNonEmptyURLs(candidates) {
+		videoURL := resolvePossiblyRelativeVideoURL(candidate, baseURL)
+		wasRelative := strings.HasPrefix(candidate, "/") && !strings.HasPrefix(candidate, "//")
+		if strings.HasPrefix(videoURL, "data:") {
+			return writeVideoDataURL(c, videoURL)
+		}
+		trusted := isTrustedChannelVideoURL(videoURL, baseURL)
+		if !wasRelative && !trusted {
+			fetchSetting := system_setting.GetFetchSetting()
+			if err := common.ValidateURLWithFetchSetting(videoURL, fetchSetting.EnableSSRFProtection, fetchSetting.AllowPrivateIp, fetchSetting.DomainFilterMode, fetchSetting.IpFilterMode, fetchSetting.DomainList, fetchSetting.IpList, fetchSetting.AllowedPorts, fetchSetting.ApplyIPFilterForDomain); err != nil {
+				logger.LogError(c.Request.Context(), fmt.Sprintf("Video URL blocked for task %s: %v", task.TaskID, err))
+				continue
+			}
+		}
+		parsed, err := url.Parse(videoURL)
+		if err != nil {
+			continue
+		}
+		tryReq := req.Clone(ctx)
+		tryReq.URL = parsed
+		if videoURLNeedsAuth(videoURL) && strings.TrimSpace(apiKey) != "" {
+			tryReq.Header.Set("Authorization", "Bearer "+apiKey)
+		} else {
+			tryReq.Header.Del("Authorization")
+		}
+		resp, err := client.Do(tryReq)
+		if err != nil {
+			lastURL = videoURL
+			continue
+		}
+		if resp.StatusCode == http.StatusNotFound && shouldRetryVideoWithCacheBypass(videoURL, baseURL) {
+			_ = resp.Body.Close()
+			retryURL := addVideoCacheBypass(videoURL, task.UpdatedAt)
+			retryReq := tryReq.Clone(ctx)
+			retryReq.URL, err = url.Parse(retryURL)
+			if err == nil {
+				resp, err = client.Do(retryReq)
+				if err != nil {
+					lastURL = retryURL
+					continue
+				}
+				videoURL = retryURL
+			}
+		}
+		if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusPartialContent {
+			lastStatus = resp.StatusCode
+			lastURL = videoURL
+			logger.LogError(c.Request.Context(), fmt.Sprintf("Upstream returned status %d for %s", resp.StatusCode, videoURL))
+			_ = resp.Body.Close()
+			continue
+		}
+		for _, key := range []string{"Content-Type", "Content-Length", "Content-Range", "Accept-Ranges", "Last-Modified", "ETag", "Content-Disposition"} {
+			if value := resp.Header.Get(key); value != "" {
+				c.Writer.Header().Set(key, value)
+			}
+		}
+		c.Writer.Header().Set("Cache-Control", "public, max-age=86400")
+		c.Writer.WriteHeader(resp.StatusCode)
+		_, copyErr := io.Copy(c.Writer, resp.Body)
+		_ = resp.Body.Close()
+		return copyErr
+	}
+	if lastStatus != 0 {
+		return fmt.Errorf("upstream returned status %d for %s", lastStatus, lastURL)
+	}
+	return fmt.Errorf("no usable video URL")
 }
 
 func resolveUpstreamTaskVideoURL(ctx context.Context, client *http.Client, baseURL, apiKey, upstreamTaskID string) string {

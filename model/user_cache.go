@@ -214,6 +214,23 @@ func UpdateUserGroupCache(userId int, group string) error {
 	return updateUserGroupCache(userId, group)
 }
 
+// refreshUserQuotaCacheAfterWrite reloads the user row and writes Redis cache after
+// a synchronous quota mutation (admin add/subtract/override). Avoid InvalidateUserCache
+// here — deleting the hash forces the next request onto ClickHouse while the pool
+// is already congested.
+func refreshUserQuotaCacheAfterWrite(userId int) (int, error) {
+	user, err := GetUserById(userId, false)
+	if err != nil {
+		return 0, err
+	}
+	if common.RedisEnabled {
+		if err := updateUserCache(*user); err != nil {
+			common.SysLog(fmt.Sprintf("failed to refresh user cache after quota write user=%d: %v", userId, err))
+		}
+	}
+	return user.Quota, nil
+}
+
 func updateUserNameCache(userId int, username string) error {
 	if !common.RedisEnabled {
 		return nil

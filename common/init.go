@@ -139,7 +139,7 @@ func resolveTaskPricePatches(raw string) []string {
 		"viduq3-turbo-720p", "viduq3-turbo-1080p", "viduq3-pro-1080p",
 		"kling-v3-720p", "kling-v3-1080p", "kling-v3-4k", "kling", "可灵",
 		"grok-imagine-1.5", "grok", "sora-2", "sora-2-720p", "sora-2-1080p", "sora-2-pro", "sora-2-pro-720p", "sora-2-pro-1080p", "sora2", "Sora", "Sora 2",
-		"seedance-2.0", "seedance-2.5",
+		"seedance-2.0", "seedance-2.5", "seedance-2.0-c1", "seedance-2.5-c1",
 		"pay", "oauth2",
 	}
 	// Environment values extend the built-in fixed-price policy. They must not
@@ -194,6 +194,12 @@ func initConstantEnv() {
 	constant.TaskQueryLimit = GetEnvOrDefault("TASK_QUERY_LIMIT", 1000)
 	// 异步任务超时时间（分钟），超过此时间未完成的任务将被标记为失败并退款。0 表示禁用。
 	constant.TaskTimeoutMinutes = GetEnvOrDefault("TASK_TIMEOUT_MINUTES", 1440)
+	// 进行中任务 Redis 缓存 TTL（秒）。高频轮询场景建议 30+，终态任务用 TASK_CACHE_TTL_DONE_SEC。
+	constant.TaskCacheTTLActiveSec = GetEnvOrDefault("TASK_CACHE_TTL_ACTIVE_SEC", 60)
+	constant.TaskCacheTTLDoneSec = GetEnvOrDefault("TASK_CACHE_TTL_DONE_SEC", 1800)
+	// 后台任务进度轮询间隔（秒）与 ClickHouse 进度写库最小间隔（秒）。
+	constant.TaskPollingIntervalSec = GetEnvOrDefault("TASK_POLLING_INTERVAL_SEC", 10)
+	constant.TaskProgressWriteIntervalSec = GetEnvOrDefault("TASK_PROGRESS_WRITE_INTERVAL_SEC", 30)
 
 	// TASK_PRICE_PATCH lists asynchronous task models that are billed per request
 	// instead of multiplying their base price by request-derived ratios like seconds

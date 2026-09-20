@@ -18,6 +18,10 @@ var GenerateDefaultToken bool
 var ErrorLogEnabled bool
 var TaskQueryLimit int
 var TaskTimeoutMinutes int
+var TaskCacheTTLActiveSec int
+var TaskCacheTTLDoneSec int
+var TaskPollingIntervalSec int
+var TaskProgressWriteIntervalSec int
 
 // temporary variable for sora patch, will be removed in future
 var TaskPricePatches []string

@@ -80,6 +80,18 @@ func TestResolveUpstreamTaskVideoURL(t *testing.T) {
 	}
 }
 
+func TestUniqueNonEmptyURLs(t *testing.T) {
+	got := uniqueNonEmptyURLs([]string{
+		"",
+		"/outputs/task_abc.mp4",
+		"/outputs/task_abc.mp4",
+		"http://dola2api:38472/v1/task/task_abc/content",
+	})
+	if len(got) != 2 {
+		t.Fatalf("got %#v", got)
+	}
+}
+
 func TestPrivateVideoContentURL(t *testing.T) {
 	got := privateVideoContentURL("http://video-generation-upstream:38983", "task_abc")
 	want := "http://video-generation-upstream:38983/v1/videos/task/task_abc/content"

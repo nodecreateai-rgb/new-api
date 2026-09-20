@@ -96,9 +96,24 @@ func sweepTimedOutTasks(ctx context.Context) {
 	}
 }
 
-const taskPollingInterval = 3 * time.Second
-
 var taskPollingJobs sync.Map
+var taskProgressLastWrite sync.Map // task public id -> last ClickHouse write time
+
+func taskPollingInterval() time.Duration {
+	sec := constant.TaskPollingIntervalSec
+	if sec <= 0 {
+		sec = 10
+	}
+	return time.Duration(sec) * time.Second
+}
+
+func taskProgressWriteInterval() time.Duration {
+	sec := constant.TaskProgressWriteIntervalSec
+	if sec <= 0 {
+		sec = 30
+	}
+	return time.Duration(sec) * time.Second
+}
 
 func startTaskPollingJob(key string, job func()) bool {
 	if _, loaded := taskPollingJobs.LoadOrStore(key, struct{}{}); loaded {
@@ -111,10 +126,10 @@ func startTaskPollingJob(key string, job func()) bool {
 	return true
 }
 
-// TaskPollingLoop 主轮询循环，每 3 秒检查一次未完成的任务
+// TaskPollingLoop 主轮询循环，按 TASK_POLLING_INTERVAL_SEC 检查未完成任务。
 func TaskPollingLoop() {
 	for {
-		time.Sleep(taskPollingInterval)
+		time.Sleep(taskPollingInterval())
 		common.SysLog("任务进度轮询开始")
 		ctx := context.TODO()
 		sweepTimedOutTasks(ctx)
@@ -554,6 +569,8 @@ func updateVideoSingleTask(ctx context.Context, adaptor TaskPollingAdaptor, ch *
 	}
 
 	isDone := task.Status == model.TaskStatusSuccess || task.Status == model.TaskStatusFailure
+	after := task.Snapshot()
+	shouldPersist := shouldPersistTaskUpdate(task.TaskID, snap, after, isDone)
 	if isDone && snap.Status != task.Status {
 		won, err := task.UpdateWithStatus(snap.Status)
 		if err != nil {
@@ -564,14 +581,18 @@ func updateVideoSingleTask(ctx context.Context, adaptor TaskPollingAdaptor, ch *
 			logger.LogWarn(ctx, fmt.Sprintf("Task %s already transitioned by another process, skip billing", task.TaskID))
 			shouldRefund = false
 			shouldSettle = false
+		} else {
+			clearTaskProgressWrite(task.TaskID)
 		}
-	} else if !snap.Equal(task.Snapshot()) {
-		if _, err := task.UpdateWithStatus(snap.Status); err != nil {
+	} else if shouldPersist {
+		if err := task.UpdateProgress(snap.Status); err != nil {
 			logger.LogError(ctx, fmt.Sprintf("Failed to update task %s: %s", task.TaskID, err.Error()))
+		} else {
+			markTaskProgressWritten(task.TaskID)
 		}
 	} else {
-		// No changes, skip update
-		logger.LogDebug(ctx, "No update needed for task %s", task.TaskID)
+		model.RefreshTaskCache(task)
+		logger.LogDebug(ctx, "Skip ClickHouse write for task %s; refreshed cache only", task.TaskID)
 	}
 
 	if shouldSettle {
@@ -902,4 +923,32 @@ func imagePollingOutputExt(data []byte) string {
 		return ".webp"
 	}
 	return ".png"
+}
+
+func shouldPersistTaskUpdate(taskID string, before, after model.TaskSnapshot, terminal bool) bool {
+	if before.NeedsPersist(after, terminal) {
+		return true
+	}
+	if terminal || bytes.Equal(before.Data, after.Data) {
+		return false
+	}
+	return allowThrottledProgressWrite(taskID)
+}
+
+func allowThrottledProgressWrite(taskID string) bool {
+	now := time.Now()
+	if last, ok := taskProgressLastWrite.Load(taskID); ok {
+		if now.Sub(last.(time.Time)) < taskProgressWriteInterval() {
+			return false
+		}
+	}
+	return true
+}
+
+func markTaskProgressWritten(taskID string) {
+	taskProgressLastWrite.Store(taskID, time.Now())
+}
+
+func clearTaskProgressWrite(taskID string) {
+	taskProgressLastWrite.Delete(taskID)
 }
