@@ -233,7 +233,7 @@ func (a *TaskAdaptor) ForceApplyBillingRatios(info *relaycommon.RelayInfo) bool 
 // IDs are fixed-price per generated video, independent of requested duration.
 func (a *TaskAdaptor) UseRequestBillingRatios(info *relaycommon.RelayInfo) bool {
 	switch strings.TrimSpace(info.OriginModelName) {
-	case "sd2.5", "sd2-mini", "sd2-fast", "sd2-c6", "sd2-c7", "seedance-720", "seedance-2.0-mini", "seedance-2.0-mini-480p", "seedance-2.0-fast-720p", "seedance-2.0-720p", "seedance-2.0-1080p", "seedance-2.0", "seedance-2.5", "seedance-2.0-c1", "seedance-2.5-c1", "kling-o3":
+	case "sd2.5", "sd2-mini", "sd2-fast", "sd2-c6", "sd2-c7", "seedance-720", "seedance-2.0-mini", "seedance-2.0-mini-480p", "seedance-2.0-fast-720p", "seedance-2.0-720p", "seedance-2.0-1080p", "seedance-2.0", "seedance-2.5", "seedance-2.0-c1", "seedance-2.5-c1", "seedance-2.5-c2", "kling-o3":
 		return false
 	default:
 		return true
@@ -280,9 +280,7 @@ func (a *TaskAdaptor) BuildRequestBody(c *gin.Context, info *relaycommon.RelayIn
 			// immediate 400 before a task is persisted.
 			if parsed, reqErr := relaycommon.GetTaskRequest(c); reqErr == nil {
 				applyCanonicalVideoControls(bodyMap, parsed)
-				if strings.TrimSpace(info.OriginModelName) == "sd2.5" {
-					applySD25DurationLimit(bodyMap, parsed)
-				}
+				applyOriginModelDurationLimit(bodyMap, parsed, info.OriginModelName)
 			}
 			normalizeOpenAIVideoAspectBody(bodyMap)
 			if newBody, err := common.Marshal(bodyMap); err == nil {
@@ -392,6 +390,32 @@ func applySD25DurationLimit(body map[string]interface{}, req relaycommon.TaskSub
 	}
 	if duration > 30 {
 		duration = 30
+	}
+	body["duration"] = duration
+	body["seconds"] = strconv.Itoa(duration)
+}
+
+func applyOriginModelDurationLimit(body map[string]interface{}, req relaycommon.TaskSubmitReq, originModel string) {
+	switch strings.TrimSpace(originModel) {
+	case "sd2.5":
+		applySD25DurationLimit(body, req)
+	case "seedance-2.5-c2":
+		applySeedance25C2DurationLimit(body, req)
+	}
+}
+
+func applySeedance25C2DurationLimit(body map[string]interface{}, req relaycommon.TaskSubmitReq) {
+	if body == nil {
+		return
+	}
+	duration := taskSubmitDuration(req)
+	if duration <= 0 {
+		delete(body, "duration")
+		delete(body, "seconds")
+		return
+	}
+	if duration > 20 {
+		duration = 20
 	}
 	body["duration"] = duration
 	body["seconds"] = strconv.Itoa(duration)
@@ -703,9 +727,7 @@ func buildUpstreamVideoJSONFromMultipart(c *gin.Context, info *relaycommon.Relay
 		}
 	}
 	bodyMap := taskSubmitReqToUpstreamVideoBody(req, info.UpstreamModelName)
-	if strings.TrimSpace(info.OriginModelName) == "sd2.5" {
-		applySD25DurationLimit(bodyMap, req)
-	}
+	applyOriginModelDurationLimit(bodyMap, req, info.OriginModelName)
 	normalizeOpenAIVideoAspectBody(bodyMap)
 	return common.Marshal(bodyMap)
 }

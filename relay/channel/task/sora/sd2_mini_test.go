@@ -22,6 +22,12 @@ func TestSD2MiniUsesFixedPerRequestBilling(t *testing.T) {
 	require.False(t, a.UseRequestBillingRatios(&relaycommon.RelayInfo{OriginModelName: "sora-2"}))
 }
 
+func TestSeedanceC2UsesFixedPerRequestBilling(t *testing.T) {
+	a := &TaskAdaptor{}
+	require.False(t, a.UseRequestBillingRatios(&relaycommon.RelayInfo{OriginModelName: "seedance-2.5-c1"}))
+	require.False(t, a.UseRequestBillingRatios(&relaycommon.RelayInfo{OriginModelName: "seedance-2.5-c2"}))
+}
+
 func TestKlingO3UpstreamBodyPassesDurationAspectAndImages(t *testing.T) {
 	req := relaycommon.TaskSubmitReq{
 		Prompt:      "cinematic apple on table",
