@@ -193,7 +193,7 @@ func initConstantEnv() {
 	// 任务轮询时查询的最大数量
 	constant.TaskQueryLimit = GetEnvOrDefault("TASK_QUERY_LIMIT", 1000)
 	// 异步任务超时时间（分钟），超过此时间未完成的任务将被标记为失败并退款。0 表示禁用。
-	constant.TaskTimeoutMinutes = GetEnvOrDefault("TASK_TIMEOUT_MINUTES", 1440)
+	constant.TaskTimeoutMinutes = GetEnvOrDefault("TASK_TIMEOUT_MINUTES", 30)
 	// 进行中任务 Redis 缓存 TTL（秒）。高频轮询场景建议 30+，终态任务用 TASK_CACHE_TTL_DONE_SEC。
 	constant.TaskCacheTTLActiveSec = GetEnvOrDefault("TASK_CACHE_TTL_ACTIVE_SEC", 60)
 	constant.TaskCacheTTLDoneSec = GetEnvOrDefault("TASK_CACHE_TTL_DONE_SEC", 1800)

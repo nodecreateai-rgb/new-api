@@ -424,7 +424,7 @@ func startPingKeepAlive(c *gin.Context, pingInterval time.Duration) context.Canc
 		logger.LogDebug(c, "SSE ping goroutine started")
 
 		// 增加超时控制，防止goroutine长时间运行
-		maxPingDuration := 120 * time.Minute // 最大ping持续时间
+		maxPingDuration := 30 * time.Minute // 最大ping持续时间
 		pingTimeout := time.NewTimer(maxPingDuration)
 		defer pingTimeout.Stop()
 
