@@ -98,6 +98,7 @@ var defaultModelRatio = map[string]float64{
 	"gpt-5-mini-2025-08-07":            0.125,
 	"gpt-5-nano":                       0.025,
 	"gpt-5-nano-2025-08-07":            0.025,
+	"gpt-6-astra":                      0.25, // ¥0.50 / 1M in, ¥3.00 / 1M out
 	//"gpt-3.5-turbo-0301":           0.75, //deprecated
 	"gpt-3.5-turbo":          0.25,
 	"gpt-3.5-turbo-0613":     0.75,
@@ -141,6 +142,8 @@ var defaultModelRatio = map[string]float64{
 	"claude-sonnet-4-20250514":                  1.5,
 	"claude-sonnet-4-5-20250929":                1.5,
 	"claude-opus-4-5-20251101":                  2.5,
+	"claude-opus-5":                             0.90, // ¥1.80 / 1M in, ¥9.00 / 1M out
+	"claude-fable-5":                            0.40, // ¥0.80 / 1M in, ¥4.00 / 1M out
 	"claude-opus-4-6":                           2.5,
 	"claude-opus-4-6-max":                       2.5,
 	"claude-opus-4-6-high":                      2.5,
@@ -195,6 +198,7 @@ var defaultModelRatio = map[string]float64{
 	"gemini-2.5-flash-lite-preview-thinking-*":  0.05,
 	"gemini-2.5-flash-lite-preview-06-17":       0.05,
 	"gemini-2.5-flash":                          0.15,
+	"gemini-3.5-flash":                          0.06, // ¥0.12 / 1M in, ¥0.48 / 1M out
 	"gemini-robotics-er-1.5-preview":            0.15,
 	"gemini-embedding-001":                      0.075,
 	"text-embedding-004":                        0.001,
@@ -349,10 +353,14 @@ var modelRatioMap = types.NewRWMap[string, float64]()
 var completionRatioMap = types.NewRWMap[string, float64]()
 
 var defaultCompletionRatio = map[string]float64{
-	"gpt-4-gizmo-*":  2,
-	"gpt-4o-gizmo-*": 3,
-	"gpt-4-all":      2,
-	"gpt-image-1":    8,
+	"gpt-4-gizmo-*":    2,
+	"gpt-4o-gizmo-*":   3,
+	"gpt-4-all":        2,
+	"gpt-image-1":      8,
+	"gpt-6-astra":      6,
+	"gemini-3.5-flash": 4,
+	"claude-fable-5":   5,
+	"claude-opus-5":    5,
 }
 
 // InitRatioSettings initializes all model related settings maps
@@ -541,6 +549,9 @@ func getHardcodedCompletionModelRatio(name string) (float64, bool) {
 	}
 
 	if strings.HasPrefix(name, "gpt-") {
+		if strings.HasPrefix(name, "gpt-6") {
+			return 6, true
+		}
 		if strings.HasPrefix(name, "gpt-4o") {
 			if name == "gpt-4o-2024-05-13" {
 				return 3, true
@@ -583,6 +594,8 @@ func getHardcodedCompletionModelRatio(name string) (float64, bool) {
 	if strings.Contains(name, "claude-3") {
 		return 5, true
 	} else if strings.Contains(name, "claude-sonnet-4") || strings.Contains(name, "claude-opus-4") || strings.Contains(name, "claude-haiku-4") {
+		return 5, true
+	} else if strings.Contains(name, "claude-opus-5") || strings.Contains(name, "claude-fable-5") || strings.Contains(name, "claude-sonnet-5") {
 		return 5, true
 	}
 

@@ -462,6 +462,8 @@ func ensureDopioRMBPricing() {
 	currentGroupRatio := common.OptionMap["GroupRatio"]
 	currentModelGroupPrice := common.OptionMap["ModelGroupPrice"]
 	currentUserUsableGroups := common.OptionMap["UserUsableGroups"]
+	currentModelRatio := common.OptionMap["ModelRatio"]
+	currentCompletionRatio := common.OptionMap["CompletionRatio"]
 	common.OptionMapRWMutex.RUnlock()
 
 	if currentPrice != targetPrice {
@@ -495,6 +497,12 @@ func ensureDopioRMBPricing() {
 	for model, price := range targetModelPrices {
 		if prices[model] != price {
 			prices[model] = price
+			changed = true
+		}
+	}
+	for _, chatModel := range getunikeyChatPublicModels {
+		if _, exists := prices[chatModel]; exists {
+			delete(prices, chatModel)
 			changed = true
 		}
 	}
@@ -603,6 +611,12 @@ func ensureDopioRMBPricing() {
 			groupPrices["seedance-2.5-c2"] = 1
 			changed = true
 		}
+		for _, chatModel := range getunikeyChatPublicModels {
+			if _, exists := groupPrices[chatModel]; exists {
+				delete(groupPrices, chatModel)
+				changed = true
+			}
+		}
 		modelGroupPrices[group] = groupPrices
 	}
 	for group, targetPrices := range targetModelGroupPrices {
@@ -622,6 +636,13 @@ func ensureDopioRMBPricing() {
 		} else {
 			common.SysLog("failed to marshal ModelGroupPrice while enforcing Dopio RMB pricing: " + err.Error())
 		}
+	}
+
+	if next, ok := mergeJSONFloatMap(currentModelRatio, getunikeyChatModelRatios); ok {
+		updates["ModelRatio"] = next
+	}
+	if next, ok := mergeJSONFloatMap(currentCompletionRatio, getunikeyChatCompletionRatios); ok {
+		updates["CompletionRatio"] = next
 	}
 
 	if len(updates) > 0 {
@@ -670,6 +691,9 @@ func ensureDopioRMBPricing() {
 	}
 	if err := ensureGetunikey2apiSeedanceRouting(); err != nil {
 		common.SysLog("failed to enforce Seedance C2 gateway routing: " + err.Error())
+	}
+	if err := ensureGetunikey2apiChatRouting(); err != nil {
+		common.SysLog("failed to enforce UniKey chat gateway routing: " + err.Error())
 	}
 	if err := ensureChannelGroupAbilities(15, "vip6"); err != nil {
 		common.SysLog("failed to ensure vip6 channel abilities: " + err.Error())
@@ -1595,6 +1619,30 @@ func ensureOAuth2APIMarketplaceModelClickHouse(publicModel, endpoint, descriptio
 
 func stringPtr(value string) *string { return &value }
 
+func mergeJSONFloatMap(current string, patch map[string]float64) (string, bool) {
+	out := map[string]float64{}
+	if strings.TrimSpace(current) != "" {
+		if err := json.Unmarshal([]byte(current), &out); err != nil {
+			out = map[string]float64{}
+		}
+	}
+	changed := false
+	for key, want := range patch {
+		if out[key] != want {
+			out[key] = want
+			changed = true
+		}
+	}
+	if !changed {
+		return current, false
+	}
+	raw, err := json.Marshal(out)
+	if err != nil {
+		return current, false
+	}
+	return string(raw), true
+}
+
 func ensurePay2APIRouting() error {
 	const publicModel = "pay"
 	const neutralName = "Pay2API"
@@ -2295,6 +2343,230 @@ func ensureGetunikey2apiSeedanceRoutingClickHouse(neutralName, modelsCSV, mappin
 		}
 		if err := DB.Unscoped().Model(&Model{}).Where("id = ?", meta.Id).Updates(map[string]any{
 			"description": desc, "tags": "video", "endpoints": endpoint,
+			"status": 1, "sync_official": 0, "deleted_at": nil, "updated_time": common.GetTimestamp(),
+		}).Error; err != nil {
+			return err
+		}
+	}
+	InvalidatePricingCache()
+	return nil
+}
+
+var getunikeyChatPublicModels = []string{"gemini-3.5-flash", "gpt-6-astra", "claude-fable-5", "claude-opus-5"}
+
+// Site displays CNY with USDExchangeRate=1, so ¥/1M input = 2 * ModelRatio.
+var getunikeyChatModelRatios = map[string]float64{
+	"gemini-3.5-flash": 0.06, // ¥0.12 / 1M in
+	"gpt-6-astra":      0.25, // ¥0.50 / 1M in
+	"claude-fable-5":   0.40, // ¥0.80 / 1M in
+	"claude-opus-5":    0.90, // ¥1.80 / 1M in
+}
+
+var getunikeyChatCompletionRatios = map[string]float64{
+	"gemini-3.5-flash": 4, // ¥0.48 / 1M out
+	"gpt-6-astra":      6, // ¥3.00 / 1M out
+	"claude-fable-5":   5, // ¥4.00 / 1M out
+	"claude-opus-5":    5, // ¥9.00 / 1M out
+}
+
+func ensureGetunikey2apiChatRouting() error {
+	const neutralName = "UniKey Chat"
+	const modelsCSV = "gemini-3.5-flash,gpt-6-astra,claude-fable-5,claude-opus-5"
+	const mappingJSON = `{"gemini-3.5-flash":"google/gemini-3.5-flash","gpt-6-astra":"gpt-6-astra","claude-fable-5":"claude-fable-5","claude-opus-5":"claude-opus-5"}`
+	const groupsCSV = "default,vip,svip,vip1,vip2,vip3,vip6,vip8,vip9"
+	baseURL := strings.TrimSpace(os.Getenv("GETUNIKEY2API_BASE_URL"))
+	if baseURL == "" {
+		baseURL = "http://getunikey2api:38720"
+	}
+	key := strings.TrimSpace(os.Getenv("GETUNIKEY2API_GATEWAY_KEY"))
+	if key == "" {
+		if keyFile := strings.TrimSpace(os.Getenv("GETUNIKEY2API_GATEWAY_KEY_FILE")); keyFile != "" {
+			if raw, err := os.ReadFile(keyFile); err == nil {
+				key = strings.TrimSpace(string(raw))
+			}
+		}
+	}
+	if key == "" {
+		key = strings.TrimSpace(os.Getenv("UNIKEY2API_API_KEY"))
+	}
+
+	publicModels := getunikeyChatPublicModels
+	groups := []string{"default", "vip", "svip", "vip1", "vip2", "vip3", "vip6", "vip8", "vip9"}
+	modelDescriptions := map[string]string{
+		"gemini-3.5-flash": "Gemini 3.5 Flash 聊天（UniKey，输入 ¥0.12/M · 输出 ¥0.48/M）",
+		"gpt-6-astra":      "GPT-6 Astra 聊天（UniKey，输入 ¥0.50/M · 输出 ¥3.00/M）",
+		"claude-fable-5":   "Claude Fable 5 聊天（UniKey，输入 ¥0.80/M · 输出 ¥4.00/M）",
+		"claude-opus-5":    "Claude Opus 5 聊天（UniKey，输入 ¥1.80/M · 输出 ¥9.00/M）",
+	}
+	endpoint := `{"openai":{"path":"/v1/chat/completions","method":"POST"}}`
+
+	if common.UsingClickHouse {
+		return ensureGetunikey2apiChatRoutingClickHouse(neutralName, modelsCSV, mappingJSON, groupsCSV, baseURL, key, publicModels, groups, modelDescriptions, endpoint)
+	}
+
+	var channel Channel
+	err := DB.Where("name = ?", neutralName).First(&channel).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		weight := uint64(100)
+		priority := int64(10)
+		autoBan := 0
+		mapping := mappingJSON
+		channel = Channel{
+			Type: constant.ChannelTypeOpenAI, Key: key, Status: common.ChannelStatusEnabled,
+			Name: neutralName, Weight: &weight, CreatedTime: common.GetTimestamp(),
+			BaseURL: stringPtr(baseURL), Models: modelsCSV, Group: groupsCSV,
+			ModelMapping: &mapping, Priority: &priority, AutoBan: &autoBan,
+		}
+		if err := DB.Create(&channel).Error; err != nil {
+			return err
+		}
+	} else if err != nil {
+		return err
+	} else {
+		if key == "" {
+			key = channel.Key
+		}
+		if err := DB.Model(&Channel{}).Where("id = ?", channel.Id).Updates(map[string]any{
+			"type": constant.ChannelTypeOpenAI, "key": key, "status": common.ChannelStatusEnabled,
+			"name": neutralName, "base_url": baseURL, "models": modelsCSV, "group": groupsCSV,
+			"model_mapping": mappingJSON, "priority": 10, "weight": 100, "auto_ban": 0,
+		}).Error; err != nil {
+			return err
+		}
+	}
+
+	if err := DB.Model(&Ability{}).Where("channel_id = ? AND model NOT IN ?", channel.Id, publicModels).
+		Update("enabled", false).Error; err != nil {
+		return err
+	}
+	for _, modelName := range publicModels {
+		if err := DB.Model(&Ability{}).Where("model = ? AND channel_id <> ?", modelName, channel.Id).
+			Update("enabled", false).Error; err != nil {
+			return err
+		}
+		for _, group := range groups {
+			ability := Ability{Group: group, Model: modelName, ChannelId: channel.Id}
+			if err := DB.Where(commonGroupCol+" = ? AND model = ? AND channel_id = ?", group, modelName, channel.Id).
+				FirstOrCreate(&ability).Error; err != nil {
+				return err
+			}
+			if err := DB.Model(&Ability{}).Where(commonGroupCol+" = ? AND model = ? AND channel_id = ?", group, modelName, channel.Id).
+				Updates(map[string]any{"enabled": true, "priority": int64(10), "weight": uint64(100)}).Error; err != nil {
+				return err
+			}
+		}
+	}
+
+	for _, publicModel := range publicModels {
+		desc := modelDescriptions[publicModel]
+		var meta Model
+		err = DB.Unscoped().Where("model_name = ?", publicModel).First(&meta).Error
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			meta = Model{
+				ModelName: publicModel, Description: desc, Icon: "", Tags: "chat",
+				Endpoints: endpoint, Status: 1, SyncOfficial: 0,
+				CreatedTime: common.GetTimestamp(), UpdatedTime: common.GetTimestamp(),
+			}
+			if err := DB.Create(&meta).Error; err != nil {
+				return err
+			}
+			continue
+		}
+		if err != nil {
+			return err
+		}
+		if err := DB.Unscoped().Model(&Model{}).Where("id = ?", meta.Id).Updates(map[string]any{
+			"description": desc, "icon": "", "tags": "chat", "endpoints": endpoint,
+			"status": 1, "sync_official": 0, "deleted_at": nil, "updated_time": common.GetTimestamp(),
+		}).Error; err != nil {
+			return err
+		}
+	}
+	InvalidatePricingCache()
+	return nil
+}
+
+func ensureGetunikey2apiChatRoutingClickHouse(neutralName, modelsCSV, mappingJSON, groupsCSV, baseURL, key string, publicModels, groups []string, modelDescriptions map[string]string, endpoint string) error {
+	var channel Channel
+	err := DB.Where("name = ?", neutralName).First(&channel).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		id := nextClickHouseTableID(DB, "channels")
+		now := common.GetTimestamp()
+		info := `{"is_multi_key":false,"multi_key_size":0,"multi_key_status_list":null,"multi_key_polling_index":0,"multi_key_mode":""}`
+		if err := DB.Exec(`INSERT INTO channels (
+			id, type, key, status, name, weight, created_time, test_time, response_time,
+			base_url, other, balance, balance_updated_time, models, `+commonGroupCol+`, used_quota,
+			model_mapping, status_code_mapping, priority, auto_ban, other_info, channel_info, settings
+		) VALUES (?, ?, ?, ?, ?, ?, ?, 0, 0, ?, '', 0, 0, ?, ?, 0, ?, '', ?, 0, '', ?, '')`,
+			id, constant.ChannelTypeOpenAI, key, common.ChannelStatusEnabled, neutralName, uint64(100), now,
+			baseURL, modelsCSV, groupsCSV, mappingJSON, int64(10), info,
+		).Error; err != nil {
+			return err
+		}
+		channel.Id = int(id)
+	} else if err != nil {
+		return err
+	} else {
+		if key == "" {
+			key = channel.Key
+		}
+		if err := DB.Exec(`ALTER TABLE channels UPDATE
+			type = ?, key = ?, status = ?, name = ?, base_url = ?, models = ?, `+commonGroupCol+` = ?, model_mapping = ?, priority = 10, weight = 100, auto_ban = 0
+			WHERE id = ?`, constant.ChannelTypeOpenAI, key, common.ChannelStatusEnabled, neutralName, baseURL, modelsCSV, groupsCSV, mappingJSON, channel.Id).Error; err != nil {
+			return err
+		}
+	}
+
+	if err := DB.Model(&Ability{}).Where("channel_id = ? AND model NOT IN ?", channel.Id, publicModels).
+		Update("enabled", false).Error; err != nil {
+		return err
+	}
+
+	for _, modelName := range publicModels {
+		if err := DB.Model(&Ability{}).Where("model = ? AND channel_id <> ?", modelName, channel.Id).
+			Update("enabled", false).Error; err != nil {
+			return err
+		}
+		for _, group := range groups {
+			var count int64
+			if err := DB.Model(&Ability{}).Where(commonGroupCol+" = ? AND model = ? AND channel_id = ?", group, modelName, channel.Id).Count(&count).Error; err != nil {
+				return err
+			}
+			if count == 0 {
+				if err := DB.Exec(
+					`INSERT INTO abilities (`+commonGroupCol+`, model, channel_id, enabled, priority, weight, tag) VALUES (?, ?, ?, 1, 10, 100, '')`,
+					group, modelName, channel.Id,
+				).Error; err != nil {
+					return err
+				}
+			} else if err := DB.Model(&Ability{}).Where(commonGroupCol+" = ? AND model = ? AND channel_id = ?", group, modelName, channel.Id).
+				Updates(map[string]any{"enabled": true, "priority": int64(10), "weight": uint64(100)}).Error; err != nil {
+				return err
+			}
+		}
+	}
+
+	for _, publicModel := range publicModels {
+		desc := modelDescriptions[publicModel]
+		var meta Model
+		err = DB.Unscoped().Where("model_name = ?", publicModel).First(&meta).Error
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			id := nextClickHouseTableID(DB, "models")
+			now := common.GetTimestamp()
+			if err := DB.Exec(
+				`INSERT INTO models (id, model_name, description, icon, tags, endpoints, status, sync_official, created_time, updated_time, name_rule)
+				 VALUES (?, ?, ?, '', 'chat', ?, 1, 0, ?, ?, 0)`,
+				id, publicModel, desc, endpoint, now, now,
+			).Error; err != nil {
+				return err
+			}
+			continue
+		}
+		if err != nil {
+			return err
+		}
+		if err := DB.Unscoped().Model(&Model{}).Where("id = ?", meta.Id).Updates(map[string]any{
+			"description": desc, "tags": "chat", "endpoints": endpoint,
 			"status": 1, "sync_official": 0, "deleted_at": nil, "updated_time": common.GetTimestamp(),
 		}).Error; err != nil {
 			return err
