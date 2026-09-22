@@ -199,6 +199,8 @@ var defaultModelRatio = map[string]float64{
 	"gemini-2.5-flash-lite-preview-06-17":       0.05,
 	"gemini-2.5-flash":                          0.15,
 	"gemini-3.5-flash":                          0.06, // ¥0.12 / 1M in, ¥0.48 / 1M out
+	"minimax-m3":                                0.10, // ¥0.20 / 1M in, ¥0.80 / 1M out
+	"kimi-k3":                                   0.50, // ¥1.00 / 1M in, ¥5.00 / 1M out
 	"gemini-robotics-er-1.5-preview":            0.15,
 	"gemini-embedding-001":                      0.075,
 	"text-embedding-004":                        0.001,
@@ -361,6 +363,8 @@ var defaultCompletionRatio = map[string]float64{
 	"gemini-3.5-flash": 4,
 	"claude-fable-5":   5,
 	"claude-opus-5":    5,
+	"minimax-m3":       4,
+	"kimi-k3":          5,
 }
 
 // InitRatioSettings initializes all model related settings maps
@@ -672,6 +676,12 @@ func getHardcodedCompletionModelRatio(name string) (float64, bool) {
 		return 2, true
 	case "llama3-70b-8192":
 		return 0.79 / 0.59, true
+	}
+	if name == "minimax-m3" || strings.HasPrefix(name, "minimax-m3") {
+		return 4, true
+	}
+	if name == "kimi-k3" || strings.HasPrefix(name, "kimi-k3") {
+		return 5, true
 	}
 	return 1, false
 }

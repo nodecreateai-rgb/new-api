@@ -2352,7 +2352,7 @@ func ensureGetunikey2apiSeedanceRoutingClickHouse(neutralName, modelsCSV, mappin
 	return nil
 }
 
-var getunikeyChatPublicModels = []string{"gemini-3.5-flash", "gpt-6-astra", "claude-fable-5", "claude-opus-5"}
+var getunikeyChatPublicModels = []string{"gemini-3.5-flash", "gpt-6-astra", "claude-fable-5", "claude-opus-5", "minimax-m3", "kimi-k3"}
 
 // Site displays CNY with USDExchangeRate=1, so ¥/1M input = 2 * ModelRatio.
 var getunikeyChatModelRatios = map[string]float64{
@@ -2360,6 +2360,8 @@ var getunikeyChatModelRatios = map[string]float64{
 	"gpt-6-astra":      0.25, // ¥0.50 / 1M in
 	"claude-fable-5":   0.40, // ¥0.80 / 1M in
 	"claude-opus-5":    0.90, // ¥1.80 / 1M in
+	"minimax-m3":       0.10, // ¥0.20 / 1M in
+	"kimi-k3":          0.50, // ¥1.00 / 1M in
 }
 
 var getunikeyChatCompletionRatios = map[string]float64{
@@ -2367,12 +2369,14 @@ var getunikeyChatCompletionRatios = map[string]float64{
 	"gpt-6-astra":      6, // ¥3.00 / 1M out
 	"claude-fable-5":   5, // ¥4.00 / 1M out
 	"claude-opus-5":    5, // ¥9.00 / 1M out
+	"minimax-m3":       4, // ¥0.80 / 1M out
+	"kimi-k3":          5, // ¥5.00 / 1M out
 }
 
 func ensureGetunikey2apiChatRouting() error {
 	const neutralName = "UniKey Chat"
-	const modelsCSV = "gemini-3.5-flash,gpt-6-astra,claude-fable-5,claude-opus-5"
-	const mappingJSON = `{"gemini-3.5-flash":"google/gemini-3.5-flash","gpt-6-astra":"gpt-6-astra","claude-fable-5":"claude-fable-5","claude-opus-5":"claude-opus-5"}`
+	const modelsCSV = "gemini-3.5-flash,gpt-6-astra,claude-fable-5,claude-opus-5,minimax-m3,kimi-k3"
+	const mappingJSON = `{"gemini-3.5-flash":"google/gemini-3.5-flash","gpt-6-astra":"gpt-6-astra","claude-fable-5":"claude-fable-5","claude-opus-5":"claude-opus-5","minimax-m3":"minimax/minimax-m3","kimi-k3":"kimi-k3"}`
 	const groupsCSV = "default,vip,svip,vip1,vip2,vip3,vip6,vip8,vip9"
 	baseURL := strings.TrimSpace(os.Getenv("GETUNIKEY2API_BASE_URL"))
 	if baseURL == "" {
@@ -2397,6 +2401,8 @@ func ensureGetunikey2apiChatRouting() error {
 		"gpt-6-astra":      "GPT-6 Astra 聊天（UniKey，输入 ¥0.50/M · 输出 ¥3.00/M）",
 		"claude-fable-5":   "Claude Fable 5 聊天（UniKey，输入 ¥0.80/M · 输出 ¥4.00/M）",
 		"claude-opus-5":    "Claude Opus 5 聊天（UniKey，输入 ¥1.80/M · 输出 ¥9.00/M）",
+		"minimax-m3":       "MiniMax M3 聊天（UniKey，输入 ¥0.20/M · 输出 ¥0.80/M）",
+		"kimi-k3":          "Kimi K3 聊天（UniKey，输入 ¥1.00/M · 输出 ¥5.00/M）",
 	}
 	endpoint := `{"openai":{"path":"/v1/chat/completions","method":"POST"}}`
 

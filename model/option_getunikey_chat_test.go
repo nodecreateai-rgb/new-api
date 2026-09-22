@@ -22,6 +22,10 @@ func TestGetunikeyChatRoutingUsesOpenAIChannel(t *testing.T) {
 		`输入 ¥0.50/M`,
 		`输入 ¥0.80/M`,
 		`输入 ¥1.80/M`,
+		`输入 ¥0.20/M`,
+		`输入 ¥1.00/M`,
+		`"minimax-m3":"minimax/minimax-m3"`,
+		`"kimi-k3":"kimi-k3"`,
 		`ensureGetunikey2apiChatRouting()`,
 	} {
 		if !strings.Contains(s, want) {
