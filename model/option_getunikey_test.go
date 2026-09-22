@@ -19,13 +19,16 @@ func TestGetunikeyC2RoutingUsesUniKeyGateway(t *testing.T) {
 		`"seedance-2.5-c2":"bytedance/seedance-2.5"`,
 		`"seedance-2.5-c2":                    1`,
 		`targetModelGroupPrices[group]["seedance-2.5-c2"] = 1`,
-		`最长 15 秒`,
+		`"seedance-2.5-c2": ""`,
 		`os.Getenv("GETUNIKEY2API_BASE_URL")`,
 		`os.Getenv("GETUNIKEY2API_GATEWAY_KEY")`,
 	} {
 		if !strings.Contains(s, want) {
 			t.Fatalf("missing %s", want)
 		}
+	}
+	if strings.Contains(s, "（UniKey") || strings.Contains(s, "UniKey，") {
+		t.Fatal("marketplace copy must not mention UniKey")
 	}
 	if !strings.Contains(s, `ensureGetunikey2apiSeedanceRouting()`) {
 		t.Fatal("C2 routing must run at startup")

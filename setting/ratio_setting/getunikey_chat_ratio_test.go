@@ -10,9 +10,9 @@ func TestGetunikeyChatTokenRatios(t *testing.T) {
 		completion float64
 	}{
 		{"gemini-3.5-flash", 0.06, 4},
-		{"gpt-6-astra", 0.25, 6},
-		{"claude-fable-5", 0.40, 5},
-		{"claude-opus-5", 0.90, 5},
+		{"gpt-6-astra", 0.40, 6},
+		{"claude-fable-5", 0.40, 6},
+		{"claude-opus-5", 0.40, 6},
 		{"minimax-m3", 0.10, 4},
 		{"kimi-k3", 0.50, 5},
 	}

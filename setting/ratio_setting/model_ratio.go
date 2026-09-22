@@ -98,7 +98,7 @@ var defaultModelRatio = map[string]float64{
 	"gpt-5-mini-2025-08-07":            0.125,
 	"gpt-5-nano":                       0.025,
 	"gpt-5-nano-2025-08-07":            0.025,
-	"gpt-6-astra":                      0.25, // ¥0.50 / 1M in, ¥3.00 / 1M out
+	"gpt-6-astra":                      0.40, // ¥0.80 / 1M in, ¥4.80 / 1M out
 	//"gpt-3.5-turbo-0301":           0.75, //deprecated
 	"gpt-3.5-turbo":          0.25,
 	"gpt-3.5-turbo-0613":     0.75,
@@ -142,8 +142,8 @@ var defaultModelRatio = map[string]float64{
 	"claude-sonnet-4-20250514":                  1.5,
 	"claude-sonnet-4-5-20250929":                1.5,
 	"claude-opus-4-5-20251101":                  2.5,
-	"claude-opus-5":                             0.90, // ¥1.80 / 1M in, ¥9.00 / 1M out
-	"claude-fable-5":                            0.40, // ¥0.80 / 1M in, ¥4.00 / 1M out
+	"claude-opus-5":                             0.40, // ¥0.80 / 1M in, ¥4.80 / 1M out
+	"claude-fable-5":                            0.40, // ¥0.80 / 1M in, ¥4.80 / 1M out
 	"claude-opus-4-6":                           2.5,
 	"claude-opus-4-6-max":                       2.5,
 	"claude-opus-4-6-high":                      2.5,
@@ -361,8 +361,8 @@ var defaultCompletionRatio = map[string]float64{
 	"gpt-image-1":      8,
 	"gpt-6-astra":      6,
 	"gemini-3.5-flash": 4,
-	"claude-fable-5":   5,
-	"claude-opus-5":    5,
+	"claude-fable-5":   6,
+	"claude-opus-5":    6,
 	"minimax-m3":       4,
 	"kimi-k3":          5,
 }
@@ -599,7 +599,9 @@ func getHardcodedCompletionModelRatio(name string) (float64, bool) {
 		return 5, true
 	} else if strings.Contains(name, "claude-sonnet-4") || strings.Contains(name, "claude-opus-4") || strings.Contains(name, "claude-haiku-4") {
 		return 5, true
-	} else if strings.Contains(name, "claude-opus-5") || strings.Contains(name, "claude-fable-5") || strings.Contains(name, "claude-sonnet-5") {
+	} else if strings.Contains(name, "claude-opus-5") || strings.Contains(name, "claude-fable-5") {
+		return 6, true
+	} else if strings.Contains(name, "claude-sonnet-5") {
 		return 5, true
 	}
 

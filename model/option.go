@@ -2167,7 +2167,7 @@ func ensureGetunikey2apiSeedanceRouting() error {
 	publicModels := []string{"seedance-2.5-c2"}
 	groups := []string{"default", "vip", "svip", "vip1", "vip2", "vip3", "vip6", "vip8", "vip9"}
 	modelDescriptions := map[string]string{
-		"seedance-2.5-c2": "Seedance 2.5 文生/图生视频（UniKey，最长 15 秒，¥1/次）",
+		"seedance-2.5-c2": "",
 	}
 	endpoint := `{"openai-video":{"path":"/v1/videos","method":"POST"}}`
 
@@ -2347,6 +2347,9 @@ func ensureGetunikey2apiSeedanceRoutingClickHouse(neutralName, modelsCSV, mappin
 		}).Error; err != nil {
 			return err
 		}
+		if err := DB.Exec(`ALTER TABLE models UPDATE description = ? WHERE id = ?`, desc, meta.Id).Error; err != nil {
+			return err
+		}
 	}
 	InvalidatePricingCache()
 	return nil
@@ -2357,18 +2360,18 @@ var getunikeyChatPublicModels = []string{"gemini-3.5-flash", "gpt-6-astra", "cla
 // Site displays CNY with USDExchangeRate=1, so ¥/1M input = 2 * ModelRatio.
 var getunikeyChatModelRatios = map[string]float64{
 	"gemini-3.5-flash": 0.06, // ¥0.12 / 1M in
-	"gpt-6-astra":      0.25, // ¥0.50 / 1M in
+	"gpt-6-astra":      0.40, // ¥0.80 / 1M in
 	"claude-fable-5":   0.40, // ¥0.80 / 1M in
-	"claude-opus-5":    0.90, // ¥1.80 / 1M in
+	"claude-opus-5":    0.40, // ¥0.80 / 1M in
 	"minimax-m3":       0.10, // ¥0.20 / 1M in
 	"kimi-k3":          0.50, // ¥1.00 / 1M in
 }
 
 var getunikeyChatCompletionRatios = map[string]float64{
 	"gemini-3.5-flash": 4, // ¥0.48 / 1M out
-	"gpt-6-astra":      6, // ¥3.00 / 1M out
-	"claude-fable-5":   5, // ¥4.00 / 1M out
-	"claude-opus-5":    5, // ¥9.00 / 1M out
+	"gpt-6-astra":      6, // ¥4.80 / 1M out
+	"claude-fable-5":   6, // ¥4.80 / 1M out
+	"claude-opus-5":    6, // ¥4.80 / 1M out
 	"minimax-m3":       4, // ¥0.80 / 1M out
 	"kimi-k3":          5, // ¥5.00 / 1M out
 }
@@ -2397,12 +2400,12 @@ func ensureGetunikey2apiChatRouting() error {
 	publicModels := getunikeyChatPublicModels
 	groups := []string{"default", "vip", "svip", "vip1", "vip2", "vip3", "vip6", "vip8", "vip9"}
 	modelDescriptions := map[string]string{
-		"gemini-3.5-flash": "Gemini 3.5 Flash 聊天（UniKey，输入 ¥0.12/M · 输出 ¥0.48/M）",
-		"gpt-6-astra":      "GPT-6 Astra 聊天（UniKey，输入 ¥0.50/M · 输出 ¥3.00/M）",
-		"claude-fable-5":   "Claude Fable 5 聊天（UniKey，输入 ¥0.80/M · 输出 ¥4.00/M）",
-		"claude-opus-5":    "Claude Opus 5 聊天（UniKey，输入 ¥1.80/M · 输出 ¥9.00/M）",
-		"minimax-m3":       "MiniMax M3 聊天（UniKey，输入 ¥0.20/M · 输出 ¥0.80/M）",
-		"kimi-k3":          "Kimi K3 聊天（UniKey，输入 ¥1.00/M · 输出 ¥5.00/M）",
+		"gemini-3.5-flash": "",
+		"gpt-6-astra":      "",
+		"claude-fable-5":   "",
+		"claude-opus-5":    "",
+		"minimax-m3":       "",
+		"kimi-k3":          "",
 	}
 	endpoint := `{"openai":{"path":"/v1/chat/completions","method":"POST"}}`
 
@@ -2575,6 +2578,9 @@ func ensureGetunikey2apiChatRoutingClickHouse(neutralName, modelsCSV, mappingJSO
 			"description": desc, "tags": "chat", "endpoints": endpoint,
 			"status": 1, "sync_official": 0, "deleted_at": nil, "updated_time": common.GetTimestamp(),
 		}).Error; err != nil {
+			return err
+		}
+		if err := DB.Exec(`ALTER TABLE models UPDATE description = ? WHERE id = ?`, desc, meta.Id).Error; err != nil {
 			return err
 		}
 	}

@@ -18,12 +18,12 @@ func TestGetunikeyChatRoutingUsesOpenAIChannel(t *testing.T) {
 		`"gemini-3.5-flash":"google/gemini-3.5-flash"`,
 		`constant.ChannelTypeOpenAI`,
 		`/v1/chat/completions`,
-		`输入 ¥0.12/M`,
-		`输入 ¥0.50/M`,
-		`输入 ¥0.80/M`,
-		`输入 ¥1.80/M`,
-		`输入 ¥0.20/M`,
-		`输入 ¥1.00/M`,
+		`"gemini-3.5-flash": ""`,
+		`"gpt-6-astra":      ""`,
+		`"claude-fable-5":   ""`,
+		`"claude-opus-5":    ""`,
+		`"minimax-m3":       ""`,
+		`"kimi-k3":          ""`,
 		`"minimax-m3":"minimax/minimax-m3"`,
 		`"kimi-k3":"kimi-k3"`,
 		`ensureGetunikey2apiChatRouting()`,
@@ -31,6 +31,9 @@ func TestGetunikeyChatRoutingUsesOpenAIChannel(t *testing.T) {
 		if !strings.Contains(s, want) {
 			t.Fatalf("missing %s", want)
 		}
+	}
+	if strings.Contains(s, "输入 ¥") || strings.Contains(s, "（UniKey") {
+		t.Fatal("chat marketplace copy must stay empty")
 	}
 }
 
