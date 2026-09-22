@@ -119,16 +119,21 @@ func TestApplyCanonicalVideoControlsConvertsStringBooleanBeforeUpstream(t *testi
 	require.NotContains(t, body, "eye_mask_mode")
 }
 
-func TestApplySeedance25C2DurationLimitCapsAtTwenty(t *testing.T) {
+func TestApplySeedance25C2DurationLimitCapsAtFifteen(t *testing.T) {
 	body := map[string]interface{}{}
 	applySeedance25C2DurationLimit(body, relaycommon.TaskSubmitReq{Duration: 45})
-	require.Equal(t, 20, body["duration"])
-	require.Equal(t, "20", body["seconds"])
+	require.Equal(t, 15, body["duration"])
+	require.Equal(t, "15", body["seconds"])
 
 	body = map[string]interface{}{}
 	applySeedance25C2DurationLimit(body, relaycommon.TaskSubmitReq{Seconds: "8"})
 	require.Equal(t, 8, body["duration"])
 	require.Equal(t, "8", body["seconds"])
+
+	body = map[string]interface{}{}
+	applySeedance25C2DurationLimit(body, relaycommon.TaskSubmitReq{Duration: 20, Seconds: "20"})
+	require.Equal(t, 15, body["duration"])
+	require.Equal(t, "15", body["seconds"])
 
 	body = map[string]interface{}{"duration": 10, "seconds": "10"}
 	applySeedance25C2DurationLimit(body, relaycommon.TaskSubmitReq{})

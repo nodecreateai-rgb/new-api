@@ -2119,7 +2119,7 @@ func ensureGetunikey2apiSeedanceRouting() error {
 	publicModels := []string{"seedance-2.5-c2"}
 	groups := []string{"default", "vip", "svip", "vip1", "vip2", "vip3", "vip6", "vip8", "vip9"}
 	modelDescriptions := map[string]string{
-		"seedance-2.5-c2": "Seedance 2.5 文生/图生视频（UniKey，最长 20 秒，¥1/次）",
+		"seedance-2.5-c2": "Seedance 2.5 文生/图生视频（UniKey，最长 15 秒，¥1/次）",
 	}
 	endpoint := `{"openai-video":{"path":"/v1/videos","method":"POST"}}`
 

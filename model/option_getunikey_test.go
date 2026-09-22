@@ -19,6 +19,7 @@ func TestGetunikeyC2RoutingUsesUniKeyGateway(t *testing.T) {
 		`"seedance-2.5-c2":"bytedance/seedance-2.5"`,
 		`"seedance-2.5-c2":                    1`,
 		`targetModelGroupPrices[group]["seedance-2.5-c2"] = 1`,
+		`最长 15 秒`,
 		`os.Getenv("GETUNIKEY2API_BASE_URL")`,
 		`os.Getenv("GETUNIKEY2API_GATEWAY_KEY")`,
 	} {

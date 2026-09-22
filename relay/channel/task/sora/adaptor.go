@@ -414,8 +414,8 @@ func applySeedance25C2DurationLimit(body map[string]interface{}, req relaycommon
 		delete(body, "seconds")
 		return
 	}
-	if duration > 20 {
-		duration = 20
+	if duration > 15 {
+		duration = 15
 	}
 	body["duration"] = duration
 	body["seconds"] = strconv.Itoa(duration)
