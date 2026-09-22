@@ -98,7 +98,8 @@ var defaultModelRatio = map[string]float64{
 	"gpt-5-mini-2025-08-07":            0.125,
 	"gpt-5-nano":                       0.025,
 	"gpt-5-nano-2025-08-07":            0.025,
-	"gpt-6-astra":                      0.40, // ¥0.80 / 1M in, ¥4.80 / 1M out
+	"gpt-6-astra":                      0.5, // UniKey chat: input 0.5, completion 2
+	"gpt-5.6-sol":                      0.5,
 	//"gpt-3.5-turbo-0301":           0.75, //deprecated
 	"gpt-3.5-turbo":          0.25,
 	"gpt-3.5-turbo-0613":     0.75,
@@ -142,8 +143,8 @@ var defaultModelRatio = map[string]float64{
 	"claude-sonnet-4-20250514":                  1.5,
 	"claude-sonnet-4-5-20250929":                1.5,
 	"claude-opus-4-5-20251101":                  2.5,
-	"claude-opus-5":                             0.40, // ¥0.80 / 1M in, ¥4.80 / 1M out
-	"claude-fable-5":                            0.40, // ¥0.80 / 1M in, ¥4.80 / 1M out
+	"claude-opus-5":                             0.5,
+	"claude-fable-5":                            0.5,
 	"claude-opus-4-6":                           2.5,
 	"claude-opus-4-6-max":                       2.5,
 	"claude-opus-4-6-high":                      2.5,
@@ -155,7 +156,7 @@ var defaultModelRatio = map[string]float64{
 	"claude-opus-4-7-high":                      2.5,
 	"claude-opus-4-7-medium":                    2.5,
 	"claude-opus-4-7-low":                       2.5,
-	"claude-opus-4-8":                           2.5,
+	"claude-opus-4-8":                           0.5,
 	"claude-opus-4-8-max":                       2.5,
 	"claude-opus-4-8-xhigh":                     2.5,
 	"claude-opus-4-8-high":                      2.5,
@@ -198,9 +199,9 @@ var defaultModelRatio = map[string]float64{
 	"gemini-2.5-flash-lite-preview-thinking-*":  0.05,
 	"gemini-2.5-flash-lite-preview-06-17":       0.05,
 	"gemini-2.5-flash":                          0.15,
-	"gemini-3.5-flash":                          0.06, // ¥0.12 / 1M in, ¥0.48 / 1M out
-	"minimax-m3":                                0.10, // ¥0.20 / 1M in, ¥0.80 / 1M out
-	"kimi-k3":                                   0.50, // ¥1.00 / 1M in, ¥5.00 / 1M out
+	"gemini-3.5-flash":                          0.5,
+	"minimax-m3":                                0.2,
+	"kimi-k3":                                   0.2,
 	"gemini-robotics-er-1.5-preview":            0.15,
 	"gemini-embedding-001":                      0.075,
 	"text-embedding-004":                        0.001,
@@ -359,12 +360,14 @@ var defaultCompletionRatio = map[string]float64{
 	"gpt-4o-gizmo-*":   3,
 	"gpt-4-all":        2,
 	"gpt-image-1":      8,
-	"gpt-6-astra":      6,
-	"gemini-3.5-flash": 4,
-	"claude-fable-5":   6,
-	"claude-opus-5":    6,
-	"minimax-m3":       4,
-	"kimi-k3":          5,
+	"gpt-6-astra":      2,
+	"gpt-5.6-sol":      2,
+	"gemini-3.5-flash": 2,
+	"claude-fable-5":   2,
+	"claude-opus-5":    2,
+	"claude-opus-4-8":  2,
+	"minimax-m3":       0.8,
+	"kimi-k3":          0.8,
 }
 
 // InitRatioSettings initializes all model related settings maps
@@ -552,9 +555,16 @@ func getHardcodedCompletionModelRatio(name string) (float64, bool) {
 		return 2, false
 	}
 
+	switch name {
+	case "minimax-m3", "kimi-k3":
+		return 0.8, true
+	case "gemini-3.5-flash", "gpt-6-astra", "gpt-5.6-sol", "claude-fable-5", "claude-opus-5", "claude-opus-4-8":
+		return 2, true
+	}
+
 	if strings.HasPrefix(name, "gpt-") {
 		if strings.HasPrefix(name, "gpt-6") {
-			return 6, true
+			return 2, true
 		}
 		if strings.HasPrefix(name, "gpt-4o") {
 			if name == "gpt-4o-2024-05-13" {
@@ -600,7 +610,7 @@ func getHardcodedCompletionModelRatio(name string) (float64, bool) {
 	} else if strings.Contains(name, "claude-sonnet-4") || strings.Contains(name, "claude-opus-4") || strings.Contains(name, "claude-haiku-4") {
 		return 5, true
 	} else if strings.Contains(name, "claude-opus-5") || strings.Contains(name, "claude-fable-5") {
-		return 6, true
+		return 2, true
 	} else if strings.Contains(name, "claude-sonnet-5") {
 		return 5, true
 	}
@@ -680,10 +690,10 @@ func getHardcodedCompletionModelRatio(name string) (float64, bool) {
 		return 0.79 / 0.59, true
 	}
 	if name == "minimax-m3" || strings.HasPrefix(name, "minimax-m3") {
-		return 4, true
+		return 0.8, true
 	}
 	if name == "kimi-k3" || strings.HasPrefix(name, "kimi-k3") {
-		return 5, true
+		return 0.8, true
 	}
 	return 1, false
 }

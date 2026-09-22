@@ -2355,31 +2355,35 @@ func ensureGetunikey2apiSeedanceRoutingClickHouse(neutralName, modelsCSV, mappin
 	return nil
 }
 
-var getunikeyChatPublicModels = []string{"gemini-3.5-flash", "gpt-6-astra", "claude-fable-5", "claude-opus-5", "minimax-m3", "kimi-k3"}
+var getunikeyChatPublicModels = []string{"gemini-3.5-flash", "gpt-6-astra", "claude-fable-5", "claude-opus-5", "claude-opus-4-8", "gpt-5.6-sol", "minimax-m3", "kimi-k3"}
 
 // Site displays CNY with USDExchangeRate=1, so ¥/1M input = 2 * ModelRatio.
 var getunikeyChatModelRatios = map[string]float64{
-	"gemini-3.5-flash": 0.06, // ¥0.12 / 1M in
-	"gpt-6-astra":      0.40, // ¥0.80 / 1M in
-	"claude-fable-5":   0.40, // ¥0.80 / 1M in
-	"claude-opus-5":    0.40, // ¥0.80 / 1M in
-	"minimax-m3":       0.10, // ¥0.20 / 1M in
-	"kimi-k3":          0.50, // ¥1.00 / 1M in
+	"gemini-3.5-flash": 0.5,
+	"gpt-6-astra":      0.5,
+	"claude-fable-5":   0.5,
+	"claude-opus-5":    0.5,
+	"claude-opus-4-8":  0.5,
+	"gpt-5.6-sol":      0.5,
+	"minimax-m3":       0.2,
+	"kimi-k3":          0.2,
 }
 
 var getunikeyChatCompletionRatios = map[string]float64{
-	"gemini-3.5-flash": 4, // ¥0.48 / 1M out
-	"gpt-6-astra":      6, // ¥4.80 / 1M out
-	"claude-fable-5":   6, // ¥4.80 / 1M out
-	"claude-opus-5":    6, // ¥4.80 / 1M out
-	"minimax-m3":       4, // ¥0.80 / 1M out
-	"kimi-k3":          5, // ¥5.00 / 1M out
+	"gemini-3.5-flash": 2,
+	"gpt-6-astra":      2,
+	"claude-fable-5":   2,
+	"claude-opus-5":    2,
+	"claude-opus-4-8":  2,
+	"gpt-5.6-sol":      2,
+	"minimax-m3":       0.8,
+	"kimi-k3":          0.8,
 }
 
 func ensureGetunikey2apiChatRouting() error {
 	const neutralName = "UniKey Chat"
-	const modelsCSV = "gemini-3.5-flash,gpt-6-astra,claude-fable-5,claude-opus-5,minimax-m3,kimi-k3"
-	const mappingJSON = `{"gemini-3.5-flash":"google/gemini-3.5-flash","gpt-6-astra":"gpt-6-astra","claude-fable-5":"claude-fable-5","claude-opus-5":"claude-opus-5","minimax-m3":"minimax/minimax-m3","kimi-k3":"kimi-k3"}`
+	const modelsCSV = "gemini-3.5-flash,gpt-6-astra,claude-fable-5,claude-opus-5,claude-opus-4-8,gpt-5.6-sol,minimax-m3,kimi-k3"
+	const mappingJSON = `{"gemini-3.5-flash":"google/gemini-3.5-flash","gpt-6-astra":"gpt-6-astra","claude-fable-5":"claude-fable-5","claude-opus-5":"claude-opus-5","claude-opus-4-8":"claude-opus-4-8","gpt-5.6-sol":"gpt-5.6-sol","minimax-m3":"minimax/minimax-m3","kimi-k3":"kimi-k3"}`
 	const groupsCSV = "default,vip,svip,vip1,vip2,vip3,vip6,vip8,vip9"
 	baseURL := strings.TrimSpace(os.Getenv("GETUNIKEY2API_BASE_URL"))
 	if baseURL == "" {
@@ -2404,6 +2408,8 @@ func ensureGetunikey2apiChatRouting() error {
 		"gpt-6-astra":      "",
 		"claude-fable-5":   "",
 		"claude-opus-5":    "",
+		"claude-opus-4-8":  "",
+		"gpt-5.6-sol":      "",
 		"minimax-m3":       "",
 		"kimi-k3":          "",
 	}
