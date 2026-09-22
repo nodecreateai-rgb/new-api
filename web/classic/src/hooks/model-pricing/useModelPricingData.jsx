@@ -185,11 +185,11 @@ export const useModelPricingData = () => {
     }
 
     if (currency === 'CNY') {
-      return `¥${(priceInUSD * usdExchangeRate).toFixed(3)}`;
+      return `¥${(priceInUSD * usdExchangeRate).toFixed(6)}`;
     } else if (currency === 'CUSTOM') {
-      return `${customCurrencySymbol}${(priceInUSD * customExchangeRate).toFixed(3)}`;
+      return `${customCurrencySymbol}${(priceInUSD * customExchangeRate).toFixed(6)}`;
     }
-    return `$${priceInUSD.toFixed(3)}`;
+    return `$${priceInUSD.toFixed(6)}`;
   };
 
   const setModelsFormat = (models, groupRatio, vendorMap) => {

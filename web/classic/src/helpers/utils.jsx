@@ -616,7 +616,7 @@ export const calculateModelPrice = ({
   displayPrice,
   currency,
   quotaDisplayType = 'USD',
-  precision = 4,
+  precision = 6,
 }) => {
   // 1. 选择实际使用的分组
   let usedGroup = selectedGroup;
