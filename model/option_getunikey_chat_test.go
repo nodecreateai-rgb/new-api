@@ -31,6 +31,13 @@ func TestGetunikeyChatRoutingUsesOpenAIChannel(t *testing.T) {
 	if strings.Contains(s, "输入 ¥") || strings.Contains(s, "（UniKey") {
 		t.Fatal("chat marketplace copy must stay empty")
 	}
+	if !strings.Contains(s, `getunikeyChatPublicModels = []string{"gemini-3.5-flash", "minimax-m3", "glm-5.3", "kimi-k3"}`) {
+		t.Fatal("kimi-k3 must stay on UniKey Chat")
+	}
+	if strings.Contains(s, `workbuddyChatPublicModels = []string{"deepseek-v4.1-flash", "kimi-k3"}`) ||
+		strings.Contains(s, `modelsCSV = "deepseek-v4.1-flash,kimi-k3"`) {
+		t.Fatal("kimi-k3 must not be routed through WorkBuddy")
+	}
 	for _, retired := range []string{
 		`"gpt-6-astra":"gpt-6-astra"`,
 		`"claude-fable-5":"claude-fable-5"`,
