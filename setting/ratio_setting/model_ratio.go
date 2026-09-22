@@ -199,11 +199,11 @@ var defaultModelRatio = map[string]float64{
 	"gemini-2.5-flash-lite-preview-thinking-*":  0.05,
 	"gemini-2.5-flash-lite-preview-06-17":       0.05,
 	"gemini-2.5-flash":                          0.15,
-	"gemini-3.5-flash":                          0.5,
-	"minimax-m3":                                0.2,
-	"kimi-k3":                                   0.2,
-	"glm-5.3":                                   0.2,
-	"deepseek-v4.1-flash":                       0.2,
+	"gemini-3.5-flash":                          0.03,
+	"minimax-m3":                                0.03,
+	"kimi-k3":                                   0.03,
+	"glm-5.3":                                   0.03,
+	"deepseek-v4.1-flash":                       0.001,
 	"gemini-robotics-er-1.5-preview":            0.15,
 	"gemini-embedding-001":                      0.075,
 	"text-embedding-004":                        0.001,
@@ -364,14 +364,14 @@ var defaultCompletionRatio = map[string]float64{
 	"gpt-image-1":         8,
 	"gpt-6-astra":         2,
 	"gpt-5.6-sol":         2,
-	"gemini-3.5-flash":    2,
+	"gemini-3.5-flash":    0.1,
 	"claude-fable-5":      2,
 	"claude-opus-5":       2,
 	"claude-opus-4-8":     2,
-	"minimax-m3":          0.8,
-	"kimi-k3":             0.8,
-	"glm-5.3":             0.8,
-	"deepseek-v4.1-flash": 0.8,
+	"minimax-m3":          0.1,
+	"kimi-k3":             0.1,
+	"glm-5.3":             0.1,
+	"deepseek-v4.1-flash": 0.001,
 }
 
 // InitRatioSettings initializes all model related settings maps
@@ -560,10 +560,10 @@ func getHardcodedCompletionModelRatio(name string) (float64, bool) {
 	}
 
 	switch name {
-	case "minimax-m3", "kimi-k3", "glm-5.3", "deepseek-v4.1-flash":
-		return 0.8, true
-	case "gemini-3.5-flash":
-		return 2, true
+	case "minimax-m3", "kimi-k3", "glm-5.3", "gemini-3.5-flash":
+		return 0.1, true
+	case "deepseek-v4.1-flash":
+		return 0.001, true
 	}
 
 	if strings.HasPrefix(name, "gpt-") {
@@ -694,13 +694,16 @@ func getHardcodedCompletionModelRatio(name string) (float64, bool) {
 		return 0.79 / 0.59, true
 	}
 	if name == "minimax-m3" || strings.HasPrefix(name, "minimax-m3") {
-		return 0.8, true
+		return 0.1, true
+	}
+	if name == "kimi-k3" || strings.HasPrefix(name, "kimi-k3") {
+		return 0.1, true
 	}
 	if name == "glm-5.3" || strings.HasPrefix(name, "glm-5.3") {
-		return 0.8, true
+		return 0.1, true
 	}
 	if name == "deepseek-v4.1-flash" || strings.HasPrefix(name, "deepseek-v4.1-flash") {
-		return 0.8, true
+		return 0.001, true
 	}
 	return 1, false
 }

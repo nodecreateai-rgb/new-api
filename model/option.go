@@ -2380,25 +2380,25 @@ func tokenBilledChatModels() []string {
 
 // Site displays CNY with USDExchangeRate=1, so ¥/1M input = 2 * ModelRatio.
 var getunikeyChatModelRatios = map[string]float64{
-	"gemini-3.5-flash": 0.5,
+	"gemini-3.5-flash": 0.03,
 }
 
 var getunikeyChatCompletionRatios = map[string]float64{
-	"gemini-3.5-flash": 2,
+	"gemini-3.5-flash": 0.1,
 }
 
 var workbuddyChatModelRatios = map[string]float64{
-	"minimax-m3":          0.2,
-	"glm-5.3":             0.2,
-	"deepseek-v4.1-flash": 0.2,
-	"kimi-k3":             0.2,
+	"minimax-m3":          0.03,
+	"glm-5.3":             0.03,
+	"deepseek-v4.1-flash": 0.001,
+	"kimi-k3":             0.03,
 }
 
 var workbuddyChatCompletionRatios = map[string]float64{
-	"minimax-m3":          0.8,
-	"glm-5.3":             0.8,
-	"deepseek-v4.1-flash": 0.8,
-	"kimi-k3":             0.8,
+	"minimax-m3":          0.1,
+	"glm-5.3":             0.1,
+	"deepseek-v4.1-flash": 0.001,
+	"kimi-k3":             0.1,
 }
 
 func chatTokenModelRatios() map[string]float64 {
