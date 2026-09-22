@@ -712,7 +712,7 @@ func ensureRoboneoMiniRouting() error {
 	const neutralName = "Roboneo Seedance Mini"
 	const modelsCSV = "seedance-2.0-mini,seedance-2.0-mini-480p"
 	const mappingJSON = `{"seedance-2.0-mini":"seedance-2.0-mini","seedance-2.0-mini-480p":"seedance-2.0-mini-480p"}`
-	const groupsCSV = "default,vip,svip,vip1,vip2,vip3,vip6"
+	const groupsCSV = "default,vip,svip,vip1,vip2,vip3,vip6,vip9"
 	baseURL := strings.TrimSpace(os.Getenv("ROBONEO2API_BASE_URL"))
 	if baseURL == "" {
 		baseURL = "http://roboneo2api:38688"
@@ -737,7 +737,7 @@ func ensureRoboneoMiniRouting() error {
 	}
 
 	publicModels := []string{"seedance-2.0-mini", "seedance-2.0-mini-480p"}
-	groups := []string{"default", "vip", "svip", "vip1", "vip2", "vip3", "vip6"}
+	groups := []string{"default", "vip", "svip", "vip1", "vip2", "vip3", "vip6", "vip9"}
 
 	if common.UsingClickHouse {
 		return ensureRoboneoMiniRoutingClickHouse(neutralName, modelsCSV, mappingJSON, groupsCSV, baseURL, key, publicModels, groups)
@@ -858,21 +858,36 @@ func ensureRoboneoMiniRoutingClickHouse(neutralName, modelsCSV, mappingJSON, gro
 		channel.Id = int(id)
 	} else if err != nil {
 		return err
-	}
-
-	var abilityCount int64
-	if err := DB.Model(&Ability{}).Where("channel_id = ?", channel.Id).Count(&abilityCount).Error; err != nil {
+	} else if err := DB.Exec(`ALTER TABLE channels UPDATE
+		type = ?, key = ?, status = ?, name = ?, base_url = ?, models = ?, `+commonGroupCol+` = ?, model_mapping = ?, priority = 10, weight = 100, auto_ban = 1
+		WHERE id = ?`, constant.ChannelTypeSora, key, common.ChannelStatusEnabled, neutralName, baseURL, modelsCSV, groupsCSV, mappingJSON, channel.Id).Error; err != nil {
 		return err
 	}
-	if abilityCount == 0 {
-		for _, modelName := range publicModels {
-			for _, group := range groups {
+
+	if err := DB.Model(&Ability{}).Where("channel_id = ? AND model NOT IN ?", channel.Id, publicModels).
+		Update("enabled", false).Error; err != nil {
+		return err
+	}
+	for _, modelName := range publicModels {
+		if err := DB.Model(&Ability{}).Where("model = ? AND channel_id <> ?", modelName, channel.Id).
+			Update("enabled", false).Error; err != nil {
+			return err
+		}
+		for _, group := range groups {
+			var count int64
+			if err := DB.Model(&Ability{}).Where(commonGroupCol+" = ? AND model = ? AND channel_id = ?", group, modelName, channel.Id).Count(&count).Error; err != nil {
+				return err
+			}
+			if count == 0 {
 				if err := DB.Exec(
 					`INSERT INTO abilities (`+commonGroupCol+`, model, channel_id, enabled, priority, weight, tag) VALUES (?, ?, ?, 1, 10, 100, '')`,
 					group, modelName, channel.Id,
 				).Error; err != nil {
 					return err
 				}
+			} else if err := DB.Model(&Ability{}).Where(commonGroupCol+" = ? AND model = ? AND channel_id = ?", group, modelName, channel.Id).
+				Updates(map[string]any{"enabled": true, "priority": int64(10), "weight": uint64(100)}).Error; err != nil {
+				return err
 			}
 		}
 	}
