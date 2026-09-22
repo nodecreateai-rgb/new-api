@@ -500,7 +500,7 @@ func ensureDopioRMBPricing() {
 			changed = true
 		}
 	}
-	for _, chatModel := range getunikeyChatPublicModels {
+	for _, chatModel := range tokenBilledChatModels() {
 		if _, exists := prices[chatModel]; exists {
 			delete(prices, chatModel)
 			changed = true
@@ -611,7 +611,7 @@ func ensureDopioRMBPricing() {
 			groupPrices["seedance-2.5-c2"] = 1
 			changed = true
 		}
-		for _, chatModel := range getunikeyChatPublicModels {
+		for _, chatModel := range tokenBilledChatModels() {
 			if _, exists := groupPrices[chatModel]; exists {
 				delete(groupPrices, chatModel)
 				changed = true
@@ -638,10 +638,10 @@ func ensureDopioRMBPricing() {
 		}
 	}
 
-	if next, ok := mergeJSONFloatMap(currentModelRatio, getunikeyChatModelRatios); ok {
+	if next, ok := mergeJSONFloatMap(currentModelRatio, chatTokenModelRatios()); ok {
 		updates["ModelRatio"] = next
 	}
-	if next, ok := mergeJSONFloatMap(currentCompletionRatio, getunikeyChatCompletionRatios); ok {
+	if next, ok := mergeJSONFloatMap(currentCompletionRatio, chatTokenCompletionRatios()); ok {
 		updates["CompletionRatio"] = next
 	}
 
@@ -694,6 +694,12 @@ func ensureDopioRMBPricing() {
 	}
 	if err := ensureGetunikey2apiChatRouting(); err != nil {
 		common.SysLog("failed to enforce UniKey chat gateway routing: " + err.Error())
+	}
+	if err := ensureWorkbuddy2apiChatRouting(); err != nil {
+		common.SysLog("failed to enforce WorkBuddy chat gateway routing: " + err.Error())
+	}
+	if err := retireMarketplaceModels(retiredUnikeyChatModels); err != nil {
+		common.SysLog("failed to retire UniKey Claude/GPT chat models: " + err.Error())
 	}
 	if err := ensureChannelGroupAbilities(15, "vip6"); err != nil {
 		common.SysLog("failed to ensure vip6 channel abilities: " + err.Error())
@@ -2355,35 +2361,72 @@ func ensureGetunikey2apiSeedanceRoutingClickHouse(neutralName, modelsCSV, mappin
 	return nil
 }
 
-var getunikeyChatPublicModels = []string{"gemini-3.5-flash", "gpt-6-astra", "claude-fable-5", "claude-opus-5", "claude-opus-4-8", "gpt-5.6-sol", "minimax-m3", "kimi-k3"}
+var getunikeyChatPublicModels = []string{"gemini-3.5-flash"}
+
+var workbuddyChatPublicModels = []string{"minimax-m3", "glm-5.3", "deepseek-v4.1-flash", "kimi-k3"}
+
+var retiredUnikeyChatModels = []string{
+	"claude-fable-5", "claude-opus-5", "claude-opus-4-8",
+	"gpt-6-astra", "gpt-5.6-sol",
+}
+
+func tokenBilledChatModels() []string {
+	out := make([]string, 0, len(getunikeyChatPublicModels)+len(workbuddyChatPublicModels)+len(retiredUnikeyChatModels))
+	out = append(out, getunikeyChatPublicModels...)
+	out = append(out, workbuddyChatPublicModels...)
+	out = append(out, retiredUnikeyChatModels...)
+	return out
+}
 
 // Site displays CNY with USDExchangeRate=1, so ¥/1M input = 2 * ModelRatio.
 var getunikeyChatModelRatios = map[string]float64{
 	"gemini-3.5-flash": 0.5,
-	"gpt-6-astra":      0.5,
-	"claude-fable-5":   0.5,
-	"claude-opus-5":    0.5,
-	"claude-opus-4-8":  0.5,
-	"gpt-5.6-sol":      0.5,
-	"minimax-m3":       0.2,
-	"kimi-k3":          0.2,
 }
 
 var getunikeyChatCompletionRatios = map[string]float64{
 	"gemini-3.5-flash": 2,
-	"gpt-6-astra":      2,
-	"claude-fable-5":   2,
-	"claude-opus-5":    2,
-	"claude-opus-4-8":  2,
-	"gpt-5.6-sol":      2,
-	"minimax-m3":       0.8,
-	"kimi-k3":          0.8,
+}
+
+var workbuddyChatModelRatios = map[string]float64{
+	"minimax-m3":          0.2,
+	"glm-5.3":             0.2,
+	"deepseek-v4.1-flash": 0.2,
+	"kimi-k3":             0.2,
+}
+
+var workbuddyChatCompletionRatios = map[string]float64{
+	"minimax-m3":          0.8,
+	"glm-5.3":             0.8,
+	"deepseek-v4.1-flash": 0.8,
+	"kimi-k3":             0.8,
+}
+
+func chatTokenModelRatios() map[string]float64 {
+	out := make(map[string]float64, len(getunikeyChatModelRatios)+len(workbuddyChatModelRatios))
+	for k, v := range getunikeyChatModelRatios {
+		out[k] = v
+	}
+	for k, v := range workbuddyChatModelRatios {
+		out[k] = v
+	}
+	return out
+}
+
+func chatTokenCompletionRatios() map[string]float64 {
+	out := make(map[string]float64, len(getunikeyChatCompletionRatios)+len(workbuddyChatCompletionRatios))
+	for k, v := range getunikeyChatCompletionRatios {
+		out[k] = v
+	}
+	for k, v := range workbuddyChatCompletionRatios {
+		out[k] = v
+	}
+	return out
 }
 
 func ensureGetunikey2apiChatRouting() error {
 	const neutralName = "UniKey Chat"
-	const modelsCSV = "gemini-3.5-flash,gpt-6-astra,claude-fable-5,claude-opus-5,claude-opus-4-8,gpt-5.6-sol,minimax-m3,kimi-k3"
-	const mappingJSON = `{"gemini-3.5-flash":"google/gemini-3.5-flash","gpt-6-astra":"gpt-6-astra","claude-fable-5":"claude-fable-5","claude-opus-5":"claude-opus-5","claude-opus-4-8":"claude-opus-4-8","gpt-5.6-sol":"gpt-5.6-sol","minimax-m3":"minimax/minimax-m3","kimi-k3":"kimi-k3"}`
+	const modelsCSV = "gemini-3.5-flash"
+	const mappingJSON = `{"gemini-3.5-flash":"google/gemini-3.5-flash"}`
 	const groupsCSV = "default,vip,svip,vip1,vip2,vip3,vip6,vip8,vip9"
 	baseURL := strings.TrimSpace(os.Getenv("GETUNIKEY2API_BASE_URL"))
 	if baseURL == "" {
@@ -2405,16 +2448,45 @@ func ensureGetunikey2apiChatRouting() error {
 	groups := []string{"default", "vip", "svip", "vip1", "vip2", "vip3", "vip6", "vip8", "vip9"}
 	modelDescriptions := map[string]string{
 		"gemini-3.5-flash": "",
-		"gpt-6-astra":      "",
-		"claude-fable-5":   "",
-		"claude-opus-5":    "",
-		"claude-opus-4-8":  "",
-		"gpt-5.6-sol":      "",
-		"minimax-m3":       "",
-		"kimi-k3":          "",
 	}
 	endpoint := `{"openai":{"path":"/v1/chat/completions","method":"POST"}}`
+	return ensureNamedOpenAIChatRouting(neutralName, modelsCSV, mappingJSON, groupsCSV, baseURL, key, publicModels, groups, modelDescriptions, endpoint)
+}
 
+func ensureWorkbuddy2apiChatRouting() error {
+	const neutralName = "WorkBuddy Chat"
+	const modelsCSV = "minimax-m3,glm-5.3,deepseek-v4.1-flash,kimi-k3"
+	const mappingJSON = `{"minimax-m3":"minimax-m3","glm-5.3":"glm-5.3","deepseek-v4.1-flash":"deepseek-v4.1-flash","kimi-k3":"kimi-k3"}`
+	const groupsCSV = "default,vip,svip,vip1,vip2,vip3,vip6,vip8,vip9"
+	baseURL := strings.TrimSpace(os.Getenv("WORKBUDDY2API_BASE_URL"))
+	if baseURL == "" {
+		baseURL = "http://workbuddy2api:8788"
+	}
+	key := strings.TrimSpace(os.Getenv("WORKBUDDY2API_GATEWAY_KEY"))
+	if key == "" {
+		if keyFile := strings.TrimSpace(os.Getenv("WORKBUDDY2API_GATEWAY_KEY_FILE")); keyFile != "" {
+			if raw, err := os.ReadFile(keyFile); err == nil {
+				key = strings.TrimSpace(string(raw))
+			}
+		}
+	}
+	if key == "" {
+		key = strings.TrimSpace(os.Getenv("WB2API_API_KEY"))
+	}
+
+	publicModels := workbuddyChatPublicModels
+	groups := []string{"default", "vip", "svip", "vip1", "vip2", "vip3", "vip6", "vip8", "vip9"}
+	modelDescriptions := map[string]string{
+		"minimax-m3":          "",
+		"glm-5.3":             "",
+		"deepseek-v4.1-flash": "",
+		"kimi-k3":             "",
+	}
+	endpoint := `{"openai":{"path":"/v1/chat/completions","method":"POST"}}`
+	return ensureNamedOpenAIChatRouting(neutralName, modelsCSV, mappingJSON, groupsCSV, baseURL, key, publicModels, groups, modelDescriptions, endpoint)
+}
+
+func ensureNamedOpenAIChatRouting(neutralName, modelsCSV, mappingJSON, groupsCSV, baseURL, key string, publicModels, groups []string, modelDescriptions map[string]string, endpoint string) error {
 	if common.UsingClickHouse {
 		return ensureGetunikey2apiChatRoutingClickHouse(neutralName, modelsCSV, mappingJSON, groupsCSV, baseURL, key, publicModels, groups, modelDescriptions, endpoint)
 	}
@@ -2684,9 +2756,28 @@ func retireMarketplaceModels(models []string) error {
 		return nil
 	}
 	now := common.GetTimestamp()
-	return DB.Unscoped().Model(&Model{}).Where("model_name IN ?", models).Updates(map[string]any{
+	if common.UsingClickHouse {
+		for _, m := range models {
+			if err := DB.Exec(`ALTER TABLE models UPDATE status = 0, updated_time = ? WHERE model_name = ?`, now, m).Error; err != nil {
+				return err
+			}
+			if err := DB.Exec(`ALTER TABLE abilities UPDATE enabled = 0 WHERE model = ?`, m).Error; err != nil {
+				return err
+			}
+		}
+		InvalidatePricingCache()
+		return nil
+	}
+	if err := DB.Unscoped().Model(&Model{}).Where("model_name IN ?", models).Updates(map[string]any{
 		"status": 0, "deleted_at": gorm.DeletedAt{Time: time.Unix(now, 0), Valid: true}, "updated_time": now,
-	}).Error
+	}).Error; err != nil {
+		return err
+	}
+	if err := DB.Model(&Ability{}).Where("model IN ?", models).Update("enabled", false).Error; err != nil {
+		return err
+	}
+	InvalidatePricingCache()
+	return nil
 }
 
 func ensurePay2APIMarketplaceModel(publicModel, endpoint, description string, vendorID int) error {

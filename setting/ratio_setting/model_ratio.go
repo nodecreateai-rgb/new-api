@@ -98,7 +98,7 @@ var defaultModelRatio = map[string]float64{
 	"gpt-5-mini-2025-08-07":            0.125,
 	"gpt-5-nano":                       0.025,
 	"gpt-5-nano-2025-08-07":            0.025,
-	"gpt-6-astra":                      0.5, // UniKey chat: input 0.5, completion 2
+	"gpt-6-astra":                      0.5, // retired UniKey chat
 	"gpt-5.6-sol":                      0.5,
 	//"gpt-3.5-turbo-0301":           0.75, //deprecated
 	"gpt-3.5-turbo":          0.25,
@@ -202,6 +202,8 @@ var defaultModelRatio = map[string]float64{
 	"gemini-3.5-flash":                          0.5,
 	"minimax-m3":                                0.2,
 	"kimi-k3":                                   0.2,
+	"glm-5.3":                                   0.2,
+	"deepseek-v4.1-flash":                       0.2,
 	"gemini-robotics-er-1.5-preview":            0.15,
 	"gemini-embedding-001":                      0.075,
 	"text-embedding-004":                        0.001,
@@ -356,18 +358,20 @@ var modelRatioMap = types.NewRWMap[string, float64]()
 var completionRatioMap = types.NewRWMap[string, float64]()
 
 var defaultCompletionRatio = map[string]float64{
-	"gpt-4-gizmo-*":    2,
-	"gpt-4o-gizmo-*":   3,
-	"gpt-4-all":        2,
-	"gpt-image-1":      8,
-	"gpt-6-astra":      2,
-	"gpt-5.6-sol":      2,
-	"gemini-3.5-flash": 2,
-	"claude-fable-5":   2,
-	"claude-opus-5":    2,
-	"claude-opus-4-8":  2,
-	"minimax-m3":       0.8,
-	"kimi-k3":          0.8,
+	"gpt-4-gizmo-*":       2,
+	"gpt-4o-gizmo-*":      3,
+	"gpt-4-all":           2,
+	"gpt-image-1":         8,
+	"gpt-6-astra":         2,
+	"gpt-5.6-sol":         2,
+	"gemini-3.5-flash":    2,
+	"claude-fable-5":      2,
+	"claude-opus-5":       2,
+	"claude-opus-4-8":     2,
+	"minimax-m3":          0.8,
+	"kimi-k3":             0.8,
+	"glm-5.3":             0.8,
+	"deepseek-v4.1-flash": 0.8,
 }
 
 // InitRatioSettings initializes all model related settings maps
@@ -556,9 +560,9 @@ func getHardcodedCompletionModelRatio(name string) (float64, bool) {
 	}
 
 	switch name {
-	case "minimax-m3", "kimi-k3":
+	case "minimax-m3", "kimi-k3", "glm-5.3", "deepseek-v4.1-flash":
 		return 0.8, true
-	case "gemini-3.5-flash", "gpt-6-astra", "gpt-5.6-sol", "claude-fable-5", "claude-opus-5", "claude-opus-4-8":
+	case "gemini-3.5-flash":
 		return 2, true
 	}
 
@@ -692,7 +696,10 @@ func getHardcodedCompletionModelRatio(name string) (float64, bool) {
 	if name == "minimax-m3" || strings.HasPrefix(name, "minimax-m3") {
 		return 0.8, true
 	}
-	if name == "kimi-k3" || strings.HasPrefix(name, "kimi-k3") {
+	if name == "glm-5.3" || strings.HasPrefix(name, "glm-5.3") {
+		return 0.8, true
+	}
+	if name == "deepseek-v4.1-flash" || strings.HasPrefix(name, "deepseek-v4.1-flash") {
 		return 0.8, true
 	}
 	return 1, false

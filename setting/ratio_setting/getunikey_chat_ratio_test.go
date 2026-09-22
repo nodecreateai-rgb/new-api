@@ -10,13 +10,10 @@ func TestGetunikeyChatTokenRatios(t *testing.T) {
 		completion float64
 	}{
 		{"gemini-3.5-flash", 0.5, 2},
-		{"gpt-6-astra", 0.5, 2},
-		{"claude-fable-5", 0.5, 2},
-		{"claude-opus-5", 0.5, 2},
-		{"claude-opus-4-8", 0.5, 2},
-		{"gpt-5.6-sol", 0.5, 2},
 		{"minimax-m3", 0.2, 0.8},
 		{"kimi-k3", 0.2, 0.8},
+		{"glm-5.3", 0.2, 0.8},
+		{"deepseek-v4.1-flash", 0.2, 0.8},
 	}
 	for _, tc := range cases {
 		got, ok, _ := GetModelRatio(tc.model)
