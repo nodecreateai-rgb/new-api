@@ -2378,27 +2378,28 @@ func tokenBilledChatModels() []string {
 	return out
 }
 
-// Site displays CNY with USDExchangeRate=1, so ¥/1M input = 2 * ModelRatio.
+// Plaza ¥/1M input = 2 * ModelRatio; ¥/1M completion = 2 * ModelRatio * CompletionRatio.
+// Target display: gemini/glm/kimi/minimax 0.03 / 0.1; deepseek-v4.1-flash 0.001 / 0.001.
 var getunikeyChatModelRatios = map[string]float64{
-	"gemini-3.5-flash": 0.03,
+	"gemini-3.5-flash": 0.015,
 }
 
 var getunikeyChatCompletionRatios = map[string]float64{
-	"gemini-3.5-flash": 0.1,
+	"gemini-3.5-flash": 10.0 / 3.0,
 }
 
 var workbuddyChatModelRatios = map[string]float64{
-	"minimax-m3":          0.03,
-	"glm-5.3":             0.03,
-	"deepseek-v4.1-flash": 0.001,
-	"kimi-k3":             0.03,
+	"minimax-m3":          0.015,
+	"glm-5.3":             0.015,
+	"deepseek-v4.1-flash": 0.0005,
+	"kimi-k3":             0.015,
 }
 
 var workbuddyChatCompletionRatios = map[string]float64{
-	"minimax-m3":          0.1,
-	"glm-5.3":             0.1,
-	"deepseek-v4.1-flash": 0.001,
-	"kimi-k3":             0.1,
+	"minimax-m3":          10.0 / 3.0,
+	"glm-5.3":             10.0 / 3.0,
+	"deepseek-v4.1-flash": 1,
+	"kimi-k3":             10.0 / 3.0,
 }
 
 func chatTokenModelRatios() map[string]float64 {
