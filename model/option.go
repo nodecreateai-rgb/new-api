@@ -2361,9 +2361,9 @@ func ensureGetunikey2apiSeedanceRoutingClickHouse(neutralName, modelsCSV, mappin
 	return nil
 }
 
-var getunikeyChatPublicModels = []string{"gemini-3.5-flash"}
+var getunikeyChatPublicModels = []string{"gemini-3.5-flash", "minimax-m3", "glm-5.3", "kimi-k3"}
 
-var workbuddyChatPublicModels = []string{"minimax-m3", "glm-5.3", "deepseek-v4.1-flash", "kimi-k3"}
+var workbuddyChatPublicModels = []string{"deepseek-v4.1-flash"}
 
 var retiredUnikeyChatModels = []string{
 	"claude-fable-5", "claude-opus-5", "claude-opus-4-8",
@@ -2382,24 +2382,24 @@ func tokenBilledChatModels() []string {
 // Target display: gemini/glm/kimi/minimax 0.03 / 0.1; deepseek-v4.1-flash 0.001 / 0.001.
 var getunikeyChatModelRatios = map[string]float64{
 	"gemini-3.5-flash": 0.015,
+	"minimax-m3":       0.015,
+	"glm-5.3":          0.015,
+	"kimi-k3":          0.015,
 }
 
 var getunikeyChatCompletionRatios = map[string]float64{
 	"gemini-3.5-flash": 10.0 / 3.0,
+	"minimax-m3":       10.0 / 3.0,
+	"glm-5.3":          10.0 / 3.0,
+	"kimi-k3":          10.0 / 3.0,
 }
 
 var workbuddyChatModelRatios = map[string]float64{
-	"minimax-m3":          0.015,
-	"glm-5.3":             0.015,
 	"deepseek-v4.1-flash": 0.0005,
-	"kimi-k3":             0.015,
 }
 
 var workbuddyChatCompletionRatios = map[string]float64{
-	"minimax-m3":          10.0 / 3.0,
-	"glm-5.3":             10.0 / 3.0,
 	"deepseek-v4.1-flash": 1,
-	"kimi-k3":             10.0 / 3.0,
 }
 
 func chatTokenModelRatios() map[string]float64 {
@@ -2426,8 +2426,8 @@ func chatTokenCompletionRatios() map[string]float64 {
 
 func ensureGetunikey2apiChatRouting() error {
 	const neutralName = "UniKey Chat"
-	const modelsCSV = "gemini-3.5-flash"
-	const mappingJSON = `{"gemini-3.5-flash":"google/gemini-3.5-flash"}`
+	const modelsCSV = "gemini-3.5-flash,minimax-m3,glm-5.3,kimi-k3"
+	const mappingJSON = `{"gemini-3.5-flash":"google/gemini-3.5-flash","minimax-m3":"minimax/minimax-m3","glm-5.3":"z-ai/glm-5.2","kimi-k3":"kimi-k3"}`
 	const groupsCSV = "default,vip,svip,vip1,vip2,vip3,vip6,vip8,vip9"
 	baseURL := strings.TrimSpace(os.Getenv("GETUNIKEY2API_BASE_URL"))
 	if baseURL == "" {
@@ -2449,6 +2449,9 @@ func ensureGetunikey2apiChatRouting() error {
 	groups := []string{"default", "vip", "svip", "vip1", "vip2", "vip3", "vip6", "vip8", "vip9"}
 	modelDescriptions := map[string]string{
 		"gemini-3.5-flash": "",
+		"minimax-m3":       "",
+		"glm-5.3":          "",
+		"kimi-k3":          "",
 	}
 	endpoint := `{"openai":{"path":"/v1/chat/completions","method":"POST"}}`
 	return ensureNamedOpenAIChatRouting(neutralName, modelsCSV, mappingJSON, groupsCSV, baseURL, key, publicModels, groups, modelDescriptions, endpoint)
@@ -2456,8 +2459,8 @@ func ensureGetunikey2apiChatRouting() error {
 
 func ensureWorkbuddy2apiChatRouting() error {
 	const neutralName = "WorkBuddy Chat"
-	const modelsCSV = "minimax-m3,glm-5.3,deepseek-v4.1-flash,kimi-k3"
-	const mappingJSON = `{"minimax-m3":"minimax-m3","glm-5.3":"glm-5.3","deepseek-v4.1-flash":"deepseek-v4.1-flash","kimi-k3":"kimi-k3"}`
+	const modelsCSV = "deepseek-v4.1-flash"
+	const mappingJSON = `{"deepseek-v4.1-flash":"deepseek-v4.1-flash"}`
 	const groupsCSV = "default,vip,svip,vip1,vip2,vip3,vip6,vip8,vip9"
 	baseURL := strings.TrimSpace(os.Getenv("WORKBUDDY2API_BASE_URL"))
 	if baseURL == "" {
@@ -2478,10 +2481,7 @@ func ensureWorkbuddy2apiChatRouting() error {
 	publicModels := workbuddyChatPublicModels
 	groups := []string{"default", "vip", "svip", "vip1", "vip2", "vip3", "vip6", "vip8", "vip9"}
 	modelDescriptions := map[string]string{
-		"minimax-m3":          "",
-		"glm-5.3":             "",
 		"deepseek-v4.1-flash": "",
-		"kimi-k3":             "",
 	}
 	endpoint := `{"openai":{"path":"/v1/chat/completions","method":"POST"}}`
 	return ensureNamedOpenAIChatRouting(neutralName, modelsCSV, mappingJSON, groupsCSV, baseURL, key, publicModels, groups, modelDescriptions, endpoint)

@@ -16,6 +16,9 @@ func TestGetunikeyChatRoutingUsesOpenAIChannel(t *testing.T) {
 		`func ensureGetunikey2apiChatRouting()`,
 		`neutralName = "UniKey Chat"`,
 		`"gemini-3.5-flash":"google/gemini-3.5-flash"`,
+		`"minimax-m3":"minimax/minimax-m3"`,
+		`"glm-5.3":"z-ai/glm-5.2"`,
+		`"kimi-k3":"kimi-k3"`,
 		`constant.ChannelTypeOpenAI`,
 		`/v1/chat/completions`,
 		`"gemini-3.5-flash": ""`,
@@ -32,7 +35,6 @@ func TestGetunikeyChatRoutingUsesOpenAIChannel(t *testing.T) {
 		`"gpt-6-astra":"gpt-6-astra"`,
 		`"claude-fable-5":"claude-fable-5"`,
 		`"claude-opus-5":"claude-opus-5"`,
-		`"minimax/minimax-m3"`,
 	} {
 		if strings.Contains(s, retired) {
 			t.Fatalf("retired unikey mapping still present: %s", retired)
@@ -51,10 +53,8 @@ func TestWorkbuddyChatRouting(t *testing.T) {
 		`neutralName = "WorkBuddy Chat"`,
 		`baseURL = "http://workbuddy2api:8788"`,
 		`os.Getenv("WORKBUDDY2API_BASE_URL")`,
-		`"minimax-m3":"minimax-m3"`,
-		`"glm-5.3":"glm-5.3"`,
+		`modelsCSV = "deepseek-v4.1-flash"`,
 		`"deepseek-v4.1-flash":"deepseek-v4.1-flash"`,
-		`"kimi-k3":"kimi-k3"`,
 		`retiredUnikeyChatModels`,
 		`ensureWorkbuddy2apiChatRouting()`,
 		`retireMarketplaceModels(retiredUnikeyChatModels)`,
