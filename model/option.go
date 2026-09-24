@@ -441,10 +441,13 @@ func ensureDopioRMBPricing() {
 		},
 		"vip8": {},
 		"vip9": {
-			"seedance-2.0":    1,
-			"seedance-2.5":    2,
-			"seedance-2.0-c1": 1.5,
-			"seedance-2.5-c1": 3,
+			"seedance-2.0":       1,
+			"seedance-2.5":       2,
+			"seedance-2.0-c1":    1.5,
+			"seedance-2.5-c1":    3,
+			"seedance-2.5-480p":  2,
+			"seedance-2.5-720p":  3,
+			"seedance-2.5-1080p": 4,
 		},
 	}
 	for group := range targetModelGroupPrices {
@@ -454,9 +457,11 @@ func ensureDopioRMBPricing() {
 			targetModelGroupPrices[group]["sd2-c7"] = 1
 		}
 		targetModelGroupPrices[group]["seedance-2.5-c2"] = 1
-		targetModelGroupPrices[group]["seedance-2.5-480p"] = 3
-		targetModelGroupPrices[group]["seedance-2.5-720p"] = 4
-		targetModelGroupPrices[group]["seedance-2.5-1080p"] = 5
+		if group != "vip9" {
+			targetModelGroupPrices[group]["seedance-2.5-480p"] = 3
+			targetModelGroupPrices[group]["seedance-2.5-720p"] = 4
+			targetModelGroupPrices[group]["seedance-2.5-1080p"] = 5
+		}
 	}
 
 	updates := map[string]string{}
@@ -617,17 +622,19 @@ func ensureDopioRMBPricing() {
 			groupPrices["seedance-2.5-c2"] = 1
 			changed = true
 		}
-		if groupPrices["seedance-2.5-480p"] != 3 {
-			groupPrices["seedance-2.5-480p"] = 3
-			changed = true
-		}
-		if groupPrices["seedance-2.5-720p"] != 4 {
-			groupPrices["seedance-2.5-720p"] = 4
-			changed = true
-		}
-		if groupPrices["seedance-2.5-1080p"] != 5 {
-			groupPrices["seedance-2.5-1080p"] = 5
-			changed = true
+		if group != "vip9" {
+			if groupPrices["seedance-2.5-480p"] != 3 {
+				groupPrices["seedance-2.5-480p"] = 3
+				changed = true
+			}
+			if groupPrices["seedance-2.5-720p"] != 4 {
+				groupPrices["seedance-2.5-720p"] = 4
+				changed = true
+			}
+			if groupPrices["seedance-2.5-1080p"] != 5 {
+				groupPrices["seedance-2.5-1080p"] = 5
+				changed = true
+			}
 		}
 		for _, chatModel := range tokenBilledChatModels() {
 			if _, exists := groupPrices[chatModel]; exists {

@@ -41,6 +41,10 @@ func TestLaihuaSeedanceRoutingUsesLaihuaGateway(t *testing.T) {
 		`targetModelGroupPrices[group]["seedance-2.5-480p"] = 3`,
 		`targetModelGroupPrices[group]["seedance-2.5-720p"] = 4`,
 		`targetModelGroupPrices[group]["seedance-2.5-1080p"] = 5`,
+		`"seedance-2.5-480p":  2`,
+		`"seedance-2.5-720p":  3`,
+		`"seedance-2.5-1080p": 4`,
+		`if group != "vip9"`,
 	} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("missing %s", want)
