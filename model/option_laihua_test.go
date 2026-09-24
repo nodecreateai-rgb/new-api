@@ -19,8 +19,8 @@ func TestLaihuaSeedanceRoutingUsesLaihuaGateway(t *testing.T) {
 		`"seedance-2.5-480p":"seedance-2.5-480p","seedance-2.5-720p":"seedance-2.5-720p","seedance-2.5-1080p":"seedance-2.5-1080p"`,
 		`os.Getenv("LAIHUA2API_BASE_URL")`,
 		`os.Getenv("LAIHUA2API_GATEWAY_KEY")`,
-		`¥2.5/次`,
 		`¥3/次`,
+		`¥4/次`,
 		`¥5/次`,
 	} {
 		if !strings.Contains(s, want) {
@@ -35,11 +35,11 @@ func TestLaihuaSeedanceRoutingUsesLaihuaGateway(t *testing.T) {
 	body := string(option)
 	for _, want := range []string{
 		`ensureLaihua2apiSeedanceRouting()`,
-		`"seedance-2.5-480p":                  2.5`,
-		`"seedance-2.5-720p":                  3`,
+		`"seedance-2.5-480p":                  3`,
+		`"seedance-2.5-720p":                  4`,
 		`"seedance-2.5-1080p":                 5`,
-		`targetModelGroupPrices[group]["seedance-2.5-480p"] = 2.5`,
-		`targetModelGroupPrices[group]["seedance-2.5-720p"] = 3`,
+		`targetModelGroupPrices[group]["seedance-2.5-480p"] = 3`,
+		`targetModelGroupPrices[group]["seedance-2.5-720p"] = 4`,
 		`targetModelGroupPrices[group]["seedance-2.5-1080p"] = 5`,
 	} {
 		if !strings.Contains(body, want) {

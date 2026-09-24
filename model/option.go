@@ -283,8 +283,8 @@ func ensureDopioRMBPricing() {
 		"pay":                                0.5,
 		"seedance-2.0":                       1.5,
 		"seedance-2.5":                       3,
-		"seedance-2.5-480p":                  2.5,
-		"seedance-2.5-720p":                  3,
+		"seedance-2.5-480p":                  3,
+		"seedance-2.5-720p":                  4,
 		"seedance-2.5-1080p":                 5,
 		"seedance-2.0-c1":                    2.5,
 		"seedance-2.5-c1":                    4,
@@ -454,8 +454,8 @@ func ensureDopioRMBPricing() {
 			targetModelGroupPrices[group]["sd2-c7"] = 1
 		}
 		targetModelGroupPrices[group]["seedance-2.5-c2"] = 1
-		targetModelGroupPrices[group]["seedance-2.5-480p"] = 2.5
-		targetModelGroupPrices[group]["seedance-2.5-720p"] = 3
+		targetModelGroupPrices[group]["seedance-2.5-480p"] = 3
+		targetModelGroupPrices[group]["seedance-2.5-720p"] = 4
 		targetModelGroupPrices[group]["seedance-2.5-1080p"] = 5
 	}
 
@@ -617,12 +617,12 @@ func ensureDopioRMBPricing() {
 			groupPrices["seedance-2.5-c2"] = 1
 			changed = true
 		}
-		if groupPrices["seedance-2.5-480p"] != 2.5 {
-			groupPrices["seedance-2.5-480p"] = 2.5
+		if groupPrices["seedance-2.5-480p"] != 3 {
+			groupPrices["seedance-2.5-480p"] = 3
 			changed = true
 		}
-		if groupPrices["seedance-2.5-720p"] != 3 {
-			groupPrices["seedance-2.5-720p"] = 3
+		if groupPrices["seedance-2.5-720p"] != 4 {
+			groupPrices["seedance-2.5-720p"] = 4
 			changed = true
 		}
 		if groupPrices["seedance-2.5-1080p"] != 5 {
