@@ -233,7 +233,7 @@ func (a *TaskAdaptor) ForceApplyBillingRatios(info *relaycommon.RelayInfo) bool 
 // IDs are fixed-price per generated video, independent of requested duration.
 func (a *TaskAdaptor) UseRequestBillingRatios(info *relaycommon.RelayInfo) bool {
 	switch strings.TrimSpace(info.OriginModelName) {
-	case "sd2.5", "sd2-mini", "sd2-fast", "sd2-c6", "sd2-c7", "seedance-720", "seedance-2.0-mini", "seedance-2.0-mini-480p", "seedance-2.0-fast-720p", "seedance-2.0-720p", "seedance-2.0-1080p", "seedance-2.0", "seedance-2.5", "seedance-2.0-c1", "seedance-2.5-c1", "seedance-2.5-c2", "kling-o3":
+	case "sd2.5", "sd2-mini", "sd2-fast", "sd2-c6", "sd2-c7", "seedance-720", "seedance-2.0-mini", "seedance-2.0-mini-480p", "seedance-2.0-fast-720p", "seedance-2.0-720p", "seedance-2.0-1080p", "seedance-2.0", "seedance-2.5", "seedance-2.5-480p", "seedance-2.5-720p", "seedance-2.5-1080p", "seedance-2.0-c1", "seedance-2.5-c1", "seedance-2.5-c2", "kling-o3":
 		return false
 	default:
 		return true
@@ -283,6 +283,7 @@ func (a *TaskAdaptor) BuildRequestBody(c *gin.Context, info *relaycommon.RelayIn
 				applyOriginModelDurationLimit(bodyMap, parsed, info.OriginModelName)
 			}
 			normalizeOpenAIVideoAspectBody(bodyMap)
+			applyOriginModelResolution(bodyMap, info.OriginModelName)
 			if newBody, err := common.Marshal(bodyMap); err == nil {
 				return bytes.NewReader(newBody), nil
 			}
@@ -401,6 +402,23 @@ func applyOriginModelDurationLimit(body map[string]interface{}, req relaycommon.
 		applySD25DurationLimit(body, req)
 	case "seedance-2.5-c2":
 		applySeedance25C2DurationLimit(body, req)
+	}
+}
+
+func applyOriginModelResolution(body map[string]interface{}, originModel string) {
+	if body == nil {
+		return
+	}
+	switch strings.TrimSpace(originModel) {
+	case "seedance-2.5-480p":
+		body["resolution"] = "480p"
+		body["size"] = "480p"
+	case "seedance-2.5-720p":
+		body["resolution"] = "720p"
+		body["size"] = "720p"
+	case "seedance-2.5-1080p":
+		body["resolution"] = "1080p"
+		body["size"] = "1080p"
 	}
 }
 
@@ -729,6 +747,7 @@ func buildUpstreamVideoJSONFromMultipart(c *gin.Context, info *relaycommon.Relay
 	bodyMap := taskSubmitReqToUpstreamVideoBody(req, info.UpstreamModelName)
 	applyOriginModelDurationLimit(bodyMap, req, info.OriginModelName)
 	normalizeOpenAIVideoAspectBody(bodyMap)
+	applyOriginModelResolution(bodyMap, info.OriginModelName)
 	return common.Marshal(bodyMap)
 }
 

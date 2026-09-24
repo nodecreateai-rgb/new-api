@@ -283,6 +283,9 @@ func ensureDopioRMBPricing() {
 		"pay":                                0.5,
 		"seedance-2.0":                       1.5,
 		"seedance-2.5":                       3,
+		"seedance-2.5-480p":                  2.5,
+		"seedance-2.5-720p":                  3,
+		"seedance-2.5-1080p":                 5,
 		"seedance-2.0-c1":                    2.5,
 		"seedance-2.5-c1":                    4,
 		"seedance-2.5-c2":                    1,
@@ -451,6 +454,9 @@ func ensureDopioRMBPricing() {
 			targetModelGroupPrices[group]["sd2-c7"] = 1
 		}
 		targetModelGroupPrices[group]["seedance-2.5-c2"] = 1
+		targetModelGroupPrices[group]["seedance-2.5-480p"] = 2.5
+		targetModelGroupPrices[group]["seedance-2.5-720p"] = 3
+		targetModelGroupPrices[group]["seedance-2.5-1080p"] = 5
 	}
 
 	updates := map[string]string{}
@@ -611,6 +617,18 @@ func ensureDopioRMBPricing() {
 			groupPrices["seedance-2.5-c2"] = 1
 			changed = true
 		}
+		if groupPrices["seedance-2.5-480p"] != 2.5 {
+			groupPrices["seedance-2.5-480p"] = 2.5
+			changed = true
+		}
+		if groupPrices["seedance-2.5-720p"] != 3 {
+			groupPrices["seedance-2.5-720p"] = 3
+			changed = true
+		}
+		if groupPrices["seedance-2.5-1080p"] != 5 {
+			groupPrices["seedance-2.5-1080p"] = 5
+			changed = true
+		}
 		for _, chatModel := range tokenBilledChatModels() {
 			if _, exists := groupPrices[chatModel]; exists {
 				delete(groupPrices, chatModel)
@@ -691,6 +709,9 @@ func ensureDopioRMBPricing() {
 	}
 	if err := ensureGetunikey2apiSeedanceRouting(); err != nil {
 		common.SysLog("failed to enforce Seedance C2 gateway routing: " + err.Error())
+	}
+	if err := ensureLaihua2apiSeedanceRouting(); err != nil {
+		common.SysLog("failed to enforce Laihua Seedance 2.5 gateway routing: " + err.Error())
 	}
 	if err := ensureGetunikey2apiChatRouting(); err != nil {
 		common.SysLog("failed to enforce UniKey chat gateway routing: " + err.Error())

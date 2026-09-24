@@ -26,6 +26,26 @@ func TestSeedanceC2UsesFixedPerRequestBilling(t *testing.T) {
 	a := &TaskAdaptor{}
 	require.False(t, a.UseRequestBillingRatios(&relaycommon.RelayInfo{OriginModelName: "seedance-2.5-c1"}))
 	require.False(t, a.UseRequestBillingRatios(&relaycommon.RelayInfo{OriginModelName: "seedance-2.5-c2"}))
+	require.False(t, a.UseRequestBillingRatios(&relaycommon.RelayInfo{OriginModelName: "seedance-2.5-480p"}))
+	require.False(t, a.UseRequestBillingRatios(&relaycommon.RelayInfo{OriginModelName: "seedance-2.5-720p"}))
+	require.False(t, a.UseRequestBillingRatios(&relaycommon.RelayInfo{OriginModelName: "seedance-2.5-1080p"}))
+}
+
+func TestLaihuaSeedanceLocksResolutionFromModel(t *testing.T) {
+	body := map[string]interface{}{"size": "1080x1920", "aspect_ratio": "9:16"}
+	applyOriginModelResolution(body, "seedance-2.5-480p")
+	require.Equal(t, "480p", body["resolution"])
+	require.Equal(t, "480p", body["size"])
+
+	body = map[string]interface{}{"size": "1080x1920", "aspect_ratio": "9:16"}
+	applyOriginModelResolution(body, "seedance-2.5-720p")
+	require.Equal(t, "720p", body["resolution"])
+	require.Equal(t, "720p", body["size"])
+
+	body = map[string]interface{}{"size": "720x1280"}
+	applyOriginModelResolution(body, "seedance-2.5-1080p")
+	require.Equal(t, "1080p", body["resolution"])
+	require.Equal(t, "1080p", body["size"])
 }
 
 func TestKlingO3UpstreamBodyPassesDurationAspectAndImages(t *testing.T) {
