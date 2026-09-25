@@ -140,6 +140,9 @@ func VideoProxy(c *gin.Context) {
 		if contentURL := roboneoStyleTaskContentURL(baseURL, upstreamID); contentURL != "" {
 			localCandidates = append(localCandidates, contentURL)
 		}
+		if contentURL := aiveedStyleTaskContentURL(baseURL, upstreamID); contentURL != "" {
+			localCandidates = append(localCandidates, contentURL)
+		}
 		localCandidates = append(localCandidates, fmt.Sprintf("%s/v1/videos/%s/content", strings.TrimRight(baseURL, "/"), upstreamID))
 		if directURL := strings.TrimSpace(task.PrivateData.UpstreamResultURL); directURL != "" {
 			localCandidates = append(localCandidates, directURL)
@@ -260,7 +263,9 @@ func videoURLNeedsAuth(videoURL string) bool {
 		return false
 	}
 	path := parsed.Path
-	return strings.Contains(path, "/v1/task/") || strings.Contains(path, "/v1/videos/")
+	return strings.Contains(path, "/v1/task/") ||
+		strings.Contains(path, "/v1/videos/") ||
+		strings.Contains(path, "/outputs/")
 }
 
 func fetchFirstAvailableVideo(c *gin.Context, req *http.Request, client *http.Client, ctx context.Context, task *model.Task, baseURL, apiKey string, candidates []string) error {
@@ -379,6 +384,19 @@ func privateVideoContentURL(baseURL, upstreamTaskID string) string {
 
 // roboneoStyleTaskContentURL matches roboneo2api / dola-style OpenAI video gateways
 // that serve bytes at /v1/task/task_<id>/content (and /v1/videos/task/...).
+func aiveedStyleTaskContentURL(baseURL, upstreamTaskID string) string {
+	baseURL = strings.TrimRight(strings.TrimSpace(baseURL), "/")
+	upstreamTaskID = strings.TrimSpace(upstreamTaskID)
+	if baseURL == "" || upstreamTaskID == "" {
+		return ""
+	}
+	name := upstreamTaskID
+	if !strings.HasPrefix(name, "task_") {
+		name = "task_" + name
+	}
+	return baseURL + "/v1/videos/task/" + url.PathEscape(name) + "/content"
+}
+
 func roboneoStyleTaskContentURL(baseURL, upstreamTaskID string) string {
 	baseURL = strings.TrimRight(strings.TrimSpace(baseURL), "/")
 	upstreamTaskID = strings.TrimSpace(upstreamTaskID)
