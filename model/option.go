@@ -242,10 +242,10 @@ func ensureDopioRMBPricing() {
 		"sd2-c6":                             0.5,
 		"sd2-c7":                             1,
 		"seedance-2.0-mini":                  0.5,
-		"seedance-2.0-mini-480p":             0.5,
-		"seedance-2.0-mini-480p-c2":          0.5,
+		"seedance-2.0-mini-480p":             0.8,
+		"seedance-2.0-mini-480p-c2":          0.8,
 		"seedance-2.0-mini-720p-c2":          0.5,
-		"seedance-2.0-fast-480p":             0.5,
+		"seedance-2.0-fast-480p":             0.8,
 		"grok-imagine-720p":                  0.5,
 		"sd2-mini":                           0.6,
 		"sd2-fast":                           1,
@@ -618,14 +618,21 @@ func ensureDopioRMBPricing() {
 			groupPrices["seedance-2.0-mini"] = 0.5
 			changed = true
 		}
-		if groupPrices["seedance-2.0-mini-480p"] != 0.5 {
-			groupPrices["seedance-2.0-mini-480p"] = 0.5
+		if groupPrices["seedance-2.0-mini-480p"] != 0.8 {
+			groupPrices["seedance-2.0-mini-480p"] = 0.8
 			changed = true
 		}
 		for _, model := range []string{
 			"seedance-2.0-mini-480p-c2",
-			"seedance-2.0-mini-720p-c2",
 			"seedance-2.0-fast-480p",
+		} {
+			if groupPrices[model] != 0.8 {
+				groupPrices[model] = 0.8
+				changed = true
+			}
+		}
+		for _, model := range []string{
+			"seedance-2.0-mini-720p-c2",
 			"grok-imagine-720p",
 		} {
 			if groupPrices[model] != 0.5 {
@@ -750,11 +757,11 @@ func ensureDopioRMBPricing() {
 	if err := ensureChannelGroupAbilities(15, "vip6"); err != nil {
 		common.SysLog("failed to ensure vip6 channel abilities: " + err.Error())
 	}
-	common.SysLog("enforced Dopio RMB pricing incl sd2.5=1.5 per call, vip6 sd2.5=1, sd2-fast=1 per call, vip6 Seedance 720p fast=1/full=2, image-omni=0.05, oauth2=0.3, pay=0.5, sd2-c6=0.5, seedance-2.0-mini=0.5, seedance-2.0-mini-480p=0.5, sd2-c7=1, sd2-c11=2.5, sd2-c12=3, Price=1, USDExchangeRate=1, quota_display_type=CNY")
+	common.SysLog("enforced Dopio RMB pricing incl sd2.5=1.5 per call, vip6 sd2.5=1, sd2-fast=1 per call, vip6 Seedance 720p fast=1/full=2, image-omni=0.05, oauth2=0.3, pay=0.5, sd2-c6=0.5, seedance-2.0-mini=0.5, seedance-2.0-mini-480p=0.8, sd2-c7=1, sd2-c11=2.5, sd2-c12=3, Price=1, USDExchangeRate=1, quota_display_type=CNY")
 }
 
 func ensureRoboneoMiniRouting() error {
-	// Roboneo2API Seedance 2.0 Mini: 720p + 480p, fixed ¥0.5 per call.
+	// Roboneo2API Seedance 2.0 Mini: 720p is ¥0.5; 480p is ¥0.8 after upscale.
 	const neutralName = "Roboneo Seedance Mini"
 	const modelsCSV = "seedance-2.0-mini,seedance-2.0-mini-480p"
 	const mappingJSON = `{"seedance-2.0-mini":"seedance-2.0-mini","seedance-2.0-mini-480p":"seedance-2.0-mini-480p"}`
@@ -967,9 +974,9 @@ func ensureAiveed2apiRouting() error {
 	const mappingJSON = `{"seedance-2.0-mini-480p-c2":"seedance-2.0-mini-480p-c2","seedance-2.0-mini-720p-c2":"seedance-2.0-mini-720p-c2","seedance-2.0-mini-720P-c2":"seedance-2.0-mini-720p-c2","seedance-2.0-fast-480p":"seedance-2.0-fast-480p","grok-imagine-720p":"grok-imagine-720p"}`
 	const groupsCSV = "default,vip,svip,vip1,vip2,vip3,vip6,vip9"
 	modelDescriptions := map[string]string{
-		"seedance-2.0-mini-480p-c2": "933 · 480p · 最长15秒 · 不卡人脸",
+		"seedance-2.0-mini-480p-c2": "933 · 480p超分720p · 最长15秒 · 不卡人脸",
 		"seedance-2.0-mini-720p-c2": "913 · 720p · 最长10秒 · 不卡人脸",
-		"seedance-2.0-fast-480p":    "903 · 480p · 最长10秒 · 不卡人脸",
+		"seedance-2.0-fast-480p":    "903 · 480p超分720p · 最长10秒 · 不卡人脸",
 		"grok-imagine-720p":         "720p · 最长15秒 · 最多1张参考图",
 	}
 	baseURL := strings.TrimSpace(os.Getenv("AIVEED2API_BASE_URL"))
