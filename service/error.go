@@ -193,7 +193,7 @@ func TaskErrorWrapperLocal(err error, code string, statusCode int) *dto.TaskErro
 func TaskErrorWrapper(err error, code string, statusCode int) *dto.TaskError {
 	text := err.Error()
 	common.SysLog(fmt.Sprintf("error: %s", text))
-	text = common.MaskSensitiveInfo(text)
+	text = common.PublicErrorMessage(text)
 	//避免暴露内部错误
 	taskError := &dto.TaskError{
 		Code:       code,
@@ -212,7 +212,7 @@ func TaskErrorFromAPIError(apiErr *types.NewAPIError) *dto.TaskError {
 	}
 	return &dto.TaskError{
 		Code:       string(apiErr.GetErrorCode()),
-		Message:    apiErr.Err.Error(),
+		Message:    common.PublicErrorMessage(apiErr.Err.Error()),
 		StatusCode: apiErr.StatusCode,
 		Error:      apiErr.Err,
 	}

@@ -518,7 +518,7 @@ export const getLogsColumns = ({
           }
         }
 
-        return isAdminUser &&
+        return false && isAdminUser &&
           (record.type === 0 ||
             record.type === 2 ||
             record.type === 5 ||

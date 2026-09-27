@@ -140,6 +140,7 @@ func resolveTaskPricePatches(raw string) []string {
 		"kling-v3-720p", "kling-v3-1080p", "kling-v3-4k", "kling", "可灵",
 		"grok-imagine-1.5", "grok", "sora-2", "sora-2-720p", "sora-2-1080p", "sora-2-pro", "sora-2-pro-720p", "sora-2-pro-1080p", "sora2", "Sora", "Sora 2",
 		"seedance-2.0", "seedance-2.5", "seedance-2.5-480p", "seedance-2.5-720p", "seedance-2.5-1080p", "seedance-2.0-c1", "seedance-2.5-c1", "seedance-2.5-c2",
+		"wan-3.0", "minimax-h3",
 		"pay", "oauth2",
 	}
 	// Environment values extend the built-in fixed-price policy. They must not

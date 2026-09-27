@@ -9,7 +9,6 @@ import (
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/logger"
-	"github.com/QuantumNous/new-api/types"
 
 	"github.com/gin-gonic/gin"
 
@@ -145,18 +144,31 @@ func (log *Log) insertClickHouse() error {
 	return nil
 }
 
-func formatUserLogs(logs []*Log, startIdx int) {
+func redactLogChannelInfo(logs []*Log) {
 	for i := range logs {
+		logs[i].ChannelId = 0
 		logs[i].ChannelName = ""
-		var otherMap map[string]interface{}
-		otherMap, _ = common.StrToMap(logs[i].Other)
+		logs[i].UpstreamRequestId = ""
+		otherMap, _ := common.StrToMap(logs[i].Other)
 		if otherMap != nil {
-			// Remove admin-only debug fields.
 			delete(otherMap, "admin_info")
-			// delete(otherMap, "reject_reason")
+			delete(otherMap, "channel_name")
+			delete(otherMap, "use_channel")
 			delete(otherMap, "stream_status")
+			if text, ok := otherMap["reject_reason"].(string); ok {
+				otherMap["reject_reason"] = common.PublicErrorMessage(text)
+			}
 		}
 		logs[i].Other = common.MapToJsonStr(otherMap)
+		if logs[i].Content != "" {
+			logs[i].Content = common.PublicErrorMessage(logs[i].Content)
+		}
+	}
+}
+
+func formatUserLogs(logs []*Log, startIdx int) {
+	redactLogChannelInfo(logs)
+	for i := range logs {
 		logs[i].Id = startIdx + i + 1
 	}
 }
@@ -451,46 +463,7 @@ func GetAllLogs(logType int, startTimestamp int64, endTimestamp int64, modelName
 		}
 	}
 
-	channelIds := types.NewSet[int]()
-	for _, log := range logs {
-		if log.ChannelId != 0 {
-			channelIds.Add(log.ChannelId)
-		}
-	}
-
-	if channelIds.Len() > 0 {
-		var channels []struct {
-			Id   int    `gorm:"column:id"`
-			Name string `gorm:"column:name"`
-		}
-		if common.MemoryCacheEnabled {
-			// Cache get channel
-			for _, channelId := range channelIds.Items() {
-				if cacheChannel, err := CacheGetChannel(channelId); err == nil {
-					channels = append(channels, struct {
-						Id   int    `gorm:"column:id"`
-						Name string `gorm:"column:name"`
-					}{
-						Id:   channelId,
-						Name: cacheChannel.Name,
-					})
-				}
-			}
-		} else {
-			// Bulk query channels from DB
-			if err = DB.Table("channels").Select("id, name").Where("id IN ?", channelIds.Items()).Find(&channels).Error; err != nil {
-				return logs, total, err
-			}
-		}
-		channelMap := make(map[int]string, len(channels))
-		for _, channel := range channels {
-			channelMap[channel.Id] = channel.Name
-		}
-		for i := range logs {
-			logs[i].ChannelName = channelMap[logs[i].ChannelId]
-		}
-	}
-
+	redactLogChannelInfo(logs)
 	return logs, total, err
 }
 

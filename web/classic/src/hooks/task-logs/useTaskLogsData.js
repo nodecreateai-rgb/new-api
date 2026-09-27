@@ -115,8 +115,8 @@ export const useTaskLogsData = () => {
         const merged = { ...defaults, ...parsed };
 
         // For non-admin users, force-hide admin-only columns (does not touch admin settings)
+        merged[COLUMN_KEYS.CHANNEL] = false;
         if (!isAdminUser) {
-          merged[COLUMN_KEYS.CHANNEL] = false;
           merged[COLUMN_KEYS.USERNAME] = false;
         }
         setVisibleColumns(merged);
@@ -135,7 +135,7 @@ export const useTaskLogsData = () => {
       [COLUMN_KEYS.SUBMIT_TIME]: true,
       [COLUMN_KEYS.FINISH_TIME]: true,
       [COLUMN_KEYS.DURATION]: true,
-      [COLUMN_KEYS.CHANNEL]: isAdminUser,
+      [COLUMN_KEYS.CHANNEL]: false,
       [COLUMN_KEYS.USERNAME]: isAdminUser,
       [COLUMN_KEYS.PLATFORM]: true,
       [COLUMN_KEYS.TYPE]: true,
@@ -167,8 +167,8 @@ export const useTaskLogsData = () => {
 
     allKeys.forEach((key) => {
       if (
-        (key === COLUMN_KEYS.CHANNEL || key === COLUMN_KEYS.USERNAME) &&
-        !isAdminUser
+        key === COLUMN_KEYS.CHANNEL ||
+        (key === COLUMN_KEYS.USERNAME && !isAdminUser)
       ) {
         updatedColumns[key] = false;
       } else {

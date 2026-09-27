@@ -286,6 +286,9 @@ func ensureDopioRMBPricing() {
 		"oauth2":                             0.3,
 		"pay":                                0.5,
 		"seedance-2.0":                       1.5,
+		"sora-2":                             1.5,
+		"wan-3.0":                            1.5,
+		"minimax-h3":                         1.5,
 		"seedance-2.5":                       3,
 		"seedance-2.5-480p":                  3,
 		"seedance-2.5-720p":                  4,
@@ -446,6 +449,9 @@ func ensureDopioRMBPricing() {
 		"vip8": {},
 		"vip9": {
 			"seedance-2.0":       1,
+			"sora-2":            1,
+			"wan-3.0":           1,
+			"minimax-h3":        1,
 			"seedance-2.5":       2,
 			"seedance-2.0-c1":    1.5,
 			"seedance-2.5-c1":    3,
@@ -499,7 +505,7 @@ func ensureDopioRMBPricing() {
 		}
 	}
 	changed := false
-	for _, staleModel := range []string{"happy-horse-1.1", "happyhorse-1.1", "kling-v3", "wan2.7", "viduq3", "seedance-video-fast", "seedance-video-standard", "seedance-video-fast-per-second", "seedance-video-standard-per-second", "seedance-2.0-fast", "seedance-2.0-480p", "sora-2", "minimax-h3-max"} {
+	for _, staleModel := range []string{"happy-horse-1.1", "happyhorse-1.1", "kling-v3", "wan2.7", "viduq3", "seedance-video-fast", "seedance-video-standard", "seedance-video-fast-per-second", "seedance-video-standard-per-second", "seedance-2.0-fast", "seedance-2.0-480p", "minimax-h3-max"} {
 		if _, exists := prices[staleModel]; exists {
 			delete(prices, staleModel)
 			changed = true
@@ -756,6 +762,12 @@ func ensureDopioRMBPricing() {
 	}
 	if err := ensureChannelGroupAbilities(15, "vip6"); err != nil {
 		common.SysLog("failed to ensure vip6 channel abilities: " + err.Error())
+	}
+	if err := retireNonCoreGateways(); err != nil {
+		common.SysLog("failed to retire non-dola/roboneo models: " + err.Error())
+	}
+	if err := ensureVideoStudioRouting(); err != nil {
+		common.SysLog("failed to enforce video studio gateway routing: " + err.Error())
 	}
 	common.SysLog("enforced Dopio RMB pricing incl sd2.5=1.5 per call, vip6 sd2.5=1, sd2-fast=1 per call, vip6 Seedance 720p fast=1/full=2, image-omni=0.05, oauth2=0.3, pay=0.5, sd2-c6=0.5, seedance-2.0-mini=0.5, seedance-2.0-mini-480p=0.8, sd2-c7=1, sd2-c11=2.5, sd2-c12=3, Price=1, USDExchangeRate=1, quota_display_type=CNY")
 }
@@ -2084,7 +2096,7 @@ func retireSeedance480Model() error {
 		return err
 	}
 
-	if err := retireMarketplaceModels([]string{modelName, "seedance-2.0-fast", "sora-2", "minimax-h3-max"}); err != nil {
+	if err := retireMarketplaceModels([]string{modelName, "seedance-2.0-fast", "minimax-h3-max"}); err != nil {
 		return err
 	}
 	InvalidatePricingCache()
@@ -3039,6 +3051,59 @@ func ensureStoryhubSeedanceRoutingClickHouse(neutralName, modelsCSV, mappingJSON
 	}
 	InvalidatePricingCache()
 	return nil
+}
+
+// Keep Dola2API + Roboneo2API generation models, Image Omni, plus pay/oauth2.
+var retiredNonCoreModels = []string{
+	"seedance-2.5",
+	"seedance-2.0-c1", "seedance-2.5-c1", "seedance-2.5-c2",
+	"seedance-2.5-480p", "seedance-2.5-720p", "seedance-2.5-1080p",
+	"seedance-2.0-mini-480p-c2", "seedance-2.0-mini-720p-c2",
+	"seedance-2.0-fast-480p", "grok-imagine-480p", "grok-imagine-720p",
+	"gemini-3.5-flash", "minimax-m3", "glm-5.3", "kimi-k3",
+	"deepseek-v4.1-flash",
+}
+
+var retiredNonCoreChannelNames = []string{
+	"StoryHub Seedance Video",
+	"Seedance C1 Video",
+	"Seedance C2 Video",
+	"UniKey Chat",
+	"WorkBuddy Chat",
+	"Laihua Seedance 2.5",
+	"Seedance 2.0 Video C2",
+}
+
+func retireNonCoreGateways() error {
+	if err := retireMarketplaceModels(retiredNonCoreModels); err != nil {
+		return err
+	}
+	for _, name := range retiredNonCoreChannelNames {
+		if err := disableChannelByName(name); err != nil {
+			return err
+		}
+	}
+	InitChannelCache()
+	return nil
+}
+
+func disableChannelByName(name string) error {
+	var channel Channel
+	err := DB.Where("name = ?", name).First(&channel).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	if common.UsingClickHouse {
+		if err := DB.Exec(`ALTER TABLE channels UPDATE status = ? WHERE id = ?`, common.ChannelStatusManuallyDisabled, channel.Id).Error; err != nil {
+			return err
+		}
+	} else if err := DB.Model(&Channel{}).Where("id = ?", channel.Id).Update("status", common.ChannelStatusManuallyDisabled).Error; err != nil {
+		return err
+	}
+	return UpdateAbilityStatus(channel.Id, false)
 }
 
 func retireMarketplaceModels(models []string) error {

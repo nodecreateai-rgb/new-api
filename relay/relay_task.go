@@ -577,7 +577,7 @@ func TaskModel2Dto(task *model.Task) *dto.TaskDto {
 		Platform:   string(task.Platform),
 		UserId:     task.UserId,
 		Group:      task.Group,
-		ChannelId:  task.ChannelId,
+		ChannelId:  0,
 		Quota:      task.Quota,
 		Action:     task.Action,
 		Status:     string(task.Status),
@@ -598,7 +598,7 @@ func sanitizeTaskPublicText(value string) string {
 	if value == "" {
 		return ""
 	}
-	return common.MaskSensitiveInfo(value)
+	return common.PublicErrorMessage(value)
 }
 
 func taskPublicResultURL(task *model.Task) string {

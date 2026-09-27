@@ -22,6 +22,37 @@ var (
 )
 
 var upstreamBrandReplacers = strings.NewReplacer(
+	"domiex-ribbi-2t6bpb-ribbi2api-1", "video-upstream",
+	"ribbi-generation-upstream", "video-upstream",
+	"ribbi2api", "video service",
+	"Ribbi2API", "Video service",
+	"RIBBI2API", "VIDEO_SERVICE",
+	"www.ribbi.ai", "video-upstream",
+	"ribbi.ai", "video-upstream",
+	"Ribbi", "Video service",
+	"ribbi", "video service",
+	"Roboneo Seedance Mini", "Video service",
+	"roboneo2api", "video service",
+	"Roboneo2API", "Video service",
+	"ROBONEO2API", "VIDEO_SERVICE",
+	"Roboneo", "Video service",
+	"roboneo", "video service",
+	"Dola2API Seedance Video", "Video service",
+	"dola2api", "video service",
+	"Dola2API", "Video service",
+	"DOLA2API", "VIDEO_SERVICE",
+	"storyhub2api", "video service",
+	"StoryHub", "Video service",
+	"storyhub", "video service",
+	"laihua2api", "video service",
+	"Laihua", "Video service",
+	"laihua", "video service",
+	"workbuddy2api", "video service",
+	"WorkBuddy", "Video service",
+	"workbuddy", "video service",
+	"getunikey2api", "video service",
+	"UniKey", "Video service",
+	"unikey", "video service",
 	"myedit2api", "video service",
 	"MyEdit2API", "Video service",
 	"MYEDIT2API", "VIDEO_SERVICE",
@@ -314,4 +345,24 @@ func MaskUpstreamProviderInfo(str string) string {
 		return str
 	}
 	return upstreamBrandReplacers.Replace(str)
+}
+
+// PublicErrorMessage returns a user-visible error with vendor and transport leaks removed.
+func PublicErrorMessage(str string) string {
+	masked := strings.TrimSpace(MaskSensitiveInfo(str))
+	if masked == "" {
+		return "request failed"
+	}
+	lower := strings.ToLower(masked)
+	for _, needle := range []string{
+		"ribbi", "roboneo", "dola2", "storyhub", "laihua", "workbuddy", "unikey",
+		"vobile", "aiveed", "oreate", "myedit", "cyberlink", "mediaio", "pixverse",
+		"generation-upstream", "dial tcp", "connection refused", "no such host",
+		"http://", "https://", "status=", "status ",
+	} {
+		if strings.Contains(lower, needle) {
+			return "request failed"
+		}
+	}
+	return masked
 }

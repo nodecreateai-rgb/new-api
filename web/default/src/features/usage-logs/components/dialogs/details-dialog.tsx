@@ -474,10 +474,6 @@ export function DetailsDialog(props: DetailsDialogProps) {
     props.log.type !== 6 &&
     (other?.request_path || conversionChain.length > 0)
 
-  const useChannel = other?.admin_info?.use_channel
-  const channelChain =
-    useChannel && useChannel.length > 0 ? useChannel.join(' → ') : undefined
-
   return (
     <Dialog
       open={props.open}
@@ -516,36 +512,6 @@ export function DetailsDialog(props: DetailsDialogProps) {
                 mono
               />
             )}
-            {props.log.upstream_request_id && (
-              <DetailRow
-                label={t('Upstream Request ID')}
-                value={props.log.upstream_request_id}
-                mono
-              />
-            )}
-
-            {props.isAdmin && props.log.channel > 0 && (
-              <DetailRow
-                label={t('Channel')}
-                value={
-                  <span>
-                    {props.log.channel}
-                    {props.log.channel_name && (
-                      <span className='text-muted-foreground'>
-                        {' '}
-                        ({props.log.channel_name})
-                      </span>
-                    )}
-                  </span>
-                }
-                mono
-              />
-            )}
-
-            {channelChain && props.isAdmin && (
-              <DetailRow label={t('Retry Chain')} value={channelChain} mono />
-            )}
-
             {props.log.token_name && (
               <DetailRow label={t('Token')} value={props.log.token_name} mono />
             )}

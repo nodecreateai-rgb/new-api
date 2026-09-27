@@ -112,7 +112,7 @@ export const useLogsData = () => {
   const getDefaultColumnVisibility = () => {
     return {
       [COLUMN_KEYS.TIME]: true,
-      [COLUMN_KEYS.CHANNEL]: isAdminUser,
+      [COLUMN_KEYS.CHANNEL]: false,
       [COLUMN_KEYS.USERNAME]: isAdminUser,
       [COLUMN_KEYS.TOKEN]: true,
       [COLUMN_KEYS.GROUP]: true,
@@ -140,8 +140,8 @@ export const useLogsData = () => {
       const parsed = JSON.parse(savedColumns);
       const merged = { ...defaults, ...parsed };
 
+      merged[COLUMN_KEYS.CHANNEL] = false;
       if (!isAdminUser) {
-        merged[COLUMN_KEYS.CHANNEL] = false;
         merged[COLUMN_KEYS.USERNAME] = false;
         merged[COLUMN_KEYS.RETRY] = false;
       }
@@ -207,10 +207,9 @@ export const useLogsData = () => {
 
     allKeys.forEach((key) => {
       if (
-        (key === COLUMN_KEYS.CHANNEL ||
-          key === COLUMN_KEYS.USERNAME ||
-          key === COLUMN_KEYS.RETRY) &&
-        !isAdminUser
+        key === COLUMN_KEYS.CHANNEL ||
+        ((key === COLUMN_KEYS.USERNAME || key === COLUMN_KEYS.RETRY) &&
+          !isAdminUser)
       ) {
         updatedColumns[key] = false;
       } else {
@@ -383,12 +382,6 @@ export const useLogsData = () => {
       let other = getLogOther(logs[i].other);
       let expandDataLocal = [];
 
-      if (isAdminUser && (logs[i].type === 0 || logs[i].type === 2 || logs[i].type === 6)) {
-        expandDataLocal.push({
-          key: t('渠道信息'),
-          value: `${logs[i].channel} - ${logs[i].channel_name || '[未知]'}`,
-        });
-      }
       if (logs[i].request_id) {
         expandDataLocal.push({
           key: t('Request ID'),
@@ -456,10 +449,6 @@ export const useLogsData = () => {
           expandDataLocal.push({
             key: t('请求并计费模型'),
             value: logs[i].model_name,
-          });
-          expandDataLocal.push({
-            key: t('实际模型'),
-            value: other.upstream_model_name,
           });
         }
 

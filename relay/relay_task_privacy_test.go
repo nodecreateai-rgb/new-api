@@ -26,6 +26,25 @@ func TestTaskModel2DtoRedactsPrivateVideoTask(t *testing.T) {
 	}
 }
 
+func TestTaskModel2DtoHidesChannel(t *testing.T) {
+	task := &model.Task{
+		TaskID:    "task_public",
+		Status:    model.TaskStatusSuccess,
+		ChannelId: 51,
+		FailReason: "Roboneo Seedance Mini failed via ribbi.ai",
+	}
+	dto := TaskModel2Dto(task)
+	if dto.ChannelId != 0 {
+		t.Fatalf("channel_id=%d", dto.ChannelId)
+	}
+	lower := strings.ToLower(dto.FailReason)
+	for _, forbidden := range []string{"roboneo", "ribbi"} {
+		if strings.Contains(lower, forbidden) {
+			t.Fatalf("leaked %q in %q", forbidden, dto.FailReason)
+		}
+	}
+}
+
 func TestTaskModel2DtoRedactsMyEditVideoTask(t *testing.T) {
 	task := &model.Task{
 		TaskID:     "task_public",
