@@ -285,10 +285,10 @@ func ensureDopioRMBPricing() {
 		"nano-banana-pro":                    air2apiImagePrice,
 		"oauth2":                             0.3,
 		"pay":                                0.5,
-		"seedance-2.0":                       1.5,
-		"sora-2":                             1.5,
-		"wan-3.0":                            1.5,
-		"minimax-h3":                         1.5,
+		"seedance-2.0":                       3,
+		"sora-2":                             1,
+		"wan-3.0":                            2,
+		"minimax-h3":                         2,
 		"seedance-2.5":                       3,
 		"seedance-2.5-480p":                  3,
 		"seedance-2.5-720p":                  4,
@@ -448,10 +448,6 @@ func ensureDopioRMBPricing() {
 		},
 		"vip8": {},
 		"vip9": {
-			"seedance-2.0":       1,
-			"sora-2":            1,
-			"wan-3.0":           1,
-			"minimax-h3":        1,
 			"seedance-2.5":       2,
 			"seedance-2.0-c1":    1.5,
 			"seedance-2.5-c1":    3,
@@ -682,6 +678,15 @@ func ensureDopioRMBPricing() {
 				changed = true
 			}
 		}
+	}
+	for group, groupPrices := range modelGroupPrices {
+		for _, model := range []string{"seedance-2.0", "sora-2", "wan-3.0", "minimax-h3"} {
+			if _, exists := groupPrices[model]; exists {
+				delete(groupPrices, model)
+				changed = true
+			}
+		}
+		modelGroupPrices[group] = groupPrices
 	}
 	if changed {
 		if b, err := json.Marshal(modelGroupPrices); err == nil {
@@ -2130,7 +2135,7 @@ func ensureStoryhubSeedanceRouting() error {
 	publicModels := []string{"seedance-2.0", "seedance-2.5"}
 	groups := []string{"default", "vip", "svip", "vip1", "vip2", "vip3", "vip6", "vip8", "vip9"}
 	modelDescriptions := map[string]string{
-		"seedance-2.0": "Seedance 2.0 文生/图生视频（异步，¥1.5/次）",
+		"seedance-2.0": "Seedance 2.0 文生/图生视频（异步，¥3/次）",
 		"seedance-2.5": "Seedance 2.5 文生/图生视频（异步，¥3/次）",
 	}
 	endpoint := `{"openai-video":{"path":"/v1/videos","method":"POST"}}`
