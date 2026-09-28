@@ -35,7 +35,7 @@ func ensureVideoStudioRouting() error {
 	publicModels := []string{"seedance-2.0", "sora-2", "wan-3.0", "minimax-h3"}
 	groups := []string{"default", "vip", "svip", "vip1", "vip2", "vip3", "vip6", "vip8", "vip9"}
 	modelDescriptions := map[string]string{
-		"seedance-2.0": "Seedance 2.0 文生/图生视频（异步，¥3/次）",
+		"seedance-2.0": "Seedance 2.0 文生/图生视频（异步，¥2/次）",
 		"sora-2":       "Sora 2 文生/图生视频（异步，¥1/次）",
 		"wan-3.0":      "Wan 3.0 文生/图生视频（异步，¥2/次）",
 		"minimax-h3":   "MiniMax H3 文生/图生视频（异步，¥2/次）",

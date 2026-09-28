@@ -286,7 +286,7 @@ func ensureDopioRMBPricing() {
 		"nano-banana-pro":                    air2apiImagePrice,
 		"oauth2":                             0.3,
 		"pay":                                0.5,
-		"seedance-2.0":                       3,
+		"seedance-2.0":                       2,
 		"sora-2":                             1,
 		"wan-3.0":                            2,
 		"minimax-h3":                         2,
@@ -2143,7 +2143,7 @@ func ensureStoryhubSeedanceRouting() error {
 	publicModels := []string{"seedance-2.0", "seedance-2.5"}
 	groups := []string{"default", "vip", "svip", "vip1", "vip2", "vip3", "vip6", "vip8", "vip9"}
 	modelDescriptions := map[string]string{
-		"seedance-2.0": "Seedance 2.0 文生/图生视频（异步，¥3/次）",
+		"seedance-2.0": "Seedance 2.0 文生/图生视频（异步，¥2/次）",
 		"seedance-2.5": "Seedance 2.5 文生/图生视频（异步，¥3/次）",
 	}
 	endpoint := `{"openai-video":{"path":"/v1/videos","method":"POST"}}`
