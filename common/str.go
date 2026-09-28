@@ -37,6 +37,13 @@ var upstreamBrandReplacers = strings.NewReplacer(
 	"ROBONEO2API", "VIDEO_SERVICE",
 	"Roboneo", "Video service",
 	"roboneo", "video service",
+	"Seko Seedance Mini", "Video service",
+	"sekotv2api", "video service",
+	"Sekotv2API", "Video service",
+	"SEKOTV2API", "VIDEO_SERVICE",
+	"www.sekotv.com", "video-upstream",
+	"sekotv", "video service",
+	"SekoTV", "Video service",
 	"Dola2API Seedance Video", "Video service",
 	"dola2api", "video service",
 	"Dola2API", "Video service",
@@ -357,7 +364,7 @@ func PublicErrorMessage(str string) string {
 	for _, needle := range []string{
 		"ribbi", "roboneo", "dola2", "storyhub", "laihua", "workbuddy", "unikey",
 		"vobile", "aiveed", "oreate", "myedit", "cyberlink", "mediaio", "pixverse",
-		"generation-upstream", "dial tcp", "connection refused", "no such host",
+		"sekotv", "generation-upstream", "dial tcp", "connection refused", "no such host",
 		"http://", "https://", "status=", "status ",
 	} {
 		if strings.Contains(lower, needle) {

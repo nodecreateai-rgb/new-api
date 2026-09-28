@@ -16,6 +16,7 @@ func TestSD2MiniUsesFixedPerRequestBilling(t *testing.T) {
 	require.False(t, a.UseRequestBillingRatios(&relaycommon.RelayInfo{OriginModelName: "sd2-c7"}))
 	require.False(t, a.UseRequestBillingRatios(&relaycommon.RelayInfo{OriginModelName: "seedance-2.0-mini"}))
 	require.False(t, a.UseRequestBillingRatios(&relaycommon.RelayInfo{OriginModelName: "seedance-2.0-mini-480p"}))
+	require.False(t, a.UseRequestBillingRatios(&relaycommon.RelayInfo{OriginModelName: "seedance-2.0-mini-720p"}))
 	require.False(t, a.UseRequestBillingRatios(&relaycommon.RelayInfo{OriginModelName: "seedance-2.0-mini-480p-c2"}))
 	require.False(t, a.UseRequestBillingRatios(&relaycommon.RelayInfo{OriginModelName: "seedance-2.0-fast-480p"}))
 	require.False(t, a.UseRequestBillingRatios(&relaycommon.RelayInfo{OriginModelName: "grok-imagine-720p"}))
@@ -54,6 +55,11 @@ func TestLaihuaSeedanceLocksResolutionFromModel(t *testing.T) {
 	applyOriginModelResolution(body, "seedance-2.0-mini-480p-c2")
 	require.Equal(t, "480p", body["resolution"])
 	require.Equal(t, "480p", body["size"])
+
+	body = map[string]interface{}{"size": "720x1280"}
+	applyOriginModelResolution(body, "seedance-2.0-mini-720p")
+	require.Equal(t, "720p", body["resolution"])
+	require.Equal(t, "720p", body["size"])
 
 	body = map[string]interface{}{"size": "720x1280"}
 	applyOriginModelResolution(body, "grok-imagine-720p")
