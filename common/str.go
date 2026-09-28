@@ -42,8 +42,17 @@ var upstreamBrandReplacers = strings.NewReplacer(
 	"Sekotv2API", "Video service",
 	"SEKOTV2API", "VIDEO_SERVICE",
 	"www.sekotv.com", "video-upstream",
+	"seko-canvas", "video service",
+	"seko-api", "video service",
+	"Seko-canvas", "Video service",
+	"Seko-api", "Video service",
+	"SEKO-CANVAS", "VIDEO_SERVICE",
+	"SEKO-API", "VIDEO_SERVICE",
 	"sekotv", "video service",
 	"SekoTV", "Video service",
+	"Seko", "Video service",
+	"seko", "video service",
+	"SEKO", "VIDEO_SERVICE",
 	"Dola2API Seedance Video", "Video service",
 	"dola2api", "video service",
 	"Dola2API", "Video service",
@@ -354,22 +363,46 @@ func MaskUpstreamProviderInfo(str string) string {
 	return upstreamBrandReplacers.Replace(str)
 }
 
+var publicErrorNeedles = []string{
+	"ribbi", "roboneo", "dola2", "storyhub", "laihua", "workbuddy", "unikey",
+	"vobile", "aiveed", "oreate", "myedit", "cyberlink", "mediaio", "pixverse",
+	"seko", "generation-upstream", "dial tcp", "connection refused", "no such host",
+	"http://", "https://", "status=", "status ",
+}
+
 // PublicErrorMessage returns a user-visible error with vendor and transport leaks removed.
 func PublicErrorMessage(str string) string {
-	masked := strings.TrimSpace(MaskSensitiveInfo(str))
-	if masked == "" {
+	raw := strings.TrimSpace(str)
+	if raw == "" {
 		return "request failed"
 	}
-	lower := strings.ToLower(masked)
-	for _, needle := range []string{
-		"ribbi", "roboneo", "dola2", "storyhub", "laihua", "workbuddy", "unikey",
-		"vobile", "aiveed", "oreate", "myedit", "cyberlink", "mediaio", "pixverse",
-		"sekotv", "generation-upstream", "dial tcp", "connection refused", "no such host",
-		"http://", "https://", "status=", "status ",
-	} {
-		if strings.Contains(lower, needle) {
-			return "request failed"
-		}
+	if containsPublicErrorNeedle(raw) {
+		return "request failed"
+	}
+	masked := strings.TrimSpace(MaskSensitiveInfo(raw))
+	if masked == "" || containsPublicErrorNeedle(masked) {
+		return "request failed"
 	}
 	return masked
+}
+
+func containsPublicErrorNeedle(str string) bool {
+	lower := strings.ToLower(str)
+	for _, needle := range publicErrorNeedles {
+		if strings.Contains(lower, needle) {
+			return true
+		}
+	}
+	return false
+}
+
+// MaskPublicTaskText sanitizes a task payload field. Error-like keys are collapsed
+// to a generic failure so vendor paths cannot leak after partial brand replacement.
+func MaskPublicTaskText(key, text string) string {
+	switch strings.ToLower(strings.TrimSpace(key)) {
+	case "message", "error", "fail_reason", "failreason", "reason":
+		return PublicErrorMessage(text)
+	default:
+		return MaskUpstreamProviderInfo(text)
+	}
 }

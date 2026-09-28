@@ -252,8 +252,8 @@ func updateVideoSingleTask(ctx context.Context, adaptor channel.TaskAdaptor, cha
 		if task.FinishTime == 0 {
 			task.FinishTime = now
 		}
-		task.FailReason = taskResult.Reason
-		logger.LogInfo(ctx, fmt.Sprintf("Task %s failed: %s", task.TaskID, task.FailReason))
+		task.FailReason = common.PublicErrorMessage(taskResult.Reason)
+		logger.LogInfo(ctx, fmt.Sprintf("Task %s failed: %s", task.TaskID, taskResult.Reason))
 		taskResult.Progress = "100%"
 		if quota != 0 {
 			if preStatus != model.TaskStatusFailure {

@@ -1,6 +1,7 @@
 package sora
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/QuantumNous/new-api/model"
@@ -177,4 +178,24 @@ func TestTaskSubmitDurationPrefersSecondsOverStaleDurationDefault(t *testing.T) 
 func TestUpstreamVideoTaskPrefersJSON(t *testing.T) {
 	require.True(t, upstreamVideoTaskPrefersJSON("http://paco-dola2api-er9b9x-dola2api-1:38472"))
 	require.False(t, upstreamVideoTaskPrefersJSON("https://api.openai.com"))
+}
+
+func TestConvertToOpenAIVideoHidesSekoError(t *testing.T) {
+	task := &model.Task{
+		TaskID:   "task_public",
+		Status:   model.TaskStatusFailure,
+		Progress: "100%",
+		Data: []byte(`{
+			"id":"upstream",
+			"status":"failed",
+			"error":{"message":"sekotv /seko-api/seko-canvas/v1/canvas-node: Invalid operation: invalid duration"}
+		}`),
+	}
+	body, err := (&TaskAdaptor{}).ConvertToOpenAIVideo(task)
+	require.NoError(t, err)
+	lower := strings.ToLower(string(body))
+	for _, forbidden := range []string{"seko", "sekotv", "canvas-node"} {
+		require.NotContains(t, lower, forbidden)
+	}
+	require.Equal(t, "request failed", gjson.GetBytes(body, "error.message").String())
 }

@@ -656,7 +656,7 @@ func scrubTaskPayload(payload map[string]any, publicTaskID string) {
 	}
 	for key, value := range payload {
 		if text, ok := value.(string); ok {
-			payload[key] = common.MaskUpstreamProviderInfo(text)
+			payload[key] = common.MaskPublicTaskText(key, text)
 			continue
 		}
 		if child, ok := value.(map[string]any); ok {

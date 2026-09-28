@@ -45,6 +45,25 @@ func TestTaskModel2DtoHidesChannel(t *testing.T) {
 	}
 }
 
+func TestTaskModel2DtoRedactsSekoVideoTask(t *testing.T) {
+	task := &model.Task{
+		TaskID:     "task_liPjh1CAc6NItGvylLCdwURyFLRu3sDO",
+		Status:     model.TaskStatusFailure,
+		FailReason: "sekotv /seko-api/seko-canvas/v1/canvas-node: Invalid operation: invalid duration",
+		Data:       []byte(`{"id":"upstream-id","error":{"message":"video service /seko-api/seko-canvas/v1/canvas-node: Invalid operation: invalid duration"},"account_email":"user@example.com"}`),
+	}
+	dto := TaskModel2Dto(task)
+	combined := strings.ToLower(dto.FailReason + dto.ResultURL + string(dto.Data))
+	for _, forbidden := range []string{"seko", "sekotv", "example.com", "upstream-id", "account_email"} {
+		if strings.Contains(combined, forbidden) {
+			t.Fatalf("leaked %q in %s", forbidden, combined)
+		}
+	}
+	if dto.FailReason != "request failed" {
+		t.Fatalf("fail_reason=%q", dto.FailReason)
+	}
+}
+
 func TestTaskModel2DtoRedactsMyEditVideoTask(t *testing.T) {
 	task := &model.Task{
 		TaskID:     "task_public",

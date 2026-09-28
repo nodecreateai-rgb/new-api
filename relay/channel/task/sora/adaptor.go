@@ -682,7 +682,7 @@ func scrubOpenAIVideoPayload(payload map[string]any) {
 	for key, value := range payload {
 		switch typed := value.(type) {
 		case string:
-			payload[key] = common.MaskUpstreamProviderInfo(typed)
+			payload[key] = common.MaskPublicTaskText(key, typed)
 		case map[string]any:
 			scrubOpenAIVideoPayload(typed)
 		case []any:

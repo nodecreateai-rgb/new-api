@@ -555,8 +555,8 @@ func updateVideoSingleTask(ctx context.Context, adaptor TaskPollingAdaptor, ch *
 		if task.FinishTime == 0 {
 			task.FinishTime = now
 		}
-		task.FailReason = taskResult.Reason
-		logger.LogInfo(ctx, fmt.Sprintf("Task %s failed: %s", task.TaskID, task.FailReason))
+		task.FailReason = common.PublicErrorMessage(taskResult.Reason)
+		logger.LogInfo(ctx, fmt.Sprintf("Task %s failed: %s", task.TaskID, taskResult.Reason))
 		taskResult.Progress = taskcommon.ProgressComplete
 		if quota != 0 {
 			shouldRefund = true
@@ -771,7 +771,7 @@ func scrubVideoResponsePayload(payload map[string]any) {
 	for key, value := range payload {
 		switch typed := value.(type) {
 		case string:
-			payload[key] = common.MaskSensitiveInfo(typed)
+			payload[key] = common.MaskPublicTaskText(key, typed)
 		case map[string]any:
 			scrubVideoResponsePayload(typed)
 		case []any:
