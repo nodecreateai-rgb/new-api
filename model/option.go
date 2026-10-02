@@ -297,6 +297,12 @@ func ensureDopioRMBPricing() {
 		"seedance-2.0-c1":                    2.5,
 		"seedance-2.5-c1":                    4,
 		"seedance-2.5-c2":                    1,
+		"seedance-2.0-c2":                    0.8,
+		"seedance-2.0-480p-c2":               0.8,
+		"seedance-2.0-fast-c2":               0.7,
+		"seedance-2.0-fast-480p-c2":          0.7,
+		"seedance-2.0-mini-c2":               0.6,
+		"wan-3.0-c2":                         1.5,
 	}
 	targetGroupRatios := map[string]float64{
 		"default": 1,
@@ -685,7 +691,7 @@ func ensureDopioRMBPricing() {
 		}
 	}
 	for group, groupPrices := range modelGroupPrices {
-		for _, model := range []string{"seedance-2.0", "sora-2", "wan-3.0", "minimax-h3"} {
+		for _, model := range []string{"seedance-2.0", "sora-2", "wan-3.0", "minimax-h3", "seedance-2.0-c2", "seedance-2.0-480p-c2", "seedance-2.0-fast-c2", "seedance-2.0-fast-480p-c2", "seedance-2.0-mini-c2", "wan-3.0-c2"} {
 			if _, exists := groupPrices[model]; exists {
 				delete(groupPrices, model)
 				changed = true
@@ -781,6 +787,9 @@ func ensureDopioRMBPricing() {
 	}
 	if err := ensureVideoStudioRouting(); err != nil {
 		common.SysLog("failed to enforce video studio gateway routing: " + err.Error())
+	}
+	if err := ensureFotor2apiRouting(); err != nil {
+		common.SysLog("failed to enforce Fotor video gateway routing: " + err.Error())
 	}
 	common.SysLog("enforced Dopio RMB pricing incl sd2.5=1.5 per call, vip6 sd2.5=1, sd2-fast=1 per call, vip6 Seedance 720p fast=1/full=2, image-omni=0.05, oauth2=0.3, pay=0.5, sd2-c6=0.5, seedance-2.0-mini=0.5, seedance-2.0-mini-480p=0.8, seedance-2.0-mini-720p=0.8, sd2-c7=1, sd2-c11=2.5, sd2-c12=3, Price=1, USDExchangeRate=1, quota_display_type=CNY")
 }
