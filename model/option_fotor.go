@@ -35,12 +35,12 @@ func ensureFotor2apiRouting() error {
 	publicModels := []string{"seedance-2.0-c2", "seedance-2.0-480p-c2", "seedance-2.0-fast-c2", "seedance-2.0-fast-480p-c2", "seedance-2.0-mini-c2", "wan-3.0-c2"}
 	groups := []string{"default", "vip", "svip", "vip1", "vip2", "vip3", "vip6", "vip8", "vip9"}
 	modelDescriptions := map[string]string{
-		"seedance-2.0-c2":           "Seedance 2.0 文生/图生视频（异步，¥0.8/次）",
-		"seedance-2.0-480p-c2":      "Seedance 2.0 480p 文生/图生视频（异步，¥0.8/次，不超分）",
-		"seedance-2.0-fast-c2":      "Seedance 2.0 Fast 文生/图生视频（异步，¥0.7/次）",
-		"seedance-2.0-fast-480p-c2": "Seedance 2.0 Fast 480p 文生/图生视频（异步，¥0.7/次，不超分）",
-		"seedance-2.0-mini-c2":      "Seedance 2.0 Mini 文生/图生视频（异步，¥0.6/次）",
-		"wan-3.0-c2":                "Wan 3.0 文生/图生视频（异步，¥1.5/次）",
+		"seedance-2.0-c2":           "Seedance 2.0 文生/图生视频（异步，¥0.8/次，903，最长15秒，不卡脸）",
+		"seedance-2.0-480p-c2":      "Seedance 2.0 480p 文生/图生视频（异步，¥0.8/次，不超分，903，最长15秒，不卡脸）",
+		"seedance-2.0-fast-c2":      "Seedance 2.0 Fast 文生/图生视频（异步，¥0.7/次，913，最长15秒，不卡脸）",
+		"seedance-2.0-fast-480p-c2": "Seedance 2.0 Fast 480p 文生/图生视频（异步，¥0.7/次，不超分，913，最长15秒，不卡脸）",
+		"seedance-2.0-mini-c2":      "Seedance 2.0 Mini 文生/图生视频（异步，¥0.6/次，903，超分720P，最长15秒）",
+		"wan-3.0-c2":                "Wan 3.0 文生/图生视频（异步，¥1.5/次，原生720P，10图5音5视，最长30秒）",
 	}
 	endpoint := `{"openai-video":{"path":"/v1/videos","method":"POST"}}`
 
@@ -66,12 +66,21 @@ func ensureFotor2apiRouting() error {
 		}
 	} else if err != nil {
 		return err
-	} else if err := DB.Model(&Channel{}).Where("id = ?", channel.Id).Updates(map[string]any{
-		"type": constant.ChannelTypeSora, "key": key, "status": common.ChannelStatusEnabled,
-		"name": neutralName, "base_url": baseURL, "models": modelsCSV, "group": groupsCSV,
-		"model_mapping": mappingJSON, "priority": 10, "weight": 100, "auto_ban": 0,
-	}).Error; err != nil {
-		return err
+	} else {
+		if key == "" {
+			key = strings.TrimSpace(channel.Key)
+		}
+		updates := map[string]any{
+			"type": constant.ChannelTypeSora, "status": common.ChannelStatusEnabled,
+			"name": neutralName, "base_url": baseURL, "models": modelsCSV, "group": groupsCSV,
+			"model_mapping": mappingJSON, "priority": 10, "weight": 100, "auto_ban": 0,
+		}
+		if key != "" {
+			updates["key"] = key
+		}
+		if err := DB.Model(&Channel{}).Where("id = ?", channel.Id).Updates(updates).Error; err != nil {
+			return err
+		}
 	}
 
 	if err := DB.Model(&Ability{}).Where("channel_id = ? AND model NOT IN ?", channel.Id, publicModels).
@@ -161,10 +170,21 @@ func ensureFotor2apiRoutingClickHouse(neutralName, modelsCSV, mappingJSON, group
 		channel.Id = int(id)
 	} else if err != nil {
 		return err
-	} else if err := DB.Exec(`ALTER TABLE channels UPDATE
-		type = ?, key = ?, status = ?, name = ?, base_url = ?, models = ?, `+commonGroupCol+` = ?, model_mapping = ?, priority = 10, weight = 100, auto_ban = 0
-		WHERE id = ?`, constant.ChannelTypeSora, key, common.ChannelStatusEnabled, neutralName, baseURL, modelsCSV, groupsCSV, mappingJSON, channel.Id).Error; err != nil {
-		return err
+	} else {
+		if key == "" {
+			key = strings.TrimSpace(channel.Key)
+		}
+		if key == "" {
+			if err := DB.Exec(`ALTER TABLE channels UPDATE
+				type = ?, status = ?, name = ?, base_url = ?, models = ?, `+commonGroupCol+` = ?, model_mapping = ?, priority = 10, weight = 100, auto_ban = 0
+				WHERE id = ?`, constant.ChannelTypeSora, common.ChannelStatusEnabled, neutralName, baseURL, modelsCSV, groupsCSV, mappingJSON, channel.Id).Error; err != nil {
+				return err
+			}
+		} else if err := DB.Exec(`ALTER TABLE channels UPDATE
+			type = ?, key = ?, status = ?, name = ?, base_url = ?, models = ?, `+commonGroupCol+` = ?, model_mapping = ?, priority = 10, weight = 100, auto_ban = 0
+			WHERE id = ?`, constant.ChannelTypeSora, key, common.ChannelStatusEnabled, neutralName, baseURL, modelsCSV, groupsCSV, mappingJSON, channel.Id).Error; err != nil {
+			return err
+		}
 	}
 
 	if err := DB.Model(&Ability{}).Where("channel_id = ? AND model NOT IN ?", channel.Id, publicModels).

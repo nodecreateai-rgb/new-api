@@ -19,11 +19,17 @@ func TestFotor2apiRoutingUsesFotorGateway(t *testing.T) {
 		`{"seedance-2.0-c2":"seedance-2.0","seedance-2.0-480p-c2":"seedance-2.0-480p","seedance-2.0-fast-c2":"seedance-2.0-fast","seedance-2.0-fast-480p-c2":"seedance-2.0-fast-480p","seedance-2.0-mini-c2":"seedance-mini","wan-3.0-c2":"wan-3.0"}`,
 		`os.Getenv("FOTOR2API_BASE_URL")`,
 		`os.Getenv("FOTOR2API_GATEWAY_KEY")`,
+		`if key == ""`,
+		`key = strings.TrimSpace(channel.Key)`,
 		`¥0.8/次`,
 		`¥0.7/次`,
 		`¥0.6/次`,
 		`¥1.5/次`,
 		`不超分`,
+		`903，最长15秒，不卡脸`,
+		`913，最长15秒，不卡脸`,
+		`903，超分720P，最长15秒`,
+		`原生720P，10图5音5视，最长30秒`,
 	} {
 		if !strings.Contains(s, want) {
 			t.Fatalf("missing %s", want)

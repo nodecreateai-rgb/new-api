@@ -825,9 +825,13 @@ func ensureRoboneoMiniRouting() error {
 
 	publicModels := []string{"seedance-2.0-mini", "seedance-2.0-mini-480p"}
 	groups := []string{"default", "vip", "svip", "vip1", "vip2", "vip3", "vip6", "vip9"}
+	modelDescriptions := map[string]string{
+		"seedance-2.0-mini":      "Seedance 2.0 Mini 文生/图生视频（异步，¥0.5/次，903，最长12秒，原生720P）",
+		"seedance-2.0-mini-480p": "Seedance 2.0 Mini 480p 文生/图生视频（异步，¥0.8/次，903，超分720P，最长15秒）",
+	}
 
 	if common.UsingClickHouse {
-		return ensureRoboneoMiniRoutingClickHouse(neutralName, modelsCSV, mappingJSON, groupsCSV, baseURL, key, publicModels, groups)
+		return ensureRoboneoMiniRoutingClickHouse(neutralName, modelsCSV, mappingJSON, groupsCSV, baseURL, key, publicModels, groups, modelDescriptions)
 	}
 
 	var channel Channel
@@ -897,11 +901,12 @@ func ensureRoboneoMiniRouting() error {
 
 	endpoint := `{"openai-video":{"path":"/v1/videos","method":"POST"}}`
 	for _, publicModel := range publicModels {
+		desc := modelDescriptions[publicModel]
 		var meta Model
 		err = DB.Unscoped().Where("model_name = ?", publicModel).First(&meta).Error
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			meta = Model{
-				ModelName: publicModel, Description: "", Icon: "", Tags: "video",
+				ModelName: publicModel, Description: desc, Icon: "", Tags: "video",
 				Endpoints: endpoint, Status: 1, SyncOfficial: 0,
 				CreatedTime: common.GetTimestamp(), UpdatedTime: common.GetTimestamp(),
 			}
@@ -914,7 +919,7 @@ func ensureRoboneoMiniRouting() error {
 			return err
 		}
 		if err := DB.Unscoped().Model(&Model{}).Where("id = ?", meta.Id).Updates(map[string]any{
-			"description": "", "icon": "", "tags": "video", "endpoints": endpoint,
+			"description": desc, "icon": "", "tags": "video", "endpoints": endpoint,
 			"status": 1, "sync_official": 0, "deleted_at": nil, "updated_time": common.GetTimestamp(),
 		}).Error; err != nil {
 			return err
@@ -925,7 +930,7 @@ func ensureRoboneoMiniRouting() error {
 
 // ensureRoboneoMiniRoutingClickHouse uses raw INSERTs: GORM Create/ALTER UPDATE on
 // ClickHouse native protocol often fails with "Unexpected packet" / *int AutoBan.
-func ensureRoboneoMiniRoutingClickHouse(neutralName, modelsCSV, mappingJSON, groupsCSV, baseURL, key string, publicModels, groups []string) error {
+func ensureRoboneoMiniRoutingClickHouse(neutralName, modelsCSV, mappingJSON, groupsCSV, baseURL, key string, publicModels, groups []string, modelDescriptions map[string]string) error {
 	var channel Channel
 	err := DB.Where("name = ?", neutralName).First(&channel).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -981,6 +986,7 @@ func ensureRoboneoMiniRoutingClickHouse(neutralName, modelsCSV, mappingJSON, gro
 
 	endpoint := `{"openai-video":{"path":"/v1/videos","method":"POST"}}`
 	for _, publicModel := range publicModels {
+		desc := modelDescriptions[publicModel]
 		var meta Model
 		err = DB.Unscoped().Where("model_name = ?", publicModel).First(&meta).Error
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -988,14 +994,23 @@ func ensureRoboneoMiniRoutingClickHouse(neutralName, modelsCSV, mappingJSON, gro
 			now := common.GetTimestamp()
 			if err := DB.Exec(
 				`INSERT INTO models (id, model_name, description, icon, tags, endpoints, status, sync_official, created_time, updated_time, name_rule)
-				 VALUES (?, ?, '', '', 'video', ?, 1, 0, ?, ?, 0)`,
-				id, publicModel, endpoint, now, now,
+				 VALUES (?, ?, ?, '', 'video', ?, 1, 0, ?, ?, 0)`,
+				id, publicModel, desc, endpoint, now, now,
 			).Error; err != nil {
 				return err
 			}
 			continue
 		}
 		if err != nil {
+			return err
+		}
+		if err := DB.Unscoped().Model(&Model{}).Where("id = ?", meta.Id).Updates(map[string]any{
+			"description": desc, "tags": "video", "endpoints": endpoint,
+			"status": 1, "sync_official": 0, "deleted_at": nil, "updated_time": common.GetTimestamp(),
+		}).Error; err != nil {
+			return err
+		}
+		if err := DB.Exec(`ALTER TABLE models UPDATE description = ? WHERE id = ?`, desc, meta.Id).Error; err != nil {
 			return err
 		}
 	}
