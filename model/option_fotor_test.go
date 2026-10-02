@@ -30,6 +30,23 @@ func TestFotor2apiRoutingUsesFotorGateway(t *testing.T) {
 		}
 	}
 
+	ratio, err := os.ReadFile("../setting/ratio_setting/model_ratio.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	ratioBody := string(ratio)
+	for _, want := range []string{
+		`"seedance-2.0-c2":                    0.8`,
+		`"seedance-2.0-480p-c2":               0.8`,
+		`"seedance-2.0-fast-c2":               0.7`,
+		`"seedance-2.0-fast-480p-c2":          0.7`,
+		`if price, ok := defaultModelPrice[name]; ok`,
+	} {
+		if !strings.Contains(ratioBody, want) {
+			t.Fatalf("missing default price %s", want)
+		}
+	}
+
 	option, err := os.ReadFile("option.go")
 	if err != nil {
 		t.Fatal(err)

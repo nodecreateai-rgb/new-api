@@ -332,6 +332,12 @@ var defaultModelPrice = map[string]float64{
 	"sd2-c3":                             4,
 	"seedance-video-fast-per-second":     0.2,
 	"seedance-video-standard-per-second": 0.33,
+	"seedance-2.0-c2":                    0.8,
+	"seedance-2.0-480p-c2":               0.8,
+	"seedance-2.0-fast-c2":               0.7,
+	"seedance-2.0-fast-480p-c2":          0.7,
+	"seedance-2.0-mini-c2":               0.6,
+	"wan-3.0-c2":                         1.5,
 }
 
 var defaultAudioRatio = map[string]float64{
@@ -424,6 +430,9 @@ func GetModelPrice(name string, printErr bool) (float64, bool) {
 	name = FormatMatchingModelName(name)
 
 	if price, ok := modelPriceMap.Get(name); ok {
+		return price, true
+	}
+	if price, ok := defaultModelPrice[name]; ok {
 		return price, true
 	}
 
