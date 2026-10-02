@@ -14,6 +14,7 @@ import (
 	"github.com/QuantumNous/new-api/constant"
 	"github.com/QuantumNous/new-api/dto"
 	"github.com/QuantumNous/new-api/model"
+	"github.com/QuantumNous/new-api/pkg/r2"
 	"github.com/QuantumNous/new-api/relay/channel"
 	"github.com/QuantumNous/new-api/relay/channel/task/taskcommon"
 	relaycommon "github.com/QuantumNous/new-api/relay/common"
@@ -494,10 +495,9 @@ func tryRealtimeFetch(task *model.Task, isOpenAIVideoAPI bool) []byte {
 	}
 	if strings.HasPrefix(ti.Url, "data:") {
 		// data: URI — kept in Data, not ResultURL
-	} else if ti.Url != "" {
-		task.PrivateData.ResultURL = ti.Url
+	} else if r2.IsPublicObjectURL(task.PrivateData.ResultURL) {
+		// Keep the public R2 object URL already stored by polling.
 	} else if task.Status == model.TaskStatusSuccess {
-		// No URL from adaptor — construct proxy URL using public task ID
 		task.PrivateData.ResultURL = taskcommon.BuildProxyURL(task.TaskID)
 	}
 
@@ -518,7 +518,7 @@ func tryRealtimeFetch(task *model.Task, isOpenAIVideoAPI bool) []byte {
 		"metadata": nil,
 		"status":   mapTaskStatusToSimple(task.Status),
 		"task_id":  task.TaskID,
-		"url":      task.GetResultURL(),
+		"url":      task.PublicResultURL(),
 	}
 	respBody, _ := common.Marshal(dto.TaskResponse[any]{
 		Code: "success",
@@ -582,7 +582,7 @@ func TaskModel2Dto(task *model.Task) *dto.TaskDto {
 		Action:     task.Action,
 		Status:     string(task.Status),
 		FailReason: sanitizeTaskPublicText(task.FailReason),
-		ResultURL:  taskPublicResultURL(task),
+		ResultURL:  task.PublicResultURL(),
 		SubmitTime: task.SubmitTime,
 		StartTime:  task.StartTime,
 		FinishTime: task.FinishTime,
@@ -599,13 +599,6 @@ func sanitizeTaskPublicText(value string) string {
 		return ""
 	}
 	return common.PublicErrorMessage(value)
-}
-
-func taskPublicResultURL(task *model.Task) string {
-	if task == nil || task.Status != model.TaskStatusSuccess || task.TaskID == "" {
-		return ""
-	}
-	return taskcommon.BuildProxyURL(task.TaskID)
 }
 
 func sanitizeTaskDtoProperties(task *model.Task) any {

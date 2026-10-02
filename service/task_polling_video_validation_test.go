@@ -56,7 +56,7 @@ func TestValidateCompletedVideoRejectsZeroDurationMP4(t *testing.T) {
 	task := &model.Task{TaskID: "task_public", Platform: constant.TaskPlatform("1")}
 	result := &relaycommon.TaskInfo{Url: server.URL + "/broken.mp4"}
 
-	if err := validateCompletedVideo(context.Background(), ch, task, result); err == nil {
+	if _, err := validateCompletedVideo(context.Background(), ch, task, result); err == nil {
 		t.Fatal("expected invalid/zero-duration MP4 to be rejected")
 	}
 }

@@ -73,6 +73,13 @@ services:
       - WORKBUDDY2API_GATEWAY_KEY=${WORKBUDDY2API_GATEWAY_KEY:-${WB2API_API_KEY:-}}
       - AIVEED2API_BASE_URL=${AIVEED2API_BASE_URL:-http://aiveed2api:38752}
       - AIVEED2API_GATEWAY_KEY=${AIVEED2API_GATEWAY_KEY:-${AIVEED2API_API_KEY:-}}
+      - R2_ACCOUNT_ID=${R2_ACCOUNT_ID:-47488236385c8da653edce5e9f0b7f64}
+      - R2_ENDPOINT=${R2_ENDPOINT:-https://47488236385c8da653edce5e9f0b7f64.r2.cloudflarestorage.com}
+      - R2_REGION=${R2_REGION:-auto}
+      - R2_BUCKET=${R2_BUCKET:-domiex-videos}
+      - R2_PUBLIC_BASE_URL=${R2_PUBLIC_BASE_URL:-https://oss.domie.studio}
+      - R2_ACCESS_KEY_ID=${R2_ACCESS_KEY_ID:-}
+      - R2_SECRET_ACCESS_KEY=${R2_SECRET_ACCESS_KEY:-}
     depends_on:
       redis:
         condition: service_started

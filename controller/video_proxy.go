@@ -14,6 +14,7 @@ import (
 	"github.com/QuantumNous/new-api/constant"
 	"github.com/QuantumNous/new-api/logger"
 	"github.com/QuantumNous/new-api/model"
+	"github.com/QuantumNous/new-api/pkg/r2"
 	"github.com/QuantumNous/new-api/service"
 	"github.com/QuantumNous/new-api/setting/system_setting"
 
@@ -65,6 +66,11 @@ func VideoProxy(c *gin.Context) {
 	if task.Status != model.TaskStatusSuccess {
 		videoProxyError(c, http.StatusBadRequest, "invalid_request_error",
 			fmt.Sprintf("Task is not completed yet, current status: %s", task.Status))
+		return
+	}
+
+	if redirectURL := r2.PublicObjectURL(task.PrivateData.ResultURL); redirectURL != "" {
+		c.Redirect(http.StatusFound, redirectURL)
 		return
 	}
 

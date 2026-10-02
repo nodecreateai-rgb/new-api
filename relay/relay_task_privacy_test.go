@@ -28,9 +28,9 @@ func TestTaskModel2DtoRedactsPrivateVideoTask(t *testing.T) {
 
 func TestTaskModel2DtoHidesChannel(t *testing.T) {
 	task := &model.Task{
-		TaskID:    "task_public",
-		Status:    model.TaskStatusSuccess,
-		ChannelId: 51,
+		TaskID:     "task_public",
+		Status:     model.TaskStatusSuccess,
+		ChannelId:  51,
 		FailReason: "Roboneo Seedance Mini failed via ribbi.ai",
 	}
 	dto := TaskModel2Dto(task)
@@ -79,6 +79,20 @@ func TestTaskModel2DtoRedactsMyEditVideoTask(t *testing.T) {
 		}
 	}
 	if dto.ResultURL == "" || !strings.Contains(dto.ResultURL, "/v1/videos/task_public/content") {
+		t.Fatalf("result_url=%q", dto.ResultURL)
+	}
+}
+
+func TestTaskModel2DtoReturnsR2PublicURL(t *testing.T) {
+	task := &model.Task{
+		TaskID: "task_public",
+		Status: model.TaskStatusSuccess,
+		PrivateData: model.TaskPrivateData{
+			ResultURL: "https://oss.domie.studio/videos/2026/10/task_public.mp4",
+		},
+	}
+	dto := TaskModel2Dto(task)
+	if dto.ResultURL != "https://oss.domie.studio/videos/2026/10/task_public.mp4" {
 		t.Fatalf("result_url=%q", dto.ResultURL)
 	}
 }

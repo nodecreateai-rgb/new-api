@@ -6,9 +6,9 @@ import (
 	"time"
 )
 
-func TestTaskPollingIntervalIsThreeSeconds(t *testing.T) {
-	if taskPollingInterval != 3*time.Second {
-		t.Fatalf("task polling interval=%s", taskPollingInterval)
+func TestTaskPollingIntervalDefaultsToTenSeconds(t *testing.T) {
+	if got := taskPollingInterval(); got != 10*time.Second {
+		t.Fatalf("task polling interval=%s", got)
 	}
 }
 

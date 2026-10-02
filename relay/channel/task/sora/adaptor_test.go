@@ -59,6 +59,26 @@ func TestConvertToOpenAIVideoCompletedUsesAuthenticatedContentProxy(t *testing.T
 	require.Equal(t, "sd2-c7", gjson.GetBytes(body, "model").String())
 }
 
+func TestConvertToOpenAIVideoCompletedUsesR2PublicURL(t *testing.T) {
+	task := &model.Task{
+		TaskID:     "task_public",
+		Status:     model.TaskStatusSuccess,
+		Progress:   "100%",
+		Data:       []byte(`{"id":"upstream","status":"completed","progress":100,"url":"/outputs/task_upstream.mp4"}`),
+		Properties: model.Properties{OriginModelName: "sd2-c7"},
+		PrivateData: model.TaskPrivateData{
+			ResultURL: "https://oss.domie.studio/videos/2026/10/task_public.mp4",
+		},
+	}
+
+	body, err := (&TaskAdaptor{}).ConvertToOpenAIVideo(task)
+	require.NoError(t, err)
+	wantURL := "https://oss.domie.studio/videos/2026/10/task_public.mp4"
+	require.Equal(t, wantURL, gjson.GetBytes(body, "url").String())
+	require.Equal(t, wantURL, gjson.GetBytes(body, "video_url").String())
+	require.Equal(t, wantURL, gjson.GetBytes(body, "metadata.url").String())
+}
+
 func TestNormalizeSoraVideoStatus(t *testing.T) {
 	require.Equal(t, "in_progress", normalizeSoraVideoStatus("processing"))
 	require.Equal(t, "in_progress", normalizeSoraVideoStatus("running"))

@@ -11,9 +11,10 @@ import (
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/constant"
 	"github.com/QuantumNous/new-api/dto"
+	"github.com/QuantumNous/new-api/pkg/r2"
 	commonRelay "github.com/QuantumNous/new-api/relay/common"
+	"github.com/QuantumNous/new-api/setting/system_setting"
 )
-
 
 func jsonBytesFromDB(val interface{}) ([]byte, error) {
 	if val == nil {
@@ -267,6 +268,19 @@ func (t *Task) GetResultURL() string {
 		return t.FailReason
 	}
 	return ""
+}
+
+// PublicResultURL is the URL returned to API clients for a successful video.
+// It is either a public R2 object URL or the stable gateway content proxy.
+// Upstream provider URLs are never returned here.
+func (t *Task) PublicResultURL() string {
+	if t == nil || t.Status != TaskStatusSuccess || strings.TrimSpace(t.TaskID) == "" {
+		return ""
+	}
+	if publicURL := r2.PublicObjectURL(t.PrivateData.ResultURL); publicURL != "" {
+		return publicURL
+	}
+	return fmt.Sprintf("%s/v1/videos/%s/content", strings.TrimRight(system_setting.ServerAddress, "/"), t.TaskID)
 }
 
 // GenerateTaskID 生成对外暴露的 task_xxxx 格式 ID
@@ -846,6 +860,6 @@ func (t *Task) ToOpenAIVideo() *dto.OpenAIVideo {
 	openAIVideo.SetProgressStr(t.Progress)
 	openAIVideo.CreatedAt = t.CreatedAt
 	openAIVideo.CompletedAt = t.UpdatedAt
-	openAIVideo.SetMetadata("url", t.GetResultURL())
+	openAIVideo.SetMetadata("url", t.PublicResultURL())
 	return openAIVideo
 }

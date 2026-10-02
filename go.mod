@@ -62,12 +62,18 @@ require (
 
 require (
 	github.com/ClickHouse/clickhouse-go/v2 v2.40.3
+	github.com/aws/aws-sdk-go-v2/service/s3 v1.97.1
 	github.com/waffo-com/waffo-pancake-sdk-go v0.3.1
 	gorm.io/driver/clickhouse v0.7.0
 )
 
 require (
 	github.com/ClickHouse/ch-go v0.68.0 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/v4a v1.4.21 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.13.7 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/checksum v1.9.12 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.13.20 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.19.20 // indirect
 	github.com/go-faster/city v1.0.1 // indirect
 	github.com/go-faster/errors v0.7.1 // indirect
 	github.com/hashicorp/go-version v1.7.0 // indirect

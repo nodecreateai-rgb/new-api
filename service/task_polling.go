@@ -512,8 +512,11 @@ func updateVideoSingleTask(ctx context.Context, adaptor TaskPollingAdaptor, ch *
 			task.StartTime = now
 		}
 	case model.TaskStatusSuccess:
+		var videoBytes []byte
 		if task.Platform != constant.TaskPlatformImage && task.Platform != constant.TaskPlatformPay {
-			if err := validateCompletedVideo(ctx, ch, task, taskResult); err != nil {
+			var err error
+			videoBytes, err = validateCompletedVideo(ctx, ch, task, taskResult)
+			if err != nil {
 				if errors.Is(err, errVideoValidationInconclusive) {
 					return fmt.Errorf("video validation inconclusive for task %s: %w", task.TaskID, err)
 				}
@@ -538,14 +541,18 @@ func updateVideoSingleTask(ctx context.Context, adaptor TaskPollingAdaptor, ch *
 		if task.FinishTime == 0 {
 			task.FinishTime = now
 		}
-		// Always expose the stable New-API content endpoint. Keep any direct
-		// provider URL private so it can be fetched by VideoProxy without leaking
-		// the upstream host or returning an expiring CDN URL to clients.
+		// Keep any direct provider URL private. Prefer a public R2 object URL when
+		// upload succeeds; otherwise expose the stable New-API content proxy.
 		task.PrivateData.ResultURL = taskcommon.BuildProxyURL(task.TaskID)
 		if strings.HasPrefix(taskResult.Url, "data:") || taskResult.Url == "" {
 			task.PrivateData.UpstreamResultURL = ""
 		} else {
 			task.PrivateData.UpstreamResultURL = taskResult.Url
+		}
+		if task.Platform != constant.TaskPlatformImage && task.Platform != constant.TaskPlatformPay {
+			if publicURL := persistGeneratedVideoToR2(ctx, task, taskResult, videoBytes); publicURL != "" {
+				task.PrivateData.ResultURL = publicURL
+			}
 		}
 		shouldSettle = true
 	case model.TaskStatusFailure:
@@ -643,13 +650,13 @@ func findCompletedVideoURL(payload any) string {
 	return ""
 }
 
-func validateCompletedVideo(ctx context.Context, ch *model.Channel, task *model.Task, taskResult *relaycommon.TaskInfo) error {
+func validateCompletedVideo(ctx context.Context, ch *model.Channel, task *model.Task, taskResult *relaycommon.TaskInfo) ([]byte, error) {
 	videoURL := strings.TrimSpace(taskResult.Url)
 	if videoURL == "" {
 		baseURL := strings.TrimRight(strings.TrimSpace(ch.GetBaseURL()), "/")
 		upstreamTaskID := strings.TrimSpace(task.GetUpstreamTaskID())
 		if baseURL == "" || upstreamTaskID == "" {
-			return errors.New("video URL is empty")
+			return nil, errors.New("video URL is empty")
 		}
 		name := upstreamTaskID
 		if !strings.HasPrefix(name, "task_") {
@@ -659,25 +666,25 @@ func validateCompletedVideo(ctx context.Context, ch *model.Channel, task *model.
 	}
 
 	if strings.HasPrefix(videoURL, "data:") {
-		return nil
+		return nil, nil
 	}
 	if strings.HasPrefix(videoURL, "/") {
 		baseURL := strings.TrimRight(strings.TrimSpace(ch.GetBaseURL()), "/")
 		if baseURL == "" {
-			return errors.New("relative video URL without channel base URL")
+			return nil, errors.New("relative video URL without channel base URL")
 		}
 		videoURL = baseURL + videoURL
 	}
 
 	client, err := GetHttpClientWithProxy(ch.GetSetting().Proxy)
 	if err != nil {
-		return fmt.Errorf("%w: create client: %v", errVideoValidationInconclusive, err)
+		return nil, fmt.Errorf("%w: create client: %v", errVideoValidationInconclusive, err)
 	}
 	requestCtx, cancel := context.WithTimeout(ctx, 60*time.Second)
 	defer cancel()
 	req, err := http.NewRequestWithContext(requestCtx, http.MethodGet, videoURL, nil)
 	if err != nil {
-		return fmt.Errorf("create video validation request: %w", err)
+		return nil, fmt.Errorf("create video validation request: %w", err)
 	}
 	if ch.Type == constant.ChannelTypeOpenAI || ch.Type == constant.ChannelTypeSora {
 		key := strings.TrimSpace(task.PrivateData.Key)
@@ -690,36 +697,36 @@ func validateCompletedVideo(ctx context.Context, ch *model.Channel, task *model.
 	}
 	resp, err := client.Do(req)
 	if err != nil {
-		return fmt.Errorf("%w: download failed: %v", errVideoValidationInconclusive, err)
+		return nil, fmt.Errorf("%w: download failed: %v", errVideoValidationInconclusive, err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("%w: HTTP %d", errVideoValidationInconclusive, resp.StatusCode)
+		return nil, fmt.Errorf("%w: HTTP %d", errVideoValidationInconclusive, resp.StatusCode)
 	}
 	if resp.ContentLength > maxVideoValidationBytes {
-		return fmt.Errorf("video exceeds validation limit: %d bytes", resp.ContentLength)
+		return nil, fmt.Errorf("video exceeds validation limit: %d bytes", resp.ContentLength)
 	}
 	body, err := io.ReadAll(io.LimitReader(resp.Body, maxVideoValidationBytes+1))
 	if err != nil {
-		return fmt.Errorf("read video for validation: %w", err)
+		return nil, fmt.Errorf("read video for validation: %w", err)
 	}
 	if int64(len(body)) > maxVideoValidationBytes {
-		return fmt.Errorf("video exceeds validation limit")
+		return nil, fmt.Errorf("video exceeds validation limit")
 	}
 	if !hasTopLevelMP4Box(body, "moov") {
-		return errors.New("MP4 metadata box moov is missing")
+		return nil, errors.New("MP4 metadata box moov is missing")
 	}
 	info, err := mp4.Probe(bytes.NewReader(body))
 	if err != nil {
-		return fmt.Errorf("probe MP4: %w", err)
+		return nil, fmt.Errorf("probe MP4: %w", err)
 	}
 	if info.Timescale == 0 || info.Duration == 0 {
-		return fmt.Errorf("zero duration: duration=%d timescale=%d", info.Duration, info.Timescale)
+		return nil, fmt.Errorf("zero duration: duration=%d timescale=%d", info.Duration, info.Timescale)
 	}
 	if info.Duration <= uint64(info.Timescale)/10 {
-		return fmt.Errorf("zero duration: duration=%d timescale=%d", info.Duration, info.Timescale)
+		return nil, fmt.Errorf("zero duration: duration=%d timescale=%d", info.Duration, info.Timescale)
 	}
-	return nil
+	return body, nil
 }
 
 func hasTopLevelMP4Box(body []byte, want string) bool {

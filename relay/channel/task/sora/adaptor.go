@@ -703,7 +703,7 @@ func ensureOpenAIVideoContentURL(data []byte, task *model.Task) ([]byte, error) 
 	if task == nil {
 		return data, nil
 	}
-	contentURL := taskcommon.BuildProxyURL(task.TaskID)
+	contentURL := task.PublicResultURL()
 	if strings.TrimSpace(contentURL) == "" {
 		return data, nil
 	}
