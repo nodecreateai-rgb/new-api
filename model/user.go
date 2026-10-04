@@ -294,12 +294,13 @@ func GetUserById(id int, selectAll bool) (*User, error) {
 		return nil, errors.New("id 为空！")
 	}
 	user := User{Id: id}
-	var err error = nil
-	if selectAll {
-		err = DB.First(&user, "id = ?", id).Error
-	} else {
-		err = DB.Omit("password").First(&user, "id = ?", id).Error
-	}
+	err := retryClickHouseErr(func() error {
+		user = User{Id: id}
+		if selectAll {
+			return DB.First(&user, "id = ?", id).Error
+		}
+		return DB.Omit("password").First(&user, "id = ?", id).Error
+	})
 	return &user, err
 }
 
@@ -853,7 +854,10 @@ func ValidateAccessToken(token string) (*User, error) {
 	}
 	token = strings.Replace(token, "Bearer ", "", 1)
 	user := &User{}
-	err := DB.Where("access_token = ?", token).First(user).Error
+	err := retryClickHouseErr(func() error {
+		user = &User{}
+		return DB.Where("access_token = ?", token).First(user).Error
+	})
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
