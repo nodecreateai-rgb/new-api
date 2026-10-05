@@ -22,7 +22,16 @@ func TestSD2MiniUsesFixedPerRequestBilling(t *testing.T) {
 	require.False(t, a.UseRequestBillingRatios(&relaycommon.RelayInfo{OriginModelName: "grok-imagine-720p"}))
 	require.False(t, a.UseRequestBillingRatios(&relaycommon.RelayInfo{OriginModelName: "seedance-720"}))
 	require.False(t, a.UseRequestBillingRatios(&relaycommon.RelayInfo{OriginModelName: "kling-o3"}))
+	require.False(t, a.UseRequestBillingRatios(&relaycommon.RelayInfo{OriginModelName: "wan-3.0-prime"}))
+	require.False(t, a.UseRequestBillingRatios(&relaycommon.RelayInfo{OriginModelName: "minimax-h3"}))
 	require.False(t, a.UseRequestBillingRatios(&relaycommon.RelayInfo{OriginModelName: "seedance-2.0-fast"}))
+	require.False(t, a.UseRequestBillingRatios(&relaycommon.RelayInfo{OriginModelName: "sora-2"}))
+}
+
+func TestFlovaUsesFixedPerRequestBilling(t *testing.T) {
+	a := &TaskAdaptor{}
+	require.False(t, a.UseRequestBillingRatios(&relaycommon.RelayInfo{OriginModelName: "wan-3.0-prime"}))
+	require.False(t, a.UseRequestBillingRatios(&relaycommon.RelayInfo{OriginModelName: "minimax-h3"}))
 	require.False(t, a.UseRequestBillingRatios(&relaycommon.RelayInfo{OriginModelName: "sora-2"}))
 }
 
@@ -77,6 +86,21 @@ func TestLaihuaSeedanceLocksResolutionFromModel(t *testing.T) {
 
 	body = map[string]interface{}{"size": "720x1280"}
 	applyOriginModelResolution(body, "grok-imagine-720p")
+	require.Equal(t, "720p", body["resolution"])
+	require.Equal(t, "720p", body["size"])
+
+	body = map[string]interface{}{"size": "1080x1920"}
+	applyOriginModelResolution(body, "wan-3.0-prime")
+	require.Equal(t, "720p", body["resolution"])
+	require.Equal(t, "720p", body["size"])
+
+	body = map[string]interface{}{"size": "720x1280"}
+	applyOriginModelResolution(body, "minimax-h3")
+	require.Equal(t, "768p", body["resolution"])
+	require.Equal(t, "768p", body["size"])
+
+	body = map[string]interface{}{"size": "1080x1920"}
+	applyOriginModelResolution(body, "sora-2")
 	require.Equal(t, "720p", body["resolution"])
 	require.Equal(t, "720p", body["size"])
 }

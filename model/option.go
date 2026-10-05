@@ -287,9 +287,10 @@ func ensureDopioRMBPricing() {
 		"oauth2":                             0.3,
 		"pay":                                0.5,
 		"seedance-2.0":                       2,
-		"sora-2":                             1,
+		"sora-2":                             1.5,
 		"wan-3.0":                            2,
-		"minimax-h3":                         2,
+		"wan-3.0-prime":                      2,
+		"minimax-h3":                         0.5,
 		"seedance-2.5":                       3,
 		"seedance-2.5-480p":                  3,
 		"seedance-2.5-720p":                  4,
@@ -691,7 +692,7 @@ func ensureDopioRMBPricing() {
 		}
 	}
 	for group, groupPrices := range modelGroupPrices {
-		for _, model := range []string{"seedance-2.0", "sora-2", "wan-3.0", "minimax-h3", "seedance-2.0-c2", "seedance-2.0-480p-c2", "seedance-2.0-fast-c2", "seedance-2.0-fast-480p-c2", "seedance-2.0-mini-c2", "wan-3.0-c2"} {
+		for _, model := range []string{"seedance-2.0", "sora-2", "wan-3.0", "wan-3.0-prime", "minimax-h3", "seedance-2.0-c2", "seedance-2.0-480p-c2", "seedance-2.0-fast-c2", "seedance-2.0-fast-480p-c2", "seedance-2.0-mini-c2", "wan-3.0-c2"} {
 			if _, exists := groupPrices[model]; exists {
 				delete(groupPrices, model)
 				changed = true
@@ -790,6 +791,9 @@ func ensureDopioRMBPricing() {
 	}
 	if err := retireFotor2apiRouting(); err != nil {
 		common.SysLog("failed to retire Fotor video gateway routing: " + err.Error())
+	}
+	if err := ensureFlova2apiRouting(); err != nil {
+		common.SysLog("failed to enforce Flova video gateway routing: " + err.Error())
 	}
 	common.SysLog("enforced Dopio RMB pricing incl sd2.5=1.5 per call, vip6 sd2.5=1, sd2-fast=1 per call, vip6 Seedance 720p fast=1/full=2, image-omni=0.05, oauth2=0.3, pay=0.5, sd2-c6=0.5, seedance-2.0-mini=0.5, seedance-2.0-mini-480p=0.8, seedance-2.0-mini-720p=0.8, sd2-c7=1, sd2-c11=2.5, sd2-c12=3, Price=1, USDExchangeRate=1, quota_display_type=CNY")
 }
@@ -3101,7 +3105,7 @@ var retiredNonCoreModels = []string{
 	"deepseek-v4.1-flash",
 	"seedance-2.0-c2", "seedance-2.0-480p-c2", "seedance-2.0-fast-c2",
 	"seedance-2.0-fast-480p-c2", "seedance-2.0-mini-c2", "wan-3.0-c2",
-	"seedance-2.0", "sora-2", "wan-3.0", "minimax-h3",
+	"seedance-2.0", "wan-3.0",
 }
 
 var retiredNonCoreChannelNames = []string{
