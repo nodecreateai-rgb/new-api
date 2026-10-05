@@ -38,6 +38,8 @@ func TestFlovaRoutingUsesFlovaGateway(t *testing.T) {
 		`"wan-3.0-prime":                      2`,
 		`"minimax-h3":                         0.5`,
 		`"sora-2":                             1.5`,
+		`"wan-3.0-prime":      1.5`,
+		`if group == "vip9" && model == "wan-3.0-prime"`,
 	} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("missing %s", want)

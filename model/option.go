@@ -462,6 +462,7 @@ func ensureDopioRMBPricing() {
 			"seedance-2.5-480p":  2,
 			"seedance-2.5-720p":  3,
 			"seedance-2.5-1080p": 4,
+			"wan-3.0-prime":      1.5,
 		},
 	}
 	for group := range targetModelGroupPrices {
@@ -693,6 +694,9 @@ func ensureDopioRMBPricing() {
 	}
 	for group, groupPrices := range modelGroupPrices {
 		for _, model := range []string{"seedance-2.0", "sora-2", "wan-3.0", "wan-3.0-prime", "minimax-h3", "seedance-2.0-c2", "seedance-2.0-480p-c2", "seedance-2.0-fast-c2", "seedance-2.0-fast-480p-c2", "seedance-2.0-mini-c2", "wan-3.0-c2"} {
+			if group == "vip9" && model == "wan-3.0-prime" {
+				continue
+			}
 			if _, exists := groupPrices[model]; exists {
 				delete(groupPrices, model)
 				changed = true
