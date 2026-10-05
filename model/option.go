@@ -785,8 +785,8 @@ func ensureDopioRMBPricing() {
 	if err := ensureSekotvMiniRouting(); err != nil {
 		common.SysLog("failed to enforce Seko Seedance Mini gateway routing: " + err.Error())
 	}
-	if err := ensureVideoStudioRouting(); err != nil {
-		common.SysLog("failed to enforce video studio gateway routing: " + err.Error())
+	if err := retireVideoStudioRouting(); err != nil {
+		common.SysLog("failed to retire video studio gateway routing: " + err.Error())
 	}
 	if err := retireFotor2apiRouting(); err != nil {
 		common.SysLog("failed to retire Fotor video gateway routing: " + err.Error())
@@ -3101,6 +3101,7 @@ var retiredNonCoreModels = []string{
 	"deepseek-v4.1-flash",
 	"seedance-2.0-c2", "seedance-2.0-480p-c2", "seedance-2.0-fast-c2",
 	"seedance-2.0-fast-480p-c2", "seedance-2.0-mini-c2", "wan-3.0-c2",
+	"seedance-2.0", "sora-2", "wan-3.0", "minimax-h3",
 }
 
 var retiredNonCoreChannelNames = []string{
@@ -3112,6 +3113,7 @@ var retiredNonCoreChannelNames = []string{
 	"Laihua Seedance 2.5",
 	"Seedance 2.0 Video C2",
 	"Fotor Video",
+	"Video Studio",
 }
 
 func retireNonCoreGateways() error {
