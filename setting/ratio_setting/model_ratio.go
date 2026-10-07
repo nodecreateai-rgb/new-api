@@ -332,12 +332,13 @@ var defaultModelPrice = map[string]float64{
 	"sd2-c3":                             4,
 	"seedance-video-fast-per-second":     0.2,
 	"seedance-video-standard-per-second": 0.33,
-	"seedance-2.0-c2":                    0.8,
-	"seedance-2.0-480p-c2":               0.8,
-	"seedance-2.0-fast-c2":               0.7,
-	"seedance-2.0-fast-480p-c2":          0.7,
-	"seedance-2.0-mini-c2":               0.6,
-	"wan-3.0-c2":                         1.5,
+	"seedance-2.0-c2":                    1.5,
+	"seedance-2.0-480p-c2":               1.5,
+	"seedance-2.0-fast-c2":               1,
+	"seedance-2.0-fast-480p-c2":          1,
+	"seedance-2.0-mini-c2":               0.8,
+	"wan-3.0-c2":                         2,
+	"wan-3.0-480p-c2":                    0.5,
 }
 
 var defaultAudioRatio = map[string]float64{

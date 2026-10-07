@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
@@ -154,6 +155,14 @@ func GetAndValidOpenAIImageRequest(c *gin.Context, relayMode int) (*dto.ImageReq
 			c.Request.MultipartForm = form
 			c.Request.PostForm = formData
 			imageRequest.Prompt = formData.Get("prompt")
+			if strings.TrimSpace(imageRequest.Prompt) == "" {
+				for _, key := range []string{"input", "text", "query", "prompt_text", "instruction", "instructions"} {
+					if v := strings.TrimSpace(formData.Get(key)); v != "" {
+						imageRequest.Prompt = v
+						break
+					}
+				}
+			}
 			imageRequest.Model = formData.Get("model")
 			imageRequest.N = common.GetPointer(uint(common.String2Int(formData.Get("n"))))
 			imageRequest.Quality = formData.Get("quality")
@@ -225,13 +234,14 @@ func GetAndValidOpenAIImageRequest(c *gin.Context, relayMode int) (*dto.ImageReq
 			}
 		}
 
-		//if imageRequest.Prompt == "" {
-		//	return nil, errors.New("prompt is required")
-		//}
-
 		if imageRequest.N == nil || *imageRequest.N == 0 {
 			imageRequest.N = common.GetPointer(uint(1))
 		}
+	}
+
+	imageRequest.ResolvePrompt()
+	if strings.TrimSpace(imageRequest.Prompt) == "" {
+		return nil, types.NewErrorWithStatusCode(errors.New("prompt is required"), types.ErrorCodeInvalidRequest, http.StatusBadRequest, types.ErrOptionWithSkipRetry())
 	}
 
 	return imageRequest, nil

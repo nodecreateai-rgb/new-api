@@ -71,3 +71,27 @@ func TestGetAndValidOpenAIImageRequestMultipartStreamInvalidValue(t *testing.T) 
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "invalid stream value")
 }
+
+func TestGetAndValidOpenAIImageRequestRequiresPrompt(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/images/generations", bytes.NewBufferString(`{"model":"gpt-image-2"}`))
+	c.Request.Header.Set("Content-Type", "application/json")
+
+	_, err := GetAndValidOpenAIImageRequest(c, relayconstant.RelayModeImagesGenerations)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "prompt is required")
+}
+
+func TestGetAndValidOpenAIImageRequestAcceptsInputAlias(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/images/generations", bytes.NewBufferString(`{"model":"gpt-image-2","input":"a red apple"}`))
+	c.Request.Header.Set("Content-Type", "application/json")
+
+	req, err := GetAndValidOpenAIImageRequest(c, relayconstant.RelayModeImagesGenerations)
+	require.NoError(t, err)
+	require.Equal(t, "a red apple", req.Prompt)
+}

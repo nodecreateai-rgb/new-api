@@ -15,6 +15,7 @@ var (
 		"gpt-image-1",
 		"gpt-image-2",
 		"nano-banana-2",
+		"nano-banana-2.1",
 		"nano-banana-pro",
 		"gemini-3-pro-image-preview",
 		"gemini-3.1-flash-image-preview",
@@ -46,6 +47,8 @@ func MapImageGenerationModelAlias(modelName string) string {
 		return "nano-banana-pro"
 	case "gemini-3.1-flash-image-preview":
 		return "nano-banana-2"
+	case "gemini-nano-banana-2.1":
+		return "nano-banana-2.1"
 	}
 	return modelName
 }

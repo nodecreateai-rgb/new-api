@@ -523,6 +523,11 @@ func RelayTask(c *gin.Context) {
 			respondTaskError(c, service.TaskErrorWrapperLocal(err, "invalid_request", http.StatusBadRequest))
 			return
 		}
+		imageReq.ResolvePrompt()
+		if strings.TrimSpace(imageReq.Prompt) == "" {
+			respondTaskError(c, service.TaskErrorWrapperLocal(errors.New("prompt is required"), "invalid_request", http.StatusBadRequest))
+			return
+		}
 		relayInfo.Request = &imageReq
 		if err := RelayImageAsync(c, relayInfo, &imageReq); err != nil {
 			c.JSON(err.StatusCode, gin.H{"error": err.ToOpenAIError()})

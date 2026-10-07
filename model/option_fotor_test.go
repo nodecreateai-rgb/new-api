@@ -6,53 +6,59 @@ import (
 	"testing"
 )
 
-func TestFotor2apiModelsAreRetiredOnStartup(t *testing.T) {
-	option, err := os.ReadFile("option.go")
-	if err != nil {
-		t.Fatal(err)
-	}
-	body := string(option)
-	for _, want := range []string{
-		`retireFotor2apiRouting()`,
-		`"Fotor Video"`,
-		`"seedance-2.0-c2"`,
-		`"seedance-2.0-480p-c2"`,
-		`"seedance-2.0-fast-c2"`,
-		`"seedance-2.0-fast-480p-c2"`,
-		`"seedance-2.0-mini-c2"`,
-		`"wan-3.0-c2"`,
-	} {
-		if !strings.Contains(body, want) {
-			t.Fatalf("missing %s", want)
-		}
-	}
-	if strings.Contains(body, "ensureFotor2apiRouting()") {
-		t.Fatal("fotor routing must not be re-enabled on startup")
-	}
-
+func TestFotor2apiRoutingUsesWan480pC2(t *testing.T) {
 	data, err := os.ReadFile("option_fotor.go")
 	if err != nil {
 		t.Fatal(err)
 	}
 	s := string(data)
 	for _, want := range []string{
-		`func retireFotor2apiRouting()`,
-		`fotor2apiChannelName = "Fotor Video"`,
-		`disableChannelByName(fotor2apiChannelName)`,
-		`retireMarketplaceModels(fotor2apiPublicModels)`,
+		`func ensureFotor2apiRouting()`,
+		`const modelsCSV = "wan-3.0-480p-c2"`,
+		`{"wan-3.0-480p-c2":"wan-3.0"}`,
+		`publicModels := []string{"wan-3.0-480p-c2"}`,
+		`baseURL = "http://fotor2api:38684"`,
+		`os.Getenv("FOTOR2API_BASE_URL")`,
+		`os.Getenv("FOTOR2API_GATEWAY_KEY")`,
+		`¥0.5/次`,
+		`480P，10图片5视频5音频，最大20秒`,
 	} {
 		if !strings.Contains(s, want) {
 			t.Fatalf("missing %s", want)
 		}
 	}
-	for _, forbidden := range []string{
-		`func ensureFotor2apiRouting()`,
-		`http://fotor2api:38684`,
-		`FOTOR2API_BASE_URL`,
-		`ChannelStatusEnabled`,
+	for _, leftover := range []string{
+		`func retireFotor2apiRouting()`,
+		`seedance-2.0-c2`,
+		`wan-3.0-c2`,
 	} {
-		if strings.Contains(s, forbidden) {
-			t.Fatalf("fotor ensure leftover %s", forbidden)
+		if strings.Contains(s, leftover) {
+			t.Fatalf("leftover %s", leftover)
 		}
+	}
+
+	option, err := os.ReadFile("option.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body := string(option)
+	for _, want := range []string{
+		`ensureFotor2apiRouting()`,
+		`"wan-3.0-480p-c2":                    0.5`,
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("missing %s", want)
+		}
+	}
+	if strings.Contains(body, "retireFotor2apiRouting()") {
+		t.Fatal("fotor routing must be ensured on startup")
+	}
+
+	ratio, err := os.ReadFile("../setting/ratio_setting/model_ratio.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(ratio), `"wan-3.0-480p-c2":                    0.5`) {
+		t.Fatal("missing default price wan-3.0-480p-c2")
 	}
 }

@@ -283,6 +283,7 @@ func ensureDopioRMBPricing() {
 		"gpt-image-2.5-sunburst":             air2apiImagePrice,
 		"nano-banana-2":                      air2apiImagePrice,
 		"nano-banana-2-lite":                 air2apiImagePrice,
+		"nano-banana-2.1":                      air2apiImagePrice,
 		"nano-banana-pro":                    air2apiImagePrice,
 		"oauth2":                             0.3,
 		"pay":                                0.5,
@@ -304,6 +305,7 @@ func ensureDopioRMBPricing() {
 		"seedance-2.0-fast-480p-c2":          1,
 		"seedance-2.0-mini-c2":               0.8,
 		"wan-3.0-c2":                         2,
+		"wan-3.0-480p-c2":                    0.5,
 	}
 	targetGroupRatios := map[string]float64{
 		"default": 1,
@@ -347,6 +349,7 @@ func ensureDopioRMBPricing() {
 			"gpt-image-2.5-sunburst": air2apiImagePrice,
 			"nano-banana-2":          air2apiImagePrice,
 			"nano-banana-2-lite":     air2apiImagePrice,
+		"nano-banana-2.1":                      air2apiImagePrice,
 			"nano-banana-pro":        air2apiImagePrice,
 		},
 		"vip1": {
@@ -368,6 +371,7 @@ func ensureDopioRMBPricing() {
 			"gpt-image-2.5-sunburst":             air2apiImagePrice,
 			"nano-banana-2":                      air2apiImagePrice,
 			"nano-banana-2-lite":                 air2apiImagePrice,
+		"nano-banana-2.1":                      air2apiImagePrice,
 			"nano-banana-pro":                    air2apiImagePrice,
 		},
 		"vip": {
@@ -389,6 +393,7 @@ func ensureDopioRMBPricing() {
 			"gpt-image-2.5-sunburst":             air2apiImagePrice,
 			"nano-banana-2":                      air2apiImagePrice,
 			"nano-banana-2-lite":                 air2apiImagePrice,
+		"nano-banana-2.1":                      air2apiImagePrice,
 			"nano-banana-pro":                    air2apiImagePrice,
 		},
 		"svip": {
@@ -410,6 +415,7 @@ func ensureDopioRMBPricing() {
 			"gpt-image-2.5-sunburst":             air2apiImagePrice,
 			"nano-banana-2":                      air2apiImagePrice,
 			"nano-banana-2-lite":                 air2apiImagePrice,
+		"nano-banana-2.1":                      air2apiImagePrice,
 			"nano-banana-pro":                    air2apiImagePrice,
 		},
 		"vip2": {
@@ -434,6 +440,7 @@ func ensureDopioRMBPricing() {
 			"gpt-image-2.5-sunburst": air2apiImagePrice,
 			"nano-banana-2":          air2apiImagePrice,
 			"nano-banana-2-lite":     air2apiImagePrice,
+		"nano-banana-2.1":                      air2apiImagePrice,
 			"nano-banana-pro":        air2apiImagePrice,
 		},
 		"vip3": {
@@ -693,7 +700,7 @@ func ensureDopioRMBPricing() {
 		}
 	}
 	for group, groupPrices := range modelGroupPrices {
-		for _, model := range []string{"seedance-2.0", "sora-2", "wan-3.0", "wan-3.0-prime", "minimax-h3", "seedance-2.0-c2", "seedance-2.0-480p-c2", "seedance-2.0-fast-c2", "seedance-2.0-fast-480p-c2", "seedance-2.0-mini-c2", "wan-3.0-c2"} {
+		for _, model := range []string{"seedance-2.0", "sora-2", "wan-3.0", "wan-3.0-prime", "minimax-h3", "seedance-2.0-c2", "seedance-2.0-480p-c2", "seedance-2.0-fast-c2", "seedance-2.0-fast-480p-c2", "seedance-2.0-mini-c2", "wan-3.0-c2", "wan-3.0-480p-c2"} {
 			if group == "vip9" && model == "wan-3.0-prime" {
 				continue
 			}
@@ -793,8 +800,8 @@ func ensureDopioRMBPricing() {
 	if err := retireVideoStudioRouting(); err != nil {
 		common.SysLog("failed to retire video studio gateway routing: " + err.Error())
 	}
-	if err := retireFotor2apiRouting(); err != nil {
-		common.SysLog("failed to retire Fotor video gateway routing: " + err.Error())
+	if err := ensureFotor2apiRouting(); err != nil {
+		common.SysLog("failed to enforce Fotor video gateway routing: " + err.Error())
 	}
 	if err := ensureFlova2apiRouting(); err != nil {
 		common.SysLog("failed to enforce Flova video gateway routing: " + err.Error())
@@ -1474,8 +1481,8 @@ func ensureSD2FastRouting() error {
 func ensureAir2APIImageRouting() error {
 	const neutralName = "Image Omni"
 	const legacyChannelName = "Air Image"
-	const modelsCSV = "gpt-image-2,gpt-image-2.5-flare,gpt-image-2.5-sunburst,nano-banana-2,nano-banana-2-lite,nano-banana-pro"
-	const mappingJSON = `{"gpt-image-2":"gpt-image-2","gpt-image-2.5-flare":"gpt-image-2.5-flare","gpt-image-2.5-sunburst":"gpt-image-2.5-sunburst","nano-banana-2":"nano-banana-2","nano-banana-2-lite":"nano-banana-2-lite","nano-banana-pro":"nano-banana-pro"}`
+	const modelsCSV = "gpt-image-2,gpt-image-2.5-flare,gpt-image-2.5-sunburst,nano-banana-2,nano-banana-2-lite,nano-banana-2.1,nano-banana-pro"
+	const mappingJSON = `{"gpt-image-2":"gpt-image-2","gpt-image-2.5-flare":"gpt-image-2.5-flare","gpt-image-2.5-sunburst":"gpt-image-2.5-sunburst","nano-banana-2":"nano-banana-2","nano-banana-2-lite":"nano-banana-2-lite","nano-banana-2.1":"nano-banana-2.1","nano-banana-pro":"nano-banana-pro"}`
 	const groupsCSV = "default,vip,svip,vip1,vip2,vip3,vip6"
 	baseURL := strings.TrimSpace(os.Getenv("AIR2API_BASE_URL"))
 	if baseURL == "" {
@@ -1502,6 +1509,7 @@ func ensureAir2APIImageRouting() error {
 		"gpt-image-2.5-sunburst",
 		"nano-banana-2",
 		"nano-banana-2-lite",
+		"nano-banana-2.1",
 		"nano-banana-pro",
 	}
 	groups := []string{"default", "vip", "svip", "vip1", "vip2", "vip3", "vip6"}
@@ -1511,6 +1519,7 @@ func ensureAir2APIImageRouting() error {
 		"gpt-image-2.5-sunburst": "OpenAI GPT Image 2.5 Sunburst 高质量图像（异步）",
 		"nano-banana-2":          "Google Gemini 3.1 Flash 图像（异步）",
 		"nano-banana-2-lite":     "Google Gemini 3.1 Flash Lite 轻量图像（异步）",
+		"nano-banana-2.1":        "Google Nano Banana 2.1 图像（异步）",
 		"nano-banana-pro":        "Google Gemini 3 Pro 高级图像（异步）",
 	}
 	endpoint := `{"openai-image":{"path":"/v1/images/generations","method":"POST"}}`
@@ -3120,7 +3129,6 @@ var retiredNonCoreChannelNames = []string{
 	"WorkBuddy Chat",
 	"Laihua Seedance 2.5",
 	"Seedance 2.0 Video C2",
-	"Fotor Video",
 	"Video Studio",
 }
 

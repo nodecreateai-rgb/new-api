@@ -38,6 +38,16 @@ func sanitizeImageTaskPublicError(reason string) string {
 	if reason == "" {
 		return ""
 	}
+	if status, msg := parseUpstreamImageStatusError(reason); status != 0 {
+		if status >= 400 && status < 500 {
+			msg = strings.TrimSpace(msg)
+			if msg != "" && !imageErrorLooksInternal(msg) {
+				return msg
+			}
+			return "invalid image request"
+		}
+		return imagePublicUpstreamError
+	}
 	low := strings.ToLower(reason)
 	if strings.Contains(low, "felo.ai") || strings.Contains(low, "file.felo.ai") ||
 		strings.Contains(low, "api-proxy") || strings.Contains(low, "upload image") ||
@@ -54,6 +64,47 @@ func sanitizeImageTaskPublicError(reason string) string {
 		return imagePublicUpstreamError
 	}
 	return clean
+}
+
+func parseUpstreamImageStatusError(reason string) (int, string) {
+	const marker = "upstream status="
+	low := strings.ToLower(reason)
+	idx := strings.Index(low, marker)
+	if idx < 0 {
+		return 0, ""
+	}
+	rest := reason[idx+len(marker):]
+	statusEnd := 0
+	for statusEnd < len(rest) && rest[statusEnd] >= '0' && rest[statusEnd] <= '9' {
+		statusEnd++
+	}
+	if statusEnd == 0 {
+		return 0, ""
+	}
+	status := 0
+	for i := 0; i < statusEnd; i++ {
+		status = status*10 + int(rest[i]-'0')
+	}
+	rest = strings.TrimSpace(rest[statusEnd:])
+	msg := ""
+	if len(rest) >= 5 && strings.EqualFold(rest[:5], "body=") {
+		body := strings.TrimSpace(rest[5:])
+		var parsed map[string]any
+		if common.Unmarshal([]byte(body), &parsed) == nil {
+			msg = imageTaskErrorMessage(parsed)
+		}
+		if msg == "" {
+			msg = body
+		}
+	}
+	return status, msg
+}
+
+func imageErrorLooksInternal(msg string) bool {
+	low := strings.ToLower(msg)
+	return strings.Contains(low, "http://") || strings.Contains(low, "https://") ||
+		strings.Contains(low, "/app/scratch") || strings.Contains(low, "felo") ||
+		strings.Contains(low, "air2api") || strings.Contains(low, "paco-felo2api")
 }
 
 func imageAsyncRequested(req *dto.ImageRequest) bool {
@@ -96,6 +147,12 @@ func shouldRouteImageRequestToFelo(req *dto.ImageRequest) bool {
 }
 
 func RelayImageAsync(c *gin.Context, info *relaycommon.RelayInfo, req *dto.ImageRequest) *types.NewAPIError {
+	if req != nil {
+		req.ResolvePrompt()
+	}
+	if req == nil || strings.TrimSpace(req.Prompt) == "" {
+		return types.NewErrorWithStatusCode(errors.New("prompt is required"), types.ErrorCodeInvalidRequest, http.StatusBadRequest, types.ErrOptionWithSkipRetry())
+	}
 	meta := req.GetTokenCountMeta()
 	tokens, err := service.EstimateRequestToken(c, meta, info)
 	if err != nil {
@@ -396,6 +453,7 @@ func ensureAsyncPayload(contentType string, body []byte, routeToFelo, routeToAir
 	if err := common.Unmarshal(body, &m); err != nil {
 		return nil, contentType, err
 	}
+	dto.ApplyImagePromptAliases(m)
 	if routeToAir2API {
 		delete(m, "async")
 		delete(m, "async_task")

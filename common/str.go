@@ -22,6 +22,25 @@ var (
 )
 
 var upstreamBrandReplacers = strings.NewReplacer(
+	"domiex-flova-blwg71-flova2api-1", "video-upstream",
+	"flova-generation-upstream", "video-upstream",
+	"flova2api", "video service",
+	"Flova2API", "Video service",
+	"FLOVA2API", "VIDEO_SERVICE",
+	"service.flova.tv", "video-upstream",
+	"www.flova.tv", "video-upstream",
+	"flova.tv", "video-upstream",
+	"Flova", "Video service",
+	"flova", "video service",
+	"domiex-fotor-9dfnxp-fotor2api-1", "video-upstream",
+	"fotor-generation-upstream", "video-upstream",
+	"fotor2api", "video service",
+	"Fotor2API", "Video service",
+	"FOTOR2API", "VIDEO_SERVICE",
+	"www.fotor.com", "video-upstream",
+	"Fotor Video", "Video service",
+	"Fotor", "Video service",
+	"fotor", "video service",
 	"domiex-ribbi-2t6bpb-ribbi2api-1", "video-upstream",
 	"ribbi-generation-upstream", "video-upstream",
 	"ribbi2api", "video service",
@@ -364,7 +383,7 @@ func MaskUpstreamProviderInfo(str string) string {
 }
 
 var publicErrorNeedles = []string{
-	"ribbi", "roboneo", "dola2", "storyhub", "laihua", "workbuddy", "unikey",
+	"flova", "ribbi", "roboneo", "dola2", "storyhub", "laihua", "workbuddy", "unikey",
 	"vobile", "aiveed", "oreate", "myedit", "cyberlink", "mediaio", "pixverse",
 	"seko", "generation-upstream", "dial tcp", "connection refused", "no such host",
 	"http://", "https://", "status=", "status ",

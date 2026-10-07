@@ -12,6 +12,7 @@ var air2apiImageModels = map[string]struct{}{
 	"gpt-image-2.5-sunburst": {},
 	"nano-banana-2":          {},
 	"nano-banana-2-lite":     {},
+	"nano-banana-2.1":        {},
 	"nano-banana-pro":        {},
 }
 

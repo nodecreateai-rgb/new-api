@@ -75,6 +75,33 @@ func TestMaskPublicTaskTextCollapsesSekoError(t *testing.T) {
 	}
 }
 
+func TestPublicErrorMessageHidesFlova(t *testing.T) {
+	got := PublicErrorMessage("flova finished without a video")
+	if got != "request failed" {
+		t.Fatalf("got %q", got)
+	}
+}
+
+func TestMaskUpstreamProviderInfoFlova(t *testing.T) {
+	got := MaskUpstreamProviderInfo("Flova flova2api flova-generation-upstream service.flova.tv")
+	lower := strings.ToLower(got)
+	for _, forbidden := range []string{"flova", "flova2api"} {
+		if strings.Contains(lower, forbidden) {
+			t.Fatalf("leaked %q in %q", forbidden, got)
+		}
+	}
+}
+
+func TestMaskUpstreamProviderInfoFotor(t *testing.T) {
+	got := MaskUpstreamProviderInfo("Fotor Video fotor2api fotor-generation-upstream www.fotor.com")
+	lower := strings.ToLower(got)
+	for _, forbidden := range []string{"fotor", "fotor2api"} {
+		if strings.Contains(lower, forbidden) {
+			t.Fatalf("leaked %q in %q", forbidden, got)
+		}
+	}
+}
+
 func TestMaskUpstreamProviderInfoMyEdit(t *testing.T) {
 	got := MaskUpstreamProviderInfo("MyEdit2API myedit-generation-upstream myedit.online CyberLink cyberlink.com")
 	lower := strings.ToLower(got)
