@@ -20,7 +20,7 @@ func TestSekotvMiniRoutingUsesSekotvGateway(t *testing.T) {
 		`{"seedance-2.0-mini-720p":"seedance-2.0-mini"}`,
 		`os.Getenv("SEKOTV2API_BASE_URL")`,
 		`os.Getenv("SEKOTV2API_GATEWAY_KEY")`,
-		`¥0.8/次`,
+		`¥1/次`,
 		`933，原生720P，最长15秒`,
 	} {
 		if !strings.Contains(s, want) {
@@ -35,7 +35,7 @@ func TestSekotvMiniRoutingUsesSekotvGateway(t *testing.T) {
 	body := string(option)
 	for _, want := range []string{
 		`ensureSekotvMiniRouting()`,
-		`"seedance-2.0-mini-720p":             0.8`,
+		`"seedance-2.0-mini-720p":             1,`,
 	} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("missing %s", want)

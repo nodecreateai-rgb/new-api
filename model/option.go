@@ -243,7 +243,7 @@ func ensureDopioRMBPricing() {
 		"sd2-c7":                             1,
 		"seedance-2.0-mini":                  0.5,
 		"seedance-2.0-mini-480p":             0.8,
-		"seedance-2.0-mini-720p":             0.8,
+		"seedance-2.0-mini-720p":             1,
 		"seedance-2.0-mini-480p-c2":          0.8,
 		"seedance-2.0-mini-720p-c2":          0.5,
 		"seedance-2.0-fast-480p":             0.8,
@@ -640,8 +640,8 @@ func ensureDopioRMBPricing() {
 			groupPrices["seedance-2.0-mini-480p"] = 0.8
 			changed = true
 		}
-		if groupPrices["seedance-2.0-mini-720p"] != 0.8 {
-			groupPrices["seedance-2.0-mini-720p"] = 0.8
+		if groupPrices["seedance-2.0-mini-720p"] != 1 {
+			groupPrices["seedance-2.0-mini-720p"] = 1
 			changed = true
 		}
 		for _, model := range []string{
@@ -806,7 +806,7 @@ func ensureDopioRMBPricing() {
 	if err := ensureFlova2apiRouting(); err != nil {
 		common.SysLog("failed to enforce Flova video gateway routing: " + err.Error())
 	}
-	common.SysLog("enforced Dopio RMB pricing incl sd2.5=1.5 per call, vip6 sd2.5=1, sd2-fast=1 per call, vip6 Seedance 720p fast=1/full=2, image-omni=0.05, oauth2=0.3, pay=0.5, sd2-c6=0.5, seedance-2.0-mini=0.5, seedance-2.0-mini-480p=0.8, seedance-2.0-mini-720p=0.8, sd2-c7=1, sd2-c11=2.5, sd2-c12=3, Price=1, USDExchangeRate=1, quota_display_type=CNY")
+	common.SysLog("enforced Dopio RMB pricing incl sd2.5=1.5 per call, vip6 sd2.5=1, sd2-fast=1 per call, vip6 Seedance 720p fast=1/full=2, image-omni=0.05, oauth2=0.3, pay=0.5, sd2-c6=0.5, seedance-2.0-mini=0.5, seedance-2.0-mini-480p=0.8, seedance-2.0-mini-720p=1, sd2-c7=1, sd2-c11=2.5, sd2-c12=3, Price=1, USDExchangeRate=1, quota_display_type=CNY")
 }
 
 func ensureRoboneoMiniRouting() error {
