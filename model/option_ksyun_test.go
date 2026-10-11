@@ -16,7 +16,7 @@ func TestKsyunSeedanceStaysOnAtSevenYuan(t *testing.T) {
 		`func ensureKsyunSeedanceRouting()`,
 		`const publicModel = "seedance-2.5"`,
 		`neutralName = "Ksyun Seedance 2.5"`,
-		`baseURL = "http://ksyun2api:38722"`,
+		`baseURL = "http://ksyun2api:38922"`,
 		`{"seedance-2.5":"seedance-2.5"}`,
 		`os.Getenv("KSYUN2API_BASE_URL")`,
 		`os.Getenv("KSYUN2API_GATEWAY_KEY")`,

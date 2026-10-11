@@ -19,7 +19,7 @@ func ensureKsyunSeedanceRouting() error {
 	const groupsCSV = "default,vip,svip,vip1,vip2,vip3,vip6,vip7,vip8,vip9"
 	baseURL := strings.TrimSpace(os.Getenv("KSYUN2API_BASE_URL"))
 	if baseURL == "" {
-		baseURL = "http://ksyun2api:38722"
+		baseURL = "http://ksyun2api:38922"
 	}
 	key := strings.TrimSpace(os.Getenv("KSYUN2API_GATEWAY_KEY"))
 	if key == "" {

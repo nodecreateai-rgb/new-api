@@ -9,7 +9,7 @@ import (
 func TestKsyunSeedanceReturnsUpstreamVideo(t *testing.T) {
 	task := &model.Task{Properties: model.Properties{OriginModelName: "seedance-2.5"}}
 	ch := &model.Channel{Name: "Ksyun Seedance 2.5"}
-	base := "http://ksyun2api:38722"
+	base := "http://ksyun2api:38922"
 	ch.BaseURL = &base
 	if !ksyunSeedanceReturnsUpstreamVideo(ch, task) {
 		t.Fatal("ksyun seedance-2.5 must return the upstream video URL")
