@@ -287,8 +287,7 @@ func ensureDopioRMBPricing() {
 		"pay":                                0.5,
 		"seedance-2.0":                       2,
 		"wan-3.0":                            2,
-		"seedance-2.5":                       3,
-		"seedance-2.5-480p":                  1.5,
+		"seedance-2.5":                       7,
 		"seedance-2.5-720p":                  4,
 		"seedance-2.5-1080p":                 5,
 		"seedance-2.0-c1":                    2.5,
@@ -450,10 +449,8 @@ func ensureDopioRMBPricing() {
 		},
 		"vip8": {},
 		"vip9": {
-			"seedance-2.5":       2,
 			"seedance-2.0-c1":    1.5,
 			"seedance-2.5-c1":    3,
-			"seedance-2.5-480p":  1.5,
 			"seedance-2.5-720p":  3,
 			"seedance-2.5-1080p": 4,
 		},
@@ -465,8 +462,8 @@ func ensureDopioRMBPricing() {
 			targetModelGroupPrices[group]["sd2-c7"] = 1
 		}
 		targetModelGroupPrices[group]["seedance-2.5-c2"] = 1
+		targetModelGroupPrices[group]["seedance-2.5"] = 7
 		if group != "vip9" {
-			targetModelGroupPrices[group]["seedance-2.5-480p"] = 1.5
 			targetModelGroupPrices[group]["seedance-2.5-720p"] = 4
 			targetModelGroupPrices[group]["seedance-2.5-1080p"] = 5
 		}
@@ -622,6 +619,10 @@ func ensureDopioRMBPricing() {
 			groupPrices["seedance-2.0-mini-480p"] = 0.4
 			changed = true
 		}
+		if groupPrices["seedance-2.5"] != 7 {
+			groupPrices["seedance-2.5"] = 7
+			changed = true
+		}
 		if groupPrices["seedance-2.0-mini-720p"] != 1 {
 			groupPrices["seedance-2.0-mini-720p"] = 1
 			changed = true
@@ -649,10 +650,6 @@ func ensureDopioRMBPricing() {
 			changed = true
 		}
 		if group != "vip9" {
-			if groupPrices["seedance-2.5-480p"] != 1.5 {
-				groupPrices["seedance-2.5-480p"] = 1.5
-				changed = true
-			}
 			if groupPrices["seedance-2.5-720p"] != 4 {
 				groupPrices["seedance-2.5-720p"] = 4
 				changed = true
@@ -785,14 +782,18 @@ func ensureDopioRMBPricing() {
 	if err := retireFlova2apiRouting(); err != nil {
 		common.SysLog("failed to retire Flova video gateway routing: " + err.Error())
 	}
-	if err := ensureMito2apiRouting(); err != nil {
-		common.SysLog("failed to enforce Mito video gateway routing: " + err.Error())
+	if err := retireMito2apiRouting(); err != nil {
+		common.SysLog("failed to retire Mito video gateway routing: " + err.Error())
 	}
-	// Last step. Earlier ensure calls must not be able to publish these again.
+	// Last catalog cleanup. Ksyun Seedance 2.5 is restored after this so the
+	// retire list cannot turn it off again.
 	if err := retirePermanentlyRemovedModels(); err != nil {
 		common.SysLog("failed to retire permanently removed models: " + err.Error())
 	}
-	common.SysLog("enforced Dopio RMB pricing incl sd2.5=1.5 per call, vip6 sd2.5=1, sd2-fast=1 per call, vip6 Seedance 720p fast=1/full=2, image-omni=0.05, oauth2=0.3, pay=0.5, sd2-c6=0.5, seedance-2.0-mini-480p=0.4, seedance-2.0-mini-720p=1, sd2-c7=1, sd2-c11=2.5, sd2-c12=3, Price=1, USDExchangeRate=1, quota_display_type=CNY")
+	if err := ensureKsyunSeedanceRouting(); err != nil {
+		common.SysLog("failed to enforce Ksyun Seedance 2.5 gateway routing: " + err.Error())
+	}
+	common.SysLog("enforced Dopio RMB pricing incl sd2.5=1.5 per call, vip6 sd2.5=1, sd2-fast=1 per call, vip6 Seedance 720p fast=1/full=2, image-omni=0.05, oauth2=0.3, pay=0.5, sd2-c6=0.5, seedance-2.0-mini-480p=0.4, seedance-2.5=7, seedance-2.0-mini-720p=1, sd2-c7=1, sd2-c11=2.5, sd2-c12=3, Price=1, USDExchangeRate=1, quota_display_type=CNY")
 }
 
 func ensureRoboneoMiniRouting() error {
@@ -2175,7 +2176,7 @@ func ensureStoryhubSeedanceRouting() error {
 	groups := []string{"default", "vip", "svip", "vip1", "vip2", "vip3", "vip6", "vip8", "vip9"}
 	modelDescriptions := map[string]string{
 		"seedance-2.0": "Seedance 2.0 文生/图生视频（异步，¥2/次）",
-		"seedance-2.5": "Seedance 2.5 文生/图生视频（异步，¥3/次）",
+		"seedance-2.5": "Seedance 2.5 文生/图生视频（异步，¥7/次，最长30秒）",
 	}
 	endpoint := `{"openai-video":{"path":"/v1/videos","method":"POST"}}`
 
@@ -3106,6 +3107,7 @@ var permanentlyRetiredPublicModels = []string{
 	"sora-2",
 	"wan-3.0-prime",
 	"minimax-h3",
+	"seedance-2.5-480p",
 }
 
 func retirePermanentlyRemovedModels() error {
@@ -3115,7 +3117,7 @@ func retirePermanentlyRemovedModels() error {
 	if err := stripModelsFromChannels(permanentlyRetiredPublicModels); err != nil {
 		return err
 	}
-	for _, name := range []string{"Fotor Video", "Flova Video", "Video Studio"} {
+	for _, name := range []string{"Fotor Video", "Flova Video", "Video Studio", "Mito Video"} {
 		if err := disableChannelByName(name); err != nil {
 			return err
 		}
@@ -3167,7 +3169,6 @@ func stripModelsFromChannels(retired []string) error {
 
 // Keep Dola2API + Roboneo2API generation models, Image Omni, plus pay/oauth2.
 var retiredNonCoreModels = []string{
-	"seedance-2.5",
 	"seedance-2.0-c1", "seedance-2.5-c1", "seedance-2.5-c2",
 	"seedance-2.5-720p", "seedance-2.5-1080p",
 	"seedance-2.0-mini-480p-c2", "seedance-2.0-mini-720p-c2",

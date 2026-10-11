@@ -83,6 +83,27 @@ func TestTaskModel2DtoRedactsMyEditVideoTask(t *testing.T) {
 	}
 }
 
+func TestTaskModel2DtoReturnsKsyunUpstreamURL(t *testing.T) {
+	upstream := "https://cdn.example.com/seedance/video.mp4"
+	task := &model.Task{
+		TaskID: "task_public",
+		Status: model.TaskStatusSuccess,
+		PrivateData: model.TaskPrivateData{
+			DirectUpstreamVideo: true,
+			UpstreamResultURL:   upstream,
+			ResultURL:           "https://oss.domie.studio/videos/2026/10/task_public.mp4",
+		},
+		FailReason: "ksyun2api kspmas.ksyun.com rejected the prompt",
+	}
+	dto := TaskModel2Dto(task)
+	if dto.ResultURL != upstream {
+		t.Fatalf("result_url=%q", dto.ResultURL)
+	}
+	if strings.Contains(strings.ToLower(dto.FailReason), "ksyun") || dto.FailReason != "request failed" {
+		t.Fatalf("fail_reason=%q", dto.FailReason)
+	}
+}
+
 func TestTaskModel2DtoReturnsR2PublicURL(t *testing.T) {
 	task := &model.Task{
 		TaskID: "task_public",

@@ -204,8 +204,11 @@ func (m Properties) Value() (driver.Value, error) {
 type TaskPrivateData struct {
 	Key               string `json:"key,omitempty"`
 	UpstreamTaskID    string `json:"upstream_task_id,omitempty"`    // 上游真实 task ID
-	ResultURL         string `json:"result_url,omitempty"`          // 对外返回的稳定内容代理 URL
-	UpstreamResultURL string `json:"upstream_result_url,omitempty"` // 内部使用的真实上游视频 URL，禁止直接返回给用户
+	ResultURL         string `json:"result_url,omitempty"`          // 对外返回的视频地址。直出渠道存上游链接，其余存代理或对象存储地址
+	UpstreamResultURL string `json:"upstream_result_url,omitempty"` // 上游视频 URL。仅 DirectUpstreamVideo 为真时可以返回给用户
+	// DirectUpstreamVideo keeps the provider file URL as the client-facing result.
+	// Ksyun Seedance 2.5 is the only task that sets this; restart must not upload it to R2.
+	DirectUpstreamVideo bool `json:"direct_upstream_video,omitempty"`
 	// 计费上下文：用于异步退款/差额结算（轮询阶段读取）
 	BillingSource  string              `json:"billing_source,omitempty"`  // "wallet" 或 "subscription"
 	SubscriptionId int                 `json:"subscription_id,omitempty"` // 订阅 ID，用于订阅退款
@@ -271,16 +274,35 @@ func (t *Task) GetResultURL() string {
 }
 
 // PublicResultURL is the URL returned to API clients for a successful video.
-// It is either a public R2 object URL or the stable gateway content proxy.
-// Upstream provider URLs are never returned here.
+// Ksyun Seedance 2.5 returns the upstream file URL. Every other video returns a
+// public object-storage URL or the stable gateway content proxy.
 func (t *Task) PublicResultURL() string {
 	if t == nil || t.Status != TaskStatusSuccess || strings.TrimSpace(t.TaskID) == "" {
 		return ""
+	}
+	if t.PrivateData.DirectUpstreamVideo {
+		if direct := directUpstreamVideoURL(t.PrivateData.UpstreamResultURL); direct != "" {
+			return direct
+		}
+		if direct := directUpstreamVideoURL(t.PrivateData.ResultURL); direct != "" {
+			return direct
+		}
 	}
 	if publicURL := r2.PublicObjectURL(t.PrivateData.ResultURL); publicURL != "" {
 		return publicURL
 	}
 	return fmt.Sprintf("%s/v1/videos/%s/content", strings.TrimRight(system_setting.ServerAddress, "/"), t.TaskID)
+}
+
+func directUpstreamVideoURL(raw string) string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" || r2.PublicObjectURL(raw) != "" {
+		return ""
+	}
+	if strings.HasPrefix(raw, "https://") || strings.HasPrefix(raw, "http://") {
+		return raw
+	}
+	return ""
 }
 
 // GenerateTaskID 生成对外暴露的 task_xxxx 格式 ID

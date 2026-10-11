@@ -513,7 +513,8 @@ func updateVideoSingleTask(ctx context.Context, adaptor TaskPollingAdaptor, ch *
 		}
 	case model.TaskStatusSuccess:
 		var videoBytes []byte
-		if task.Platform != constant.TaskPlatformImage && task.Platform != constant.TaskPlatformPay {
+		passthrough := ksyunSeedanceReturnsUpstreamVideo(ch, task)
+		if !passthrough && task.Platform != constant.TaskPlatformImage && task.Platform != constant.TaskPlatformPay {
 			var err error
 			videoBytes, err = validateCompletedVideo(ctx, ch, task, taskResult)
 			if err != nil {
@@ -525,7 +526,7 @@ func updateVideoSingleTask(ctx context.Context, adaptor TaskPollingAdaptor, ch *
 				taskResult.Reason = "视频文件无效或时长为0秒"
 				task.Status = model.TaskStatusFailure
 				task.Progress = taskcommon.ProgressComplete
-				task.FailReason = common.MaskSensitiveInfo(taskResult.Reason)
+				task.FailReason = common.PublicErrorMessage(taskResult.Reason)
 				task.PrivateData.ResultURL = ""
 				if task.FinishTime == 0 {
 					task.FinishTime = now
@@ -541,17 +542,44 @@ func updateVideoSingleTask(ctx context.Context, adaptor TaskPollingAdaptor, ch *
 		if task.FinishTime == 0 {
 			task.FinishTime = now
 		}
-		// Keep any direct provider URL private. Prefer a public R2 object URL when
-		// upload succeeds; otherwise expose the stable New-API content proxy.
-		task.PrivateData.ResultURL = taskcommon.BuildProxyURL(task.TaskID)
-		if strings.HasPrefix(taskResult.Url, "data:") || taskResult.Url == "" {
-			task.PrivateData.UpstreamResultURL = ""
+		if passthrough {
+			// This channel/model is fixed in code: return the provider file URL
+			// and never replace it with oss.domie.studio after a restart.
+			upstream := absoluteUpstreamVideoURL(ch, taskResult.Url)
+			if upstream == "" {
+				taskResult.Status = string(model.TaskStatusFailure)
+				taskResult.Progress = taskcommon.ProgressComplete
+				taskResult.Reason = "视频文件无效或时长为0秒"
+				task.Status = model.TaskStatusFailure
+				task.Progress = taskcommon.ProgressComplete
+				task.FailReason = common.PublicErrorMessage(taskResult.Reason)
+				task.PrivateData.ResultURL = ""
+				task.PrivateData.DirectUpstreamVideo = false
+				if task.FinishTime == 0 {
+					task.FinishTime = now
+				}
+				if quota != 0 {
+					shouldRefund = true
+				}
+				break
+			}
+			task.PrivateData.DirectUpstreamVideo = true
+			task.PrivateData.UpstreamResultURL = upstream
+			task.PrivateData.ResultURL = upstream
 		} else {
-			task.PrivateData.UpstreamResultURL = taskResult.Url
-		}
-		if task.Platform != constant.TaskPlatformImage && task.Platform != constant.TaskPlatformPay {
-			if publicURL := persistGeneratedVideoToR2(ctx, task, taskResult, videoBytes); publicURL != "" {
-				task.PrivateData.ResultURL = publicURL
+			// Keep any direct provider URL private. Prefer a public R2 object URL when
+			// upload succeeds; otherwise expose the stable New-API content proxy.
+			task.PrivateData.DirectUpstreamVideo = false
+			task.PrivateData.ResultURL = taskcommon.BuildProxyURL(task.TaskID)
+			if strings.HasPrefix(taskResult.Url, "data:") || taskResult.Url == "" {
+				task.PrivateData.UpstreamResultURL = ""
+			} else {
+				task.PrivateData.UpstreamResultURL = taskResult.Url
+			}
+			if task.Platform != constant.TaskPlatformImage && task.Platform != constant.TaskPlatformPay {
+				if publicURL := persistGeneratedVideoToR2(ctx, task, taskResult, videoBytes); publicURL != "" {
+					task.PrivateData.ResultURL = publicURL
+				}
 			}
 		}
 		shouldSettle = true
@@ -648,6 +676,38 @@ func findCompletedVideoURL(payload any) string {
 		}
 	}
 	return ""
+}
+
+// ksyunSeedanceReturnsUpstreamVideo is fixed for the Ksyun channel's seedance-2.5
+// model. Startup must not turn this back into an object-storage URL.
+func ksyunSeedanceReturnsUpstreamVideo(ch *model.Channel, task *model.Task) bool {
+	if ch == nil || task == nil || taskModelName(task) != "seedance-2.5" {
+		return false
+	}
+	base := strings.ToLower(strings.TrimSpace(ch.GetBaseURL()))
+	name := strings.ToLower(strings.TrimSpace(ch.Name))
+	return strings.Contains(base, "ksyun2api") || strings.Contains(name, "ksyun")
+}
+
+func absoluteUpstreamVideoURL(ch *model.Channel, raw string) string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" || strings.HasPrefix(raw, "data:") || r2PublicURL(raw) {
+		return ""
+	}
+	if strings.HasPrefix(raw, "https://") || strings.HasPrefix(raw, "http://") {
+		return raw
+	}
+	if strings.HasPrefix(raw, "/") && ch != nil {
+		base := strings.TrimRight(strings.TrimSpace(ch.GetBaseURL()), "/")
+		if base != "" {
+			return base + raw
+		}
+	}
+	return ""
+}
+
+func r2PublicURL(raw string) bool {
+	return strings.Contains(strings.ToLower(raw), "oss.domie.studio")
 }
 
 func validateCompletedVideo(ctx context.Context, ch *model.Channel, task *model.Task, taskResult *relaycommon.TaskInfo) ([]byte, error) {

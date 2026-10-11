@@ -495,6 +495,13 @@ func tryRealtimeFetch(task *model.Task, isOpenAIVideoAPI bool) []byte {
 	}
 	if strings.HasPrefix(ti.Url, "data:") {
 		// data: URI — kept in Data, not ResultURL
+	} else if task.PrivateData.DirectUpstreamVideo {
+		if upstream := strings.TrimSpace(ti.Url); strings.HasPrefix(upstream, "http://") || strings.HasPrefix(upstream, "https://") {
+			if r2.PublicObjectURL(upstream) == "" {
+				task.PrivateData.UpstreamResultURL = upstream
+				task.PrivateData.ResultURL = upstream
+			}
+		}
 	} else if r2.IsPublicObjectURL(task.PrivateData.ResultURL) {
 		// Keep the public R2 object URL already stored by polling.
 	} else if task.Status == model.TaskStatusSuccess {

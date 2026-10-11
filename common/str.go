@@ -128,6 +128,18 @@ var upstreamBrandReplacers = strings.NewReplacer(
 	"MEDIAIO2API", "VIDEO_SERVICE",
 	"Media.io", "Video service",
 	"mediaio", "video service",
+	"kspmas.ksyun.com", "video-upstream",
+	"Ksyun Seedance 2.5", "Video service",
+	"ksyun2api", "video service",
+	"Ksyun2API", "Video service",
+	"KSYUN2API", "VIDEO_SERVICE",
+	"kingsoft", "video service",
+	"Kingsoft", "Video service",
+	"KINGSOFT", "VIDEO_SERVICE",
+	"金山云", "视频服务",
+	"Ksyun", "Video service",
+	"ksyun", "video service",
+	"KSYUN", "VIDEO_SERVICE",
 )
 
 const LocalLogContentLimit = 2048
@@ -385,7 +397,8 @@ func MaskUpstreamProviderInfo(str string) string {
 var publicErrorNeedles = []string{
 	"flova", "ribbi", "roboneo", "dola2", "storyhub", "laihua", "workbuddy", "unikey",
 	"vobile", "aiveed", "oreate", "myedit", "cyberlink", "mediaio", "pixverse",
-	"seko", "generation-upstream", "dial tcp", "connection refused", "no such host",
+	"seko", "ksyun", "kspmas", "kingsoft", "金山云", "fotor", "mito2api",
+	"generation-upstream", "dial tcp", "connection refused", "no such host",
 	"http://", "https://", "status=", "status ",
 }
 

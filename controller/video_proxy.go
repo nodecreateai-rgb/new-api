@@ -69,6 +69,15 @@ func VideoProxy(c *gin.Context) {
 		return
 	}
 
+	if task.PrivateData.DirectUpstreamVideo {
+		if direct := strings.TrimSpace(task.PrivateData.UpstreamResultURL); strings.HasPrefix(direct, "http://") || strings.HasPrefix(direct, "https://") {
+			if r2.PublicObjectURL(direct) == "" {
+				c.Redirect(http.StatusFound, direct)
+				return
+			}
+		}
+	}
+
 	if redirectURL := r2.PublicObjectURL(task.PrivateData.ResultURL); redirectURL != "" {
 		c.Redirect(http.StatusFound, redirectURL)
 		return

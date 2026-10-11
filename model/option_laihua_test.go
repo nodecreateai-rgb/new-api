@@ -14,12 +14,11 @@ func TestLaihuaSeedanceRoutingUsesLaihuaGateway(t *testing.T) {
 	s := string(data)
 	for _, want := range []string{
 		`func ensureLaihua2apiSeedanceRouting()`,
-		`publicModels := []string{"seedance-2.5-480p", "seedance-2.5-720p", "seedance-2.5-1080p"}`,
+		`publicModels := []string{"seedance-2.5-720p", "seedance-2.5-1080p"}`,
 		`baseURL = "http://laihua2api:38693"`,
-		`"seedance-2.5-480p":"seedance-2.5-480p","seedance-2.5-720p":"seedance-2.5-720p","seedance-2.5-1080p":"seedance-2.5-1080p"`,
+		`"seedance-2.5-720p":"seedance-2.5-720p","seedance-2.5-1080p":"seedance-2.5-1080p"`,
 		`os.Getenv("LAIHUA2API_BASE_URL")`,
 		`os.Getenv("LAIHUA2API_GATEWAY_KEY")`,
-		`30秒，30图0视10音频`,
 		`¥4/次`,
 		`¥5/次`,
 	} {
@@ -35,13 +34,10 @@ func TestLaihuaSeedanceRoutingUsesLaihuaGateway(t *testing.T) {
 	body := string(option)
 	for _, want := range []string{
 		`ensureLaihua2apiSeedanceRouting()`,
-		`"seedance-2.5-480p":                  1.5`,
 		`"seedance-2.5-720p":                  4`,
 		`"seedance-2.5-1080p":                 5`,
-		`targetModelGroupPrices[group]["seedance-2.5-480p"] = 1.5`,
 		`targetModelGroupPrices[group]["seedance-2.5-720p"] = 4`,
 		`targetModelGroupPrices[group]["seedance-2.5-1080p"] = 5`,
-		`"seedance-2.5-480p":  1.5`,
 		`"seedance-2.5-720p":  3`,
 		`"seedance-2.5-1080p": 4`,
 		`if group != "vip9"`,

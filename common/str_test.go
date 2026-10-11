@@ -92,6 +92,23 @@ func TestMaskUpstreamProviderInfoFlova(t *testing.T) {
 	}
 }
 
+func TestPublicErrorMessageHidesKsyun(t *testing.T) {
+	got := PublicErrorMessage("Ksyun2API kspmas.ksyun.com kingsoft 金山云 failed")
+	if got != "request failed" {
+		t.Fatalf("got %q", got)
+	}
+}
+
+func TestMaskUpstreamProviderInfoKsyun(t *testing.T) {
+	got := MaskUpstreamProviderInfo("Ksyun Seedance 2.5 ksyun2api kspmas.ksyun.com Kingsoft 金山云")
+	lower := strings.ToLower(got)
+	for _, forbidden := range []string{"ksyun", "kspmas", "kingsoft", "金山云"} {
+		if strings.Contains(lower, forbidden) {
+			t.Fatalf("leaked %q in %q", forbidden, got)
+		}
+	}
+}
+
 func TestMaskUpstreamProviderInfoFotor(t *testing.T) {
 	got := MaskUpstreamProviderInfo("Fotor Video fotor2api fotor-generation-upstream www.fotor.com")
 	lower := strings.ToLower(got)
