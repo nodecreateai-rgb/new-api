@@ -48,7 +48,13 @@ func openClickHouseGorm(dsn string, isLog bool) (*gorm.DB, error) {
 		opts.Settings = clickhouse.Settings{}
 	}
 	opts.Settings["allow_experimental_lightweight_update"] = 1
-	opts.Settings["apply_mutations_on_fly"] = 1
+	// Do not apply unfinished mutations while reading. Task progress updates are
+	// lightweight mutations; replaying a backlog on every SELECT pins the server
+	// and leaves API calls pending. Token and quota writes stay correct because
+	// their own mutations are small and materialize in the background.
+	if !isLog {
+		opts.Settings["max_execution_time"] = 30
+	}
 
 	sqlDB := clickhouse.OpenDB(opts)
 	if err := sqlDB.Ping(); err != nil {

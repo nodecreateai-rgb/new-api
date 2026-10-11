@@ -663,9 +663,9 @@ func (Task *Task) Update() error {
 	if common.UsingClickHouse {
 		// GORM Save falls back to INSERT when UPDATE reports 0 rows; ClickHouse
 		// never reports RowsAffected for lightweight UPDATE, so Save would
-		// duplicate tasks. Always use Updates by primary key.
+		// duplicate tasks. Write by primary key, including the result payload.
 		Task.UpdatedAt = time.Now().Unix()
-		err := DB.Model(Task).Where("id = ?", Task.ID).Select("*").Updates(Task).Error
+		err := Task.writeClickHouseTask("", true, false)
 		if err == nil {
 			RefreshTaskCache(Task)
 		}
@@ -709,7 +709,9 @@ func (t *Task) UpdateProgress(fromStatus TaskStatus) error {
 	}
 	t.UpdatedAt = time.Now().Unix()
 	if common.UsingClickHouse {
-		err := DB.Model(t).Where("id = ? AND status = ?", t.ID, fromStatus).Select("*").Updates(t).Error
+		// Skip the result payload. Poll JSON changes constantly; rewriting `data`
+		// on every tick is what piled mutations onto the tasks table.
+		err := t.writeClickHouseTask(fromStatus, false, false)
 		if err == nil {
 			RefreshTaskCache(t)
 		}
@@ -734,28 +736,143 @@ func (t *Task) updateWithStatusClickHouse(fromStatus TaskStatus) (bool, error) {
 		return true, t.UpdateProgress(fromStatus)
 	}
 
-	var curStatus string
-	if err := DB.Table("tasks").Where("id = ?", t.ID).Select("status").Limit(1).Scan(&curStatus).Error; err != nil {
-		return false, err
-	}
-	if TaskStatus(curStatus) != fromStatus {
-		return false, nil
+	// A long Redis claim used to be taken on the first status change, including
+	// the move into IN_PROGRESS. Later success and failure polls then skipped
+	// the write until that key expired, so clients kept the old progress for
+	// about 10 minutes after upstream had already finished.
+	terminal := t.Status == TaskStatusSuccess || t.Status == TaskStatusFailure
+	claimed := false
+	if terminal {
+		ok, err := t.claimTerminalTransition()
+		if err != nil {
+			return false, err
+		}
+		if !ok {
+			return false, nil
+		}
+		claimed = true
 	}
 
 	t.UpdatedAt = time.Now().Unix()
-	if err := DB.Model(t).Where("id = ? AND status = ?", t.ID, fromStatus).Select("*").Updates(t).Error; err != nil {
+	if err := t.writeClickHouseTask(fromStatus, true, true); err != nil {
+		if claimed {
+			releaseTaskTransition(t.TaskID)
+		}
 		return false, err
 	}
+	after, err := readTaskStatusByID(t.ID)
+	if err != nil {
+		if claimed {
+			releaseTaskTransition(t.TaskID)
+		}
+		return false, err
+	}
+	if after != t.Status {
+		if claimed && after == fromStatus {
+			releaseTaskTransition(t.TaskID)
+		}
+		return false, nil
+	}
+	RefreshTaskCache(t)
+	return true, nil
+}
 
-	var after string
-	if err := DB.Table("tasks").Where("id = ?", t.ID).Select("status").Limit(1).Scan(&after).Error; err != nil {
+// claimTerminalTransition lets one poller write SUCCESS or FAILURE.
+// A claim left behind while the row is still open is removed, so a finished
+// task is not stuck until the key expires.
+func (t *Task) claimTerminalTransition() (bool, error) {
+	if !common.RedisEnabled || t.TaskID == "" {
+		return true, nil
+	}
+	key := "task_transition:" + t.TaskID
+	ok, err := common.RedisSetNX(key, string(t.Status), 2*time.Minute)
+	if err != nil {
 		return false, err
 	}
-	won := TaskStatus(after) == t.Status
-	if won {
-		RefreshTaskCache(t)
+	if ok {
+		return true, nil
 	}
-	return won, nil
+	current, err := readTaskStatusByID(t.ID)
+	if err != nil {
+		return false, err
+	}
+	if current == TaskStatusSuccess || current == TaskStatusFailure {
+		return false, nil
+	}
+	releaseTaskTransition(t.TaskID)
+	ok, err = common.RedisSetNX(key, string(t.Status), 2*time.Minute)
+	if err != nil {
+		return false, err
+	}
+	return ok, nil
+}
+
+func releaseTaskTransition(taskID string) {
+	if taskID == "" || !common.RedisEnabled {
+		return
+	}
+	_ = common.RedisDel("task_transition:" + taskID)
+}
+
+func readTaskStatusByID(id int64) (TaskStatus, error) {
+	var rows []struct {
+		Status string `gorm:"column:status"`
+	}
+	if err := DB.Table("tasks").Select("status").Where("id = ?", id).Limit(1).Find(&rows).Error; err != nil {
+		return "", err
+	}
+	if len(rows) == 0 {
+		return "", fmt.Errorf("task %d not found", id)
+	}
+	return TaskStatus(rows[0].Status), nil
+}
+
+// writeClickHouseTask updates the columns a poll actually changes.
+// guardStatus empty means update by id only. includeData writes the upstream
+// payload; progress ticks leave it untouched. sync waits until the mutation
+// is applied so a later read on this connection sees it.
+func (t *Task) writeClickHouseTask(guardStatus TaskStatus, includeData bool, sync bool) error {
+	props, err := common.Marshal(t.Properties)
+	if err != nil {
+		return fmt.Errorf("marshal task properties: %w", err)
+	}
+	priv, err := common.Marshal(t.PrivateData)
+	if err != nil {
+		return fmt.Errorf("marshal task private_data: %w", err)
+	}
+	query := "UPDATE `tasks` SET `updated_at` = ?, `status` = ?, `progress` = ?, `start_time` = ?, `finish_time` = ?, `fail_reason` = ?, `quota` = ?, `properties` = ?, `private_data` = ?"
+	args := []any{
+		t.UpdatedAt,
+		string(t.Status),
+		t.Progress,
+		t.StartTime,
+		t.FinishTime,
+		t.FailReason,
+		t.Quota,
+		string(props),
+		string(priv),
+	}
+	if includeData {
+		data := t.Data
+		if len(data) == 0 {
+			data = JSONRaw("{}")
+		}
+		query += ", `data` = ?"
+		args = append(args, string(data))
+	}
+	query += " WHERE `id` = ?"
+	args = append(args, t.ID)
+	if guardStatus != "" {
+		query += " AND `status` = ?"
+		args = append(args, string(guardStatus))
+	}
+	if sync {
+		query += " SETTINGS mutations_sync = 1"
+	}
+	if err := DB.Exec(query, args...).Error; err != nil {
+		return fmt.Errorf("clickhouse update task %s: %w", t.TaskID, err)
+	}
+	return nil
 }
 
 // TaskBulkUpdate performs an unconditional bulk UPDATE by upstream task_id strings.

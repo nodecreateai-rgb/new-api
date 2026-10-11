@@ -318,7 +318,6 @@ var defaultModelPrice = map[string]float64{
 	"mj_upscale":                     0.05,
 	"swap_face":                      0.05,
 	"mj_upload":                      0.05,
-	"sora-2":                         0.3,
 	"sora-2-pro":                     0.5,
 	"gpt-4o-mini-tts":                0.3,
 	"veo-3.0-generate-001":           0.4,
@@ -338,7 +337,7 @@ var defaultModelPrice = map[string]float64{
 	"seedance-2.0-fast-480p-c2":          1,
 	"seedance-2.0-mini-c2":               0.8,
 	"wan-3.0-c2":                         2,
-	"wan-3.0-480p-c2":                    0.5,
+	"seedance-2.5-480p":                  1.5,
 }
 
 var defaultAudioRatio = map[string]float64{

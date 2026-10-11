@@ -51,11 +51,21 @@ func TestRoboneoMiniMarketplaceDescriptions(t *testing.T) {
 	body := string(option)
 	for _, want := range []string{
 		`ensureRoboneoMiniRouting()`,
-		`"seedance-2.0-mini":      "Seedance 2.0 Mini 文生/图生视频（异步，¥0.5/次，903，最长12秒，原生720P）"`,
-		`"seedance-2.0-mini-480p": "Seedance 2.0 Mini 480p 文生/图生视频（异步，¥0.8/次，903，超分720P，最长15秒）"`,
+		`retirePermanentlyRemovedModels()`,
+		`"seedance-2.0-mini-480p":             0.4`,
+		`"seedance-2.0-mini-480p": "Seedance 2.0 Mini 480p 文生/图生视频（异步，¥0.4/次，903，超分720P，最长10秒）"`,
 	} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("missing %s", want)
+		}
+	}
+	for _, forbidden := range []string{
+		`"seedance-2.0-mini":                  0.5`,
+		`"seedance-2.0-mini":      "Seedance 2.0 Mini 文生/图生视频（异步，¥0.5/次，903，最长12秒，原生720P）"`,
+		`¥0.8/次，903，超分720P，最长15秒`,
+	} {
+		if strings.Contains(body, forbidden) {
+			t.Fatalf("retired mini listing must stay down: %s", forbidden)
 		}
 	}
 }

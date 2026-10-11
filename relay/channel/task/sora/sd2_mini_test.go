@@ -49,6 +49,24 @@ func TestSeedanceC2UsesFixedPerRequestBilling(t *testing.T) {
 	require.False(t, a.UseRequestBillingRatios(&relaycommon.RelayInfo{OriginModelName: "wan-3.0-480p-c2"}))
 }
 
+func TestMitoCatalogLocksDurationAndResolution(t *testing.T) {
+	body := map[string]interface{}{"duration": 4, "seconds": "4", "size": "1080x1920"}
+	applyOriginModelDurationLimit(body, relaycommon.TaskSubmitReq{}, "seedance-2.0-720p")
+	applyOriginModelResolution(body, "seedance-2.0-720p")
+	require.Equal(t, 15, body["duration"])
+	require.Equal(t, "15", body["seconds"])
+	require.Equal(t, "720p", body["resolution"])
+	require.Equal(t, "720p", body["size"])
+
+	body = map[string]interface{}{"duration": 4, "seconds": "4", "size": "720x1280"}
+	applyOriginModelDurationLimit(body, relaycommon.TaskSubmitReq{}, "seedance-2.5-480p")
+	applyOriginModelResolution(body, "seedance-2.5-480p")
+	require.Equal(t, 30, body["duration"])
+	require.Equal(t, "30", body["seconds"])
+	require.Equal(t, "480p", body["resolution"])
+	require.Equal(t, "480p", body["size"])
+}
+
 func TestLaihuaSeedanceLocksResolutionFromModel(t *testing.T) {
 	body := map[string]interface{}{"size": "1080x1920", "aspect_ratio": "9:16"}
 	applyOriginModelResolution(body, "seedance-2.5-480p")
