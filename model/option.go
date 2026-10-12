@@ -1297,12 +1297,17 @@ func ensureDolaSeedanceRouting() error {
 	}
 
 	endpoint := `{"openai-video":{"path":"/v1/videos","method":"POST"}}`
+	descriptions := map[string]string{
+		"sd2-c6": "最大支持10秒，9图，fast模型",
+		"sd2-c7": "最大支持15秒，10图，fast模型",
+	}
 	for _, publicModel := range []string{"sd2-c6", "sd2-c7"} {
+		desc := descriptions[publicModel]
 		var meta Model
 		err = DB.Unscoped().Where("model_name = ?", publicModel).First(&meta).Error
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			meta = Model{
-				ModelName: publicModel, Description: "", Icon: "", Tags: "video",
+				ModelName: publicModel, Description: desc, Icon: "", Tags: "video",
 				Endpoints: endpoint, Status: 1, SyncOfficial: 0,
 				CreatedTime: common.GetTimestamp(), UpdatedTime: common.GetTimestamp(),
 			}
@@ -1314,8 +1319,14 @@ func ensureDolaSeedanceRouting() error {
 		if err != nil {
 			return err
 		}
+		if common.UsingClickHouse {
+			if err := DB.Exec(`ALTER TABLE models UPDATE description = ?, updated_time = ? WHERE id = ?`, desc, common.GetTimestamp(), meta.Id).Error; err != nil {
+				return err
+			}
+			continue
+		}
 		if err := DB.Unscoped().Model(&Model{}).Where("id = ?", meta.Id).Updates(map[string]any{
-			"description": "", "icon": "", "tags": "video", "endpoints": endpoint,
+			"description": desc, "icon": "", "tags": "video", "endpoints": endpoint,
 			"status": 1, "sync_official": 0, "deleted_at": nil, "updated_time": common.GetTimestamp(),
 		}).Error; err != nil {
 			return err
@@ -1730,16 +1741,20 @@ func ensureSD25Routing() error {
 		}
 	}
 	endpoint := `{"openai-video":{"path":"/v1/videos","method":"POST"}}`
+	const description = "最大支持30秒，10图"
 	var meta Model
 	err = DB.Unscoped().Where("model_name = ?", publicModel).First(&meta).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
-		meta = Model{ModelName: publicModel, Description: "", Icon: "", Tags: "video", Endpoints: endpoint, Status: 1, SyncOfficial: 0, CreatedTime: common.GetTimestamp(), UpdatedTime: common.GetTimestamp()}
+		meta = Model{ModelName: publicModel, Description: description, Icon: "", Tags: "video", Endpoints: endpoint, Status: 1, SyncOfficial: 0, CreatedTime: common.GetTimestamp(), UpdatedTime: common.GetTimestamp()}
 		return DB.Create(&meta).Error
 	}
 	if err != nil {
 		return err
 	}
-	return DB.Unscoped().Model(&Model{}).Where("id = ?", meta.Id).Updates(map[string]any{"description": "", "icon": "", "tags": "video", "endpoints": endpoint, "status": 1, "sync_official": 0, "deleted_at": nil, "updated_time": common.GetTimestamp()}).Error
+	if common.UsingClickHouse {
+		return DB.Exec(`ALTER TABLE models UPDATE description = ?, updated_time = ? WHERE id = ?`, description, common.GetTimestamp(), meta.Id).Error
+	}
+	return DB.Unscoped().Model(&Model{}).Where("id = ?", meta.Id).Updates(map[string]any{"description": description, "icon": "", "tags": "video", "endpoints": endpoint, "status": 1, "sync_official": 0, "deleted_at": nil, "updated_time": common.GetTimestamp()}).Error
 }
 
 func ensureOAuth2APIRouting() error {

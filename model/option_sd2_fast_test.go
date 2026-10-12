@@ -70,6 +70,9 @@ func TestDolaRoutingUsesNeutralPersistentAlias(t *testing.T) {
 		`const neutralName = "Dola2API Seedance Video"`,
 		`"sd2-c7":"seedance2-c1"`,
 		`"sd2-c6":"seedance2-c2"`,
+		`"sd2-c6": "最大支持10秒，9图，fast模型"`,
+		`"sd2-c7": "最大支持15秒，10图，fast模型"`,
+		`const description = "最大支持30秒，10图"`,
 	} {
 		if !strings.Contains(s, want) {
 			t.Fatalf("missing %s", want)
