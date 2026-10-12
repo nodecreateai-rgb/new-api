@@ -27,7 +27,6 @@ type Option struct {
 }
 
 const higgsSeedancePrice = 2.5
-const air2apiImagePrice = 0.05
 
 func AllOption() ([]*Option, error) {
 	var options []*Option
@@ -276,18 +275,10 @@ func ensureDopioRMBPricing() {
 		"kling-v3-4k":                        2,
 		"kling-3-pro":                        1,
 		"kling-o3":                           1,
-		"gpt-image-2":                        air2apiImagePrice,
-		"gpt-image-2.5-flare":                air2apiImagePrice,
-		"gpt-image-2.5-sunburst":             air2apiImagePrice,
-		"nano-banana-2":                      air2apiImagePrice,
-		"nano-banana-2-lite":                 air2apiImagePrice,
-		"nano-banana-2.1":                    air2apiImagePrice,
-		"nano-banana-pro":                    air2apiImagePrice,
 		"oauth2":                             0.3,
 		"pay":                                0.5,
 		"seedance-2.0":                       2,
 		"wan-3.0":                            2,
-		"seedance-2.5":                       7,
 		"seedance-2.5-720p":                  4,
 		"seedance-2.5-1080p":                 5,
 		"seedance-2.0-c1":                    2.5,
@@ -334,15 +325,8 @@ func ensureDopioRMBPricing() {
 			"happyhorse-1.1-720p": 0.5, "happyhorse-1.1-1080p": 1,
 			"sora-2-720p": 0.5, "sora-2-1080p": 1, "sora-2-pro-720p": 5, "sora-2-pro-1080p": 8,
 			"kling-v3-720p": 0.5, "kling-v3-1080p": 1, "kling-v3-4k": 2,
-			"sd2-c6":                 0.5,
-			"sd2-c7":                 0.5,
-			"gpt-image-2":            air2apiImagePrice,
-			"gpt-image-2.5-flare":    air2apiImagePrice,
-			"gpt-image-2.5-sunburst": air2apiImagePrice,
-			"nano-banana-2":          air2apiImagePrice,
-			"nano-banana-2-lite":     air2apiImagePrice,
-			"nano-banana-2.1":        air2apiImagePrice,
-			"nano-banana-pro":        air2apiImagePrice,
+			"sd2-c6": 0.5,
+			"sd2-c7": 0.5,
 		},
 		"vip1": {
 			"seedance-video-fast":                3,
@@ -357,13 +341,6 @@ func ensureDopioRMBPricing() {
 			"sd2-c8":                             3,
 			"sd2-c9":                             1,
 			"sd2-c10":                            0.5,
-			"gpt-image-2":                        air2apiImagePrice,
-			"gpt-image-2.5-flare":                air2apiImagePrice,
-			"gpt-image-2.5-sunburst":             air2apiImagePrice,
-			"nano-banana-2":                      air2apiImagePrice,
-			"nano-banana-2-lite":                 air2apiImagePrice,
-			"nano-banana-2.1":                    air2apiImagePrice,
-			"nano-banana-pro":                    air2apiImagePrice,
 		},
 		"vip": {
 			"seedance-video-fast":                3,
@@ -378,13 +355,6 @@ func ensureDopioRMBPricing() {
 			"sd2-c5":                             4,
 			"sd2-c6":                             0.5,
 			"sd2-c7":                             0.5,
-			"gpt-image-2":                        air2apiImagePrice,
-			"gpt-image-2.5-flare":                air2apiImagePrice,
-			"gpt-image-2.5-sunburst":             air2apiImagePrice,
-			"nano-banana-2":                      air2apiImagePrice,
-			"nano-banana-2-lite":                 air2apiImagePrice,
-			"nano-banana-2.1":                    air2apiImagePrice,
-			"nano-banana-pro":                    air2apiImagePrice,
 		},
 		"svip": {
 			"seedance-video-fast":                3,
@@ -399,13 +369,6 @@ func ensureDopioRMBPricing() {
 			"sd2-c5":                             2,
 			"sd2-c6":                             0.5,
 			"sd2-c7":                             0.5,
-			"gpt-image-2":                        air2apiImagePrice,
-			"gpt-image-2.5-flare":                air2apiImagePrice,
-			"gpt-image-2.5-sunburst":             air2apiImagePrice,
-			"nano-banana-2":                      air2apiImagePrice,
-			"nano-banana-2-lite":                 air2apiImagePrice,
-			"nano-banana-2.1":                    air2apiImagePrice,
-			"nano-banana-pro":                    air2apiImagePrice,
 		},
 		"vip2": {
 			"seedance-video-fast":                3,
@@ -419,17 +382,10 @@ func ensureDopioRMBPricing() {
 			"happyhorse-1.1-720p": 0.5, "happyhorse-1.1-1080p": 1,
 			"sora-2-720p": 0.5, "sora-2-1080p": 1, "sora-2-pro-720p": 5, "sora-2-pro-1080p": 8,
 			"kling-v3-720p": 0.5, "kling-v3-1080p": 1, "kling-v3-4k": 2,
-			"sd2-c6":                 0.3,
-			"sd2-c7":                 0.5,
-			"sd2-c11":                1.5,
-			"sd2-c12":                2,
-			"gpt-image-2":            air2apiImagePrice,
-			"gpt-image-2.5-flare":    air2apiImagePrice,
-			"gpt-image-2.5-sunburst": air2apiImagePrice,
-			"nano-banana-2":          air2apiImagePrice,
-			"nano-banana-2-lite":     air2apiImagePrice,
-			"nano-banana-2.1":        air2apiImagePrice,
-			"nano-banana-pro":        air2apiImagePrice,
+			"sd2-c6":  0.3,
+			"sd2-c7":  0.5,
+			"sd2-c11": 1.5,
+			"sd2-c12": 2,
 		},
 		"vip3": {
 			"seedance-video-fast":                3,
@@ -461,7 +417,6 @@ func ensureDopioRMBPricing() {
 		targetModelGroupPrices[group]["sd2-c7"] = 0.5
 		targetModelGroupPrices[group]["sd2.5"] = 0.5
 		targetModelGroupPrices[group]["seedance-2.5-c2"] = 1
-		targetModelGroupPrices[group]["seedance-2.5"] = 7
 		if group != "vip9" {
 			targetModelGroupPrices[group]["seedance-2.5-720p"] = 4
 			targetModelGroupPrices[group]["seedance-2.5-1080p"] = 5
@@ -618,10 +573,6 @@ func ensureDopioRMBPricing() {
 			groupPrices["seedance-2.0-mini-480p"] = 0.4
 			changed = true
 		}
-		if groupPrices["seedance-2.5"] != 7 {
-			groupPrices["seedance-2.5"] = 7
-			changed = true
-		}
 		if groupPrices["seedance-2.0-mini-720p"] != 1 {
 			groupPrices["seedance-2.0-mini-720p"] = 1
 			changed = true
@@ -730,9 +681,6 @@ func ensureDopioRMBPricing() {
 	if err := ensureSD2FastRouting(); err != nil {
 		common.SysLog("failed to enforce sd2-fast gateway routing: " + err.Error())
 	}
-	if err := ensureAir2APIImageRouting(); err != nil {
-		common.SysLog("failed to enforce image omni gateway routing: " + err.Error())
-	}
 	if err := ensureSeedance720HiggsRouting(); err != nil {
 		common.SysLog("failed to enforce Seedance 720 gateway routing: " + err.Error())
 	}
@@ -790,15 +738,11 @@ func ensureDopioRMBPricing() {
 	if err := retireMito2apiRouting(); err != nil {
 		common.SysLog("failed to retire Mito video gateway routing: " + err.Error())
 	}
-	// Last catalog cleanup. Ksyun Seedance 2.5 is restored after this so the
-	// retire list cannot turn it off again.
+	// Last catalog cleanup. Nothing after this may publish a retired model.
 	if err := retirePermanentlyRemovedModels(); err != nil {
 		common.SysLog("failed to retire permanently removed models: " + err.Error())
 	}
-	if err := ensureKsyunSeedanceRouting(); err != nil {
-		common.SysLog("failed to enforce Ksyun Seedance 2.5 gateway routing: " + err.Error())
-	}
-	common.SysLog("enforced Dopio RMB pricing incl sd2.5=0.5 per call, sd2-c7=0.5 per call, sd2-fast=1 per call, vip6 Seedance 720p fast=1/full=2, image-omni=0.05, oauth2=0.3, pay=0.5, sd2-c6=0.5, seedance-2.0-mini-480p=0.4, seedance-2.5=7, seedance-2.0-mini-720p=1, sd2-c11=2.5, sd2-c12=3, Price=1, USDExchangeRate=1, quota_display_type=CNY")
+	common.SysLog("enforced Dopio RMB pricing incl sd2.5=0.5 per call, sd2-c7=0.5 per call, sd2-fast=1 per call, vip6 Seedance 720p fast=1/full=2, oauth2=0.3, pay=0.5, sd2-c6=0.5, seedance-2.0-mini-480p=0.4, seedance-2.0-mini-720p=1, sd2-c11=2.5, sd2-c12=3, Price=1, USDExchangeRate=1, quota_display_type=CNY")
 }
 
 func ensureRoboneoMiniRouting() error {
@@ -2155,8 +2099,8 @@ func retireSeedance480Model() error {
 
 func ensureStoryhubSeedanceRouting() error {
 	const neutralName = "StoryHub Seedance Video"
-	const modelsCSV = "seedance-2.0,seedance-2.5"
-	const mappingJSON = `{"seedance-2.0":"seedance-2.0","seedance-2.5":"seedance-2.5"}`
+	const modelsCSV = "seedance-2.0"
+	const mappingJSON = `{"seedance-2.0":"seedance-2.0"}`
 	const groupsCSV = "default,vip,svip,vip1,vip2,vip3,vip6,vip8,vip9"
 	baseURL := strings.TrimSpace(os.Getenv("STORYHUB2API_BASE_URL"))
 	if baseURL == "" {
@@ -2177,11 +2121,10 @@ func ensureStoryhubSeedanceRouting() error {
 		key = "storyhub"
 	}
 
-	publicModels := []string{"seedance-2.0", "seedance-2.5"}
+	publicModels := []string{"seedance-2.0"}
 	groups := []string{"default", "vip", "svip", "vip1", "vip2", "vip3", "vip6", "vip8", "vip9"}
 	modelDescriptions := map[string]string{
 		"seedance-2.0": "Seedance 2.0 文生/图生视频（异步，¥2/次）",
-		"seedance-2.5": "Seedance 2.5 文生/图生视频（异步，¥7/次，最长30秒）",
 	}
 	endpoint := `{"openai-video":{"path":"/v1/videos","method":"POST"}}`
 
@@ -3113,6 +3056,14 @@ var permanentlyRetiredPublicModels = []string{
 	"wan-3.0-prime",
 	"minimax-h3",
 	"seedance-2.5-480p",
+	"seedance-2.5",
+	"gpt-image-2",
+	"gpt-image-2.5-flare",
+	"gpt-image-2.5-sunburst",
+	"nano-banana-2",
+	"nano-banana-2-lite",
+	"nano-banana-2.1",
+	"nano-banana-pro",
 }
 
 func retirePermanentlyRemovedModels() error {
@@ -3122,7 +3073,7 @@ func retirePermanentlyRemovedModels() error {
 	if err := stripModelsFromChannels(permanentlyRetiredPublicModels); err != nil {
 		return err
 	}
-	for _, name := range []string{"Fotor Video", "Flova Video", "Video Studio", "Mito Video"} {
+	for _, name := range []string{"Fotor Video", "Flova Video", "Video Studio", "Mito Video", "Image Omni", "Air Image", "Ksyun Seedance 2.5", "Seedance 2.5 Video"} {
 		if err := disableChannelByName(name); err != nil {
 			return err
 		}
@@ -3172,7 +3123,7 @@ func stripModelsFromChannels(retired []string) error {
 	return nil
 }
 
-// Keep Dola2API + Roboneo2API generation models, Image Omni, plus pay/oauth2.
+// Keep Dola2API + Roboneo2API generation models, plus pay/oauth2.
 var retiredNonCoreModels = []string{
 	"seedance-2.0-c1", "seedance-2.5-c1", "seedance-2.5-c2",
 	"seedance-2.5-720p", "seedance-2.5-1080p",
