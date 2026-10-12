@@ -162,6 +162,23 @@ func TestApplySeedance25C2DurationLimitCapsAtFifteen(t *testing.T) {
 	require.NotContains(t, body, "seconds")
 }
 
+func TestApplySD2C7DurationLimitPassesFifteenSeconds(t *testing.T) {
+	body := map[string]interface{}{"seconds": "15"}
+	applyOriginModelDurationLimit(body, relaycommon.TaskSubmitReq{Seconds: "15"}, "sd2-c7")
+	require.Equal(t, 15, body["duration"])
+	require.Equal(t, "15", body["seconds"])
+
+	body = map[string]interface{}{}
+	applyOriginModelDurationLimit(body, relaycommon.TaskSubmitReq{Duration: 20}, "sd2-c7")
+	require.Equal(t, 15, body["duration"])
+	require.Equal(t, "15", body["seconds"])
+
+	body = map[string]interface{}{"seconds": "10"}
+	applyOriginModelDurationLimit(body, relaycommon.TaskSubmitReq{}, "sd2-c7")
+	require.Equal(t, "10", body["seconds"])
+	require.NotContains(t, body, "duration")
+}
+
 func TestApplySD25DurationLimitUsesSecondsAndCapsAtThirty(t *testing.T) {
 	body := map[string]interface{}{"seconds": "25"}
 	applySD25DurationLimit(body, relaycommon.TaskSubmitReq{Seconds: "25"})

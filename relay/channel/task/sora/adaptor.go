@@ -374,6 +374,24 @@ func applyCanonicalVideoControls(body map[string]interface{}, req relaycommon.Ta
 	delete(body, "eye_mask_mode")
 }
 
+func applySD2C7DurationLimit(body map[string]interface{}, req relaycommon.TaskSubmitReq) {
+	if body == nil {
+		return
+	}
+	duration := taskSubmitDuration(req)
+	if duration <= 0 {
+		return
+	}
+	if duration < 5 {
+		duration = 5
+	}
+	if duration > 15 {
+		duration = 15
+	}
+	body["duration"] = duration
+	body["seconds"] = strconv.Itoa(duration)
+}
+
 func applySD25DurationLimit(body map[string]interface{}, req relaycommon.TaskSubmitReq) {
 	if body == nil {
 		return
@@ -400,6 +418,8 @@ func applyOriginModelDurationLimit(body map[string]interface{}, req relaycommon.
 	switch strings.TrimSpace(originModel) {
 	case "sd2.5":
 		applySD25DurationLimit(body, req)
+	case "sd2-c7":
+		applySD2C7DurationLimit(body, req)
 	case "seedance-2.5-c2":
 		applySeedance25C2DurationLimit(body, req)
 	case "seedance-2.0-mini-480p-c2":
