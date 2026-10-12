@@ -240,7 +240,7 @@ func ensureDopioRMBPricing() {
 		"sd2-c3":                             4,
 		"sd2-c5":                             5,
 		"sd2-c6":                             0.5,
-		"sd2-c7":                             1,
+		"sd2-c7":                             0.5,
 		"seedance-2.0-mini-480p":             0.4,
 		"seedance-2.0-mini-720p":             1,
 		"seedance-2.0-mini-480p-c2":          0.8,
@@ -249,7 +249,7 @@ func ensureDopioRMBPricing() {
 		"grok-imagine-720p":                  0.5,
 		"sd2-mini":                           0.6,
 		"sd2-fast":                           1,
-		"sd2.5":                              1.5,
+		"sd2.5":                              0.5,
 		"sd2-c8":                             5,
 		"sd2-c9":                             2,
 		"sd2-c10":                            4,
@@ -335,7 +335,7 @@ func ensureDopioRMBPricing() {
 			"sora-2-720p": 0.5, "sora-2-1080p": 1, "sora-2-pro-720p": 5, "sora-2-pro-1080p": 8,
 			"kling-v3-720p": 0.5, "kling-v3-1080p": 1, "kling-v3-4k": 2,
 			"sd2-c6":                 0.5,
-			"sd2-c7":                 1,
+			"sd2-c7":                 0.5,
 			"gpt-image-2":            air2apiImagePrice,
 			"gpt-image-2.5-flare":    air2apiImagePrice,
 			"gpt-image-2.5-sunburst": air2apiImagePrice,
@@ -353,7 +353,7 @@ func ensureDopioRMBPricing() {
 			"seedance-video-standard-per-second": 0.33,
 			"sd2-c5":                             3,
 			"sd2-c6":                             0.5,
-			"sd2-c7":                             1,
+			"sd2-c7":                             0.5,
 			"sd2-c8":                             3,
 			"sd2-c9":                             1,
 			"sd2-c10":                            0.5,
@@ -377,7 +377,7 @@ func ensureDopioRMBPricing() {
 			"sd2-c3":                             3,
 			"sd2-c5":                             4,
 			"sd2-c6":                             0.5,
-			"sd2-c7":                             1,
+			"sd2-c7":                             0.5,
 			"gpt-image-2":                        air2apiImagePrice,
 			"gpt-image-2.5-flare":                air2apiImagePrice,
 			"gpt-image-2.5-sunburst":             air2apiImagePrice,
@@ -398,7 +398,7 @@ func ensureDopioRMBPricing() {
 			"sd2-c3":                             2,
 			"sd2-c5":                             2,
 			"sd2-c6":                             0.5,
-			"sd2-c7":                             1,
+			"sd2-c7":                             0.5,
 			"gpt-image-2":                        air2apiImagePrice,
 			"gpt-image-2.5-flare":                air2apiImagePrice,
 			"gpt-image-2.5-sunburst":             air2apiImagePrice,
@@ -420,7 +420,7 @@ func ensureDopioRMBPricing() {
 			"sora-2-720p": 0.5, "sora-2-1080p": 1, "sora-2-pro-720p": 5, "sora-2-pro-1080p": 8,
 			"kling-v3-720p": 0.5, "kling-v3-1080p": 1, "kling-v3-4k": 2,
 			"sd2-c6":                 0.3,
-			"sd2-c7":                 1,
+			"sd2-c7":                 0.5,
 			"sd2-c11":                1.5,
 			"sd2-c12":                2,
 			"gpt-image-2":            air2apiImagePrice,
@@ -441,11 +441,11 @@ func ensureDopioRMBPricing() {
 		},
 		"vip6": {
 			"seedance-2.0-fast-720p": 1,
-			"sd2.5":                  1,
+			"sd2.5":                  0.5,
 		},
 		"vip7": {
-			"sd2-c7": 0.3,
-			"sd2.5":  0.3,
+			"sd2-c7": 0.5,
+			"sd2.5":  0.5,
 		},
 		"vip8": {},
 		"vip9": {
@@ -457,10 +457,9 @@ func ensureDopioRMBPricing() {
 	}
 	for group := range targetModelGroupPrices {
 		targetModelGroupPrices[group]["seedance-720"] = higgsSeedancePrice
-		// sd2-c7 is a fixed ¥1 per call except for the dedicated vip7 price.
-		if group != "vip7" {
-			targetModelGroupPrices[group]["sd2-c7"] = 1
-		}
+		// sd2-c7 and sd2.5 are ¥0.5 per call in every group, including after restart.
+		targetModelGroupPrices[group]["sd2-c7"] = 0.5
+		targetModelGroupPrices[group]["sd2.5"] = 0.5
 		targetModelGroupPrices[group]["seedance-2.5-c2"] = 1
 		targetModelGroupPrices[group]["seedance-2.5"] = 7
 		if group != "vip9" {
@@ -594,7 +593,7 @@ func ensureDopioRMBPricing() {
 			changed = true
 		}
 		for model, price := range targetModelPrices {
-			// Keep dedicated ModelGroupPrice overrides (e.g. vip7/sd2.5=0.3)
+			// Keep dedicated ModelGroupPrice overrides (e.g. vip6/seedance-2.0-fast-720p=1)
 			// intact; the next loop applies those explicitly.
 			if overridePrices, ok := targetModelGroupPrices[group]; ok {
 				if _, hasOverride := overridePrices[model]; hasOverride {
@@ -679,6 +678,12 @@ func ensureDopioRMBPricing() {
 		}
 	}
 	for group, groupPrices := range modelGroupPrices {
+		for _, model := range []string{"sd2-c7", "sd2.5"} {
+			if groupPrices[model] != 0.5 {
+				groupPrices[model] = 0.5
+				changed = true
+			}
+		}
 		for _, model := range append([]string{"seedance-2.0", "wan-3.0", "seedance-2.0-c2", "seedance-2.0-480p-c2", "seedance-2.0-fast-c2", "seedance-2.0-fast-480p-c2", "seedance-2.0-mini-c2", "wan-3.0-c2"}, permanentlyRetiredPublicModels...) {
 			if _, exists := groupPrices[model]; exists {
 				delete(groupPrices, model)
@@ -793,7 +798,7 @@ func ensureDopioRMBPricing() {
 	if err := ensureKsyunSeedanceRouting(); err != nil {
 		common.SysLog("failed to enforce Ksyun Seedance 2.5 gateway routing: " + err.Error())
 	}
-	common.SysLog("enforced Dopio RMB pricing incl sd2.5=1.5 per call, vip6 sd2.5=1, sd2-fast=1 per call, vip6 Seedance 720p fast=1/full=2, image-omni=0.05, oauth2=0.3, pay=0.5, sd2-c6=0.5, seedance-2.0-mini-480p=0.4, seedance-2.5=7, seedance-2.0-mini-720p=1, sd2-c7=1, sd2-c11=2.5, sd2-c12=3, Price=1, USDExchangeRate=1, quota_display_type=CNY")
+	common.SysLog("enforced Dopio RMB pricing incl sd2.5=0.5 per call, sd2-c7=0.5 per call, sd2-fast=1 per call, vip6 Seedance 720p fast=1/full=2, image-omni=0.05, oauth2=0.3, pay=0.5, sd2-c6=0.5, seedance-2.0-mini-480p=0.4, seedance-2.5=7, seedance-2.0-mini-720p=1, sd2-c11=2.5, sd2-c12=3, Price=1, USDExchangeRate=1, quota_display_type=CNY")
 }
 
 func ensureRoboneoMiniRouting() error {

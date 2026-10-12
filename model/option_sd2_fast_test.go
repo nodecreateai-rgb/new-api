@@ -33,15 +33,27 @@ func TestSD25RoutingUsesNeutralPersistentAlias(t *testing.T) {
 	}
 }
 
-func TestSD25PriceIsOnePointFivePerCall(t *testing.T) {
+func TestSD25AndSD2C7PriceIsHalfYuanPerCall(t *testing.T) {
 	data, err := os.ReadFile("option.go")
 	if err != nil {
 		t.Fatal(err)
 	}
 	s := string(data)
-	for _, want := range []string{`"sd2.5":                              1.5`, `sd2.5=1.5 per call`} {
+	for _, want := range []string{
+		`"sd2.5":                              0.5`,
+		`"sd2-c7":                             0.5`,
+		`targetModelGroupPrices[group]["sd2.5"] = 0.5`,
+		`targetModelGroupPrices[group]["sd2-c7"] = 0.5`,
+		`sd2.5=0.5 per call`,
+		`sd2-c7=0.5 per call`,
+	} {
 		if !strings.Contains(s, want) {
 			t.Fatalf("missing %s", want)
+		}
+	}
+	for _, forbidden := range []string{`"sd2.5":                              1.5`, `"sd2-c7": 0.3`, `"sd2.5":  0.3`, `"sd2.5":                  1`} {
+		if strings.Contains(s, forbidden) {
+			t.Fatalf("old price still enforced: %s", forbidden)
 		}
 	}
 }
