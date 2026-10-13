@@ -337,6 +337,7 @@ var defaultModelPrice = map[string]float64{
 	"seedance-2.0-fast-480p-c2":          1,
 	"seedance-2.0-mini-c2":               0.8,
 	"wan-3.0-c2":                         2,
+	"anthropic/claude-opus-5-5":          10000000,
 }
 
 var defaultAudioRatio = map[string]float64{

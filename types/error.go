@@ -211,7 +211,7 @@ func (e *NewAPIError) ToOpenAIError() OpenAIError {
 		}
 	}
 	if e.errorCode != ErrorCodeCountTokenFailed {
-		result.Message = common.MaskSensitiveInfo(result.Message)
+		result.Message = common.PublicErrorMessage(result.Message)
 	} else {
 		result.Message = common.MaskUpstreamProviderInfo(result.Message)
 	}
@@ -242,7 +242,7 @@ func (e *NewAPIError) ToClaudeError() ClaudeError {
 		}
 	}
 	if e.errorCode != ErrorCodeCountTokenFailed {
-		result.Message = common.MaskSensitiveInfo(result.Message)
+		result.Message = common.PublicErrorMessage(result.Message)
 	} else {
 		result.Message = common.MaskUpstreamProviderInfo(result.Message)
 	}

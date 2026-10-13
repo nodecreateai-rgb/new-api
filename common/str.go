@@ -140,6 +140,17 @@ var upstreamBrandReplacers = strings.NewReplacer(
 	"Ksyun", "Video service",
 	"ksyun", "video service",
 	"KSYUN", "VIDEO_SERVICE",
+	"domiex-runbios-asitvy-runbios2api-1", "chat-upstream",
+	"api.runbios.ai", "chat-upstream",
+	"runbios2api", "chat-upstream",
+	"Runbios2API", "Chat service",
+	"RUNBIOS2API", "CHAT_SERVICE",
+	"Run BiOS", "Chat service",
+	"RunBIOS", "Chat service",
+	"Runbios", "Chat service",
+	"runbios", "chat service",
+	"RB2API", "CHAT_SERVICE",
+	"rb2api", "chat service",
 )
 
 const LocalLogContentLimit = 2048
@@ -398,6 +409,7 @@ var publicErrorNeedles = []string{
 	"flova", "ribbi", "roboneo", "dola2", "storyhub", "laihua", "workbuddy", "unikey",
 	"vobile", "aiveed", "oreate", "myedit", "cyberlink", "mediaio", "pixverse",
 	"seko", "ksyun", "kspmas", "kingsoft", "金山云", "fotor", "mito2api",
+	"runbios", "rb2api", "api.runbios.ai",
 	"generation-upstream", "dial tcp", "connection refused", "no such host",
 	"http://", "https://", "status=", "status ",
 }

@@ -119,6 +119,29 @@ func TestMaskUpstreamProviderInfoFotor(t *testing.T) {
 	}
 }
 
+func TestMaskUpstreamProviderInfoClaudeChatUpstream(t *testing.T) {
+	got := MaskUpstreamProviderInfo("Claude Chat runbios2api api.runbios.ai RunBIOS RB2API")
+	lower := strings.ToLower(got)
+	for _, forbidden := range []string{"runbios", "rb2api", "api.runbios.ai"} {
+		if strings.Contains(lower, forbidden) {
+			t.Fatalf("leaked %q in %q", forbidden, got)
+		}
+	}
+}
+
+func TestPublicErrorMessageHidesClaudeChatUpstream(t *testing.T) {
+	got := PublicErrorMessage(`Post "http://runbios2api:8911/v1/chat/completions": dial tcp: connection refused`)
+	lower := strings.ToLower(got)
+	for _, forbidden := range []string{"runbios", "8911", "dial tcp", "http://"} {
+		if strings.Contains(lower, forbidden) {
+			t.Fatalf("leaked %q in %q", forbidden, got)
+		}
+	}
+	if got != "request failed" {
+		t.Fatalf("got %q", got)
+	}
+}
+
 func TestMaskUpstreamProviderInfoMyEdit(t *testing.T) {
 	got := MaskUpstreamProviderInfo("MyEdit2API myedit-generation-upstream myedit.online CyberLink cyberlink.com")
 	lower := strings.ToLower(got)

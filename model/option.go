@@ -290,6 +290,7 @@ func ensureDopioRMBPricing() {
 		"seedance-2.0-fast-480p-c2":          1,
 		"seedance-2.0-mini-c2":               0.8,
 		"wan-3.0-c2":                         2,
+		"anthropic/claude-opus-5-5":          10000000,
 	}
 	targetGroupRatios := map[string]float64{
 		"default": 1,
@@ -301,12 +302,14 @@ func ensureDopioRMBPricing() {
 		"vip7":    1,
 		"vip8":    1,
 		"vip9":    1,
+		"llm-vip": 1,
 	}
 	targetUserUsableGroups := map[string]string{
-		"vip6": "VIP6分组",
-		"vip7": "VIP7分组",
-		"vip8": "VIP8分组",
-		"vip9": "VIP9分组",
+		"vip6":    "VIP6分组",
+		"vip7":    "VIP7分组",
+		"vip8":    "VIP8分组",
+		"vip9":    "VIP9分组",
+		"llm-vip": "LLM VIP分组",
 	}
 	// Fixed per-group RMB prices for Dopio video aliases. ModelGroupPrice
 	// overrides ModelPrice and resets group ratio to 1 during billing, which is
@@ -409,6 +412,9 @@ func ensureDopioRMBPricing() {
 			"seedance-2.5-c1":    3,
 			"seedance-2.5-720p":  3,
 			"seedance-2.5-1080p": 4,
+		},
+		"llm-vip": {
+			"anthropic/claude-opus-5-5": 0,
 		},
 	}
 	for group := range targetModelGroupPrices {
@@ -622,7 +628,8 @@ func ensureDopioRMBPricing() {
 			modelGroupPrices[group] = map[string]float64{}
 		}
 		for model, price := range targetPrices {
-			if modelGroupPrices[group][model] != price {
+			current, ok := modelGroupPrices[group][model]
+			if !ok || current != price {
 				modelGroupPrices[group][model] = price
 				changed = true
 			}
@@ -742,7 +749,13 @@ func ensureDopioRMBPricing() {
 	if err := retirePermanentlyRemovedModels(); err != nil {
 		common.SysLog("failed to retire permanently removed models: " + err.Error())
 	}
-	common.SysLog("enforced Dopio RMB pricing incl sd2.5=0.5 per call, sd2-c7=0.5 per call, sd2-fast=1 per call, vip6 Seedance 720p fast=1/full=2, oauth2=0.3, pay=0.5, sd2-c6=0.5, seedance-2.0-mini-480p=0.4, seedance-2.0-mini-720p=1, sd2-c11=2.5, sd2-c12=3, Price=1, USDExchangeRate=1, quota_display_type=CNY")
+	if err := ensureClaudeChatRouting(); err != nil {
+		common.SysLog("failed to enforce Claude Chat gateway routing: " + err.Error())
+	}
+	if err := ensureLLMVipOnEnabledChannels(); err != nil {
+		common.SysLog("failed to ensure llm-vip channel abilities: " + err.Error())
+	}
+	common.SysLog("enforced Dopio RMB pricing incl sd2.5=0.5 per call, sd2-c7=0.5 per call, sd2-fast=1 per call, vip6 Seedance 720p fast=1/full=2, oauth2=0.3, pay=0.5, sd2-c6=0.5, seedance-2.0-mini-480p=0.4, seedance-2.0-mini-720p=1, sd2-c11=2.5, sd2-c12=3, anthropic/claude-opus-5-5=10000000, llm-vip opus free, Price=1, USDExchangeRate=1, quota_display_type=CNY")
 }
 
 func ensureRoboneoMiniRouting() error {
