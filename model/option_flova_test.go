@@ -6,37 +6,35 @@ import (
 	"testing"
 )
 
-func TestFlovaModelsAreRetiredOnStartup(t *testing.T) {
+func TestFlovaModelsStayOnAfterStartup(t *testing.T) {
 	option, err := os.ReadFile("option.go")
 	if err != nil {
 		t.Fatal(err)
 	}
 	body := string(option)
 	for _, want := range []string{
-		`retireFlova2apiRouting()`,
-		`retirePermanentlyRemovedModels()`,
-		`"Flova Video"`,
+		`ensureFlova2apiRouting()`,
 		`"wan-3.0-prime"`,
 		`"minimax-h3"`,
 		`"sora-2"`,
+		`"wan-3.0-prime":                      1.5`,
+		`"minimax-h3":                         0.5`,
+		`"sora-2":                             1`,
+		`"wan-3.0-prime":      1`,
 	} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("missing %s", want)
 		}
 	}
 	for _, forbidden := range []string{
+		`retireFlova2apiRouting()`,
 		`"wan-3.0-prime":                      2`,
-		`"minimax-h3":                         0.5`,
 		`"sora-2":                             1.5`,
 		`"wan-3.0-prime":      1.5`,
-		`if group == "vip9" && model == "wan-3.0-prime"`,
 	} {
 		if strings.Contains(body, forbidden) {
-			t.Fatalf("retired model price must not be enforced: %s", forbidden)
+			t.Fatalf("retired flova setting must not return: %s", forbidden)
 		}
-	}
-	if strings.Contains(body, "ensureFlova2apiRouting()") {
-		t.Fatal("flova routing must not be re-enabled on startup")
 	}
 
 	data, err := os.ReadFile("option_flova.go")
@@ -45,26 +43,23 @@ func TestFlovaModelsAreRetiredOnStartup(t *testing.T) {
 	}
 	s := string(data)
 	for _, want := range []string{
-		`func retireFlova2apiRouting()`,
+		`func ensureFlova2apiRouting()`,
 		`flovaChannelName = "Flova Video"`,
-		`disableChannelByName(flovaChannelName)`,
-		`retireMarketplaceModels(flovaPublicModels)`,
+		`http://flova2api:38686`,
+		`FLOVA2API_BASE_URL`,
+		`ChannelStatusEnabled`,
 		`"wan-3.0-prime"`,
 		`"minimax-h3"`,
 		`"sora-2"`,
+		`¥1.5/次，VIP9 ¥1/次，原生480P，2-30秒`,
+		`¥0.5/次，原生768P，4-15秒`,
+		`¥1/次，原生720P，时长仅4/8/12秒`,
 	} {
 		if !strings.Contains(s, want) {
 			t.Fatalf("missing %s", want)
 		}
 	}
-	for _, forbidden := range []string{
-		`func ensureFlova2apiRouting()`,
-		`http://flova2api:38686`,
-		`FLOVA2API_BASE_URL`,
-		`ChannelStatusEnabled`,
-	} {
-		if strings.Contains(s, forbidden) {
-			t.Fatalf("flova ensure leftover %s", forbidden)
-		}
+	if strings.Contains(s, `func retireFlova2apiRouting()`) {
+		t.Fatal("flova routing must not be retired on startup")
 	}
 }

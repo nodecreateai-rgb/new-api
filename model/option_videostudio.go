@@ -2,9 +2,7 @@ package model
 
 var videoStudioPublicModels = []string{
 	"seedance-2.0",
-	"sora-2",
 	"wan-3.0",
-	"minimax-h3",
 }
 
 const videoStudioChannelName = "Video Studio"

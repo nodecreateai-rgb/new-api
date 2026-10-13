@@ -452,10 +452,10 @@ func applyOriginModelResolution(body map[string]interface{}, originModel string)
 		return
 	}
 	switch strings.TrimSpace(originModel) {
-	case "seedance-2.5-480p", "seedance-2.0-mini-480p-c2", "seedance-2.0-fast-480p", "seedance-2.0-480p-c2", "seedance-2.0-fast-480p-c2", "wan-3.0-480p-c2":
+	case "seedance-2.5-480p", "seedance-2.0-mini-480p-c2", "seedance-2.0-fast-480p", "seedance-2.0-480p-c2", "seedance-2.0-fast-480p-c2", "wan-3.0-480p-c2", "wan-3.0-prime":
 		body["resolution"] = "480p"
 		body["size"] = "480p"
-	case "seedance-2.0-720p", "seedance-2.5-720p", "seedance-2.0-mini-720p", "seedance-2.0-mini-720p-c2", "seedance-2.0-mini-720P-c2", "grok-imagine-720p", "wan-3.0-prime", "sora-2":
+	case "seedance-2.0-720p", "seedance-2.5-720p", "seedance-2.0-mini-720p", "seedance-2.0-mini-720p-c2", "seedance-2.0-mini-720P-c2", "grok-imagine-720p", "sora-2":
 		body["resolution"] = "720p"
 		body["size"] = "720p"
 	case "minimax-h3":

@@ -83,7 +83,7 @@ func TestPublicErrorMessageHidesFlova(t *testing.T) {
 }
 
 func TestMaskUpstreamProviderInfoFlova(t *testing.T) {
-	got := MaskUpstreamProviderInfo("Flova flova2api flova-generation-upstream service.flova.tv")
+	got := MaskUpstreamProviderInfo("Flova Video Flova flova2api flova-generation-upstream service.flova.tv")
 	lower := strings.ToLower(got)
 	for _, forbidden := range []string{"flova", "flova2api"} {
 		if strings.Contains(lower, forbidden) {

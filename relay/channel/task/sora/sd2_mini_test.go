@@ -110,8 +110,8 @@ func TestLaihuaSeedanceLocksResolutionFromModel(t *testing.T) {
 
 	body = map[string]interface{}{"size": "1080x1920"}
 	applyOriginModelResolution(body, "wan-3.0-prime")
-	require.Equal(t, "720p", body["resolution"])
-	require.Equal(t, "720p", body["size"])
+	require.Equal(t, "480p", body["resolution"])
+	require.Equal(t, "480p", body["size"])
 
 	body = map[string]interface{}{"size": "1080x1920"}
 	applyOriginModelResolution(body, "wan-3.0-480p-c2")

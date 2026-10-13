@@ -279,6 +279,9 @@ func ensureDopioRMBPricing() {
 		"pay":                                0.5,
 		"seedance-2.0":                       2,
 		"wan-3.0":                            2,
+		"wan-3.0-prime":                      1.5,
+		"minimax-h3":                         0.5,
+		"sora-2":                             1,
 		"seedance-2.5-720p":                  4,
 		"seedance-2.5-1080p":                 5,
 		"seedance-2.0-c1":                    2.5,
@@ -412,6 +415,7 @@ func ensureDopioRMBPricing() {
 			"seedance-2.5-c1":    3,
 			"seedance-2.5-720p":  3,
 			"seedance-2.5-1080p": 4,
+			"wan-3.0-prime":      1,
 		},
 		"llm-vip": {
 			"anthropic/claude-opus-5-5": 0,
@@ -739,15 +743,16 @@ func ensureDopioRMBPricing() {
 	if err := retireFotor2apiRouting(); err != nil {
 		common.SysLog("failed to retire Fotor video gateway routing: " + err.Error())
 	}
-	if err := retireFlova2apiRouting(); err != nil {
-		common.SysLog("failed to retire Flova video gateway routing: " + err.Error())
-	}
 	if err := retireMito2apiRouting(); err != nil {
 		common.SysLog("failed to retire Mito video gateway routing: " + err.Error())
 	}
-	// Last catalog cleanup. Nothing after this may publish a retired model.
+	// Last catalog cleanup. Nothing after this may publish a retired model,
+	// except Flova Video which is published again below.
 	if err := retirePermanentlyRemovedModels(); err != nil {
 		common.SysLog("failed to retire permanently removed models: " + err.Error())
+	}
+	if err := ensureFlova2apiRouting(); err != nil {
+		common.SysLog("failed to enforce Flova video gateway routing: " + err.Error())
 	}
 	if err := ensureClaudeChatRouting(); err != nil {
 		common.SysLog("failed to enforce Claude Chat gateway routing: " + err.Error())
@@ -3080,9 +3085,6 @@ var permanentlyRetiredPublicModels = []string{
 	"seedance-2.0-mini",
 	"seedance-2.0-720p",
 	"wan-3.0-480p-c2",
-	"sora-2",
-	"wan-3.0-prime",
-	"minimax-h3",
 	"seedance-2.5-480p",
 	"seedance-2.5",
 	"gpt-image-2",
@@ -3101,7 +3103,7 @@ func retirePermanentlyRemovedModels() error {
 	if err := stripModelsFromChannels(permanentlyRetiredPublicModels); err != nil {
 		return err
 	}
-	for _, name := range []string{"Fotor Video", "Flova Video", "Video Studio", "Mito Video", "Image Omni", "Air Image", "Ksyun Seedance 2.5", "Seedance 2.5 Video"} {
+	for _, name := range []string{"Fotor Video", "Video Studio", "Mito Video", "Image Omni", "Air Image", "Ksyun Seedance 2.5", "Seedance 2.5 Video"} {
 		if err := disableChannelByName(name); err != nil {
 			return err
 		}
@@ -3161,7 +3163,7 @@ var retiredNonCoreModels = []string{
 	"deepseek-v4.1-flash",
 	"seedance-2.0-c2", "seedance-2.0-480p-c2", "seedance-2.0-fast-c2",
 	"seedance-2.0-fast-480p-c2", "seedance-2.0-mini-c2", "wan-3.0-c2",
-	"seedance-2.0", "sora-2", "wan-3.0", "wan-3.0-prime", "minimax-h3",
+	"seedance-2.0", "wan-3.0",
 	"seedance-2.0-mini", "seedance-2.0-720p", "wan-3.0-480p-c2",
 }
 
@@ -3174,7 +3176,6 @@ var retiredNonCoreChannelNames = []string{
 	"Laihua Seedance 2.5",
 	"Seedance 2.0 Video C2",
 	"Video Studio",
-	"Flova Video",
 }
 
 func retireNonCoreGateways() error {

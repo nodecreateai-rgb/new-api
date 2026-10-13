@@ -30,6 +30,7 @@ var upstreamBrandReplacers = strings.NewReplacer(
 	"service.flova.tv", "video-upstream",
 	"www.flova.tv", "video-upstream",
 	"flova.tv", "video-upstream",
+	"Flova Video", "Video service",
 	"Flova", "Video service",
 	"flova", "video service",
 	"domiex-fotor-9dfnxp-fotor2api-1", "video-upstream",
