@@ -127,32 +127,21 @@ func ModelPriceHelper(c *gin.Context, info *relaycommon.RelayInfo, promptTokens 
 		audioCompletionRatio = ratio_setting.GetAudioCompletionRatio(info.OriginModelName)
 		ratio := modelRatio * groupRatioInfo.GroupRatio
 		preConsumedQuota = int(float64(preConsumedTokens) * ratio)
-	} else {
-		if meta.ImagePriceRatio != 0 {
-			modelPrice = modelPrice * meta.ImagePriceRatio
-		}
+	} else if meta.ImagePriceRatio != 0 {
+		modelPrice = modelPrice * meta.ImagePriceRatio
+	}
+
+	// Group overrides must apply before pre-consume. Otherwise a 0-price
+	// group still reserves the public ModelPrice (e.g. 10000000) and the
+	// request is rejected for insufficient quota.
+	applyModelGroupPrice(info, &groupRatioInfo, &modelPrice, usePrice)
+	if usePrice {
 		preConsumedQuota = int(modelPrice * common.QuotaPerUnit * groupRatioInfo.GroupRatio)
 	}
 
-	// check if free model pre-consume is disabled
-	applyModelGroupPrice(info, &groupRatioInfo, &modelPrice, usePrice)
-
-	if !operation_setting.GetQuotaSetting().EnableFreeModelPreConsume {
-		// if model price or ratio is 0, do not pre-consume quota
-		if groupRatioInfo.GroupRatio == 0 {
-			preConsumedQuota = 0
-			freeModel = true
-		} else if usePrice {
-			if modelPrice == 0 {
-				preConsumedQuota = 0
-				freeModel = true
-			}
-		} else {
-			if modelRatio == 0 {
-				preConsumedQuota = 0
-				freeModel = true
-			}
-		}
+	if groupRatioInfo.GroupRatio == 0 || (usePrice && modelPrice == 0) || (!usePrice && modelRatio == 0) {
+		preConsumedQuota = 0
+		freeModel = true
 	}
 
 	priceData := types.PriceData{
@@ -213,21 +202,17 @@ func ModelPriceHelperPerCall(c *gin.Context, info *relaycommon.RelayInfo) (types
 
 	if usePrice {
 		quota = int(modelPrice * common.QuotaPerUnit * groupRatioInfo.GroupRatio)
-		if !operation_setting.GetQuotaSetting().EnableFreeModelPreConsume {
-			if groupRatioInfo.GroupRatio == 0 || modelPrice == 0 {
-				quota = 0
-				freeModel = true
-			}
+		if groupRatioInfo.GroupRatio == 0 || modelPrice == 0 {
+			quota = 0
+			freeModel = true
 		}
 	} else {
 		// 按量计费：以模型倍率的一半作为预扣额度
 		quota = int(modelRatio / 2 * common.QuotaPerUnit * groupRatioInfo.GroupRatio)
 		modelPrice = -1
-		if !operation_setting.GetQuotaSetting().EnableFreeModelPreConsume {
-			if groupRatioInfo.GroupRatio == 0 || modelRatio == 0 {
-				quota = 0
-				freeModel = true
-			}
+		if groupRatioInfo.GroupRatio == 0 || modelRatio == 0 {
+			quota = 0
+			freeModel = true
 		}
 	}
 

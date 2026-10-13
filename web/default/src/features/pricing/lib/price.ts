@@ -244,6 +244,23 @@ export function formatFixedPrice(
     return '-'
   }
 
+  const groupPrices = model.model_group_price
+  if (groupPrices && Object.prototype.hasOwnProperty.call(groupPrices, group)) {
+    const groupPrice = groupPrices[group]
+    let priceInUSD = groupPrice
+    priceInUSD = applyRechargeRate(
+      priceInUSD,
+      showWithRecharge,
+      priceRate,
+      usdExchangeRate
+    )
+    return formatCurrencyFromUSD(priceInUSD, {
+      digitsLarge: 4,
+      digitsSmall: 4,
+      abbreviate: false,
+    })
+  }
+
   const ratio = groupRatio[group] || 1
   let priceInUSD = (model.model_price || 0) * ratio
 

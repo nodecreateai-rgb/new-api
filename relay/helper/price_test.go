@@ -129,3 +129,47 @@ func TestModelPriceHelperPerCallDopioGroupPrices(t *testing.T) {
 		})
 	}
 }
+
+func TestModelPriceHelperLLMVipOpusIsFree(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	savedModelPrice := ratio_setting.ModelPrice2JSONString()
+	savedGroupRatio := ratio_setting.GroupRatio2JSONString()
+	savedModelGroupPrice := ratio_setting.ModelGroupPrice2JSONString()
+	t.Cleanup(func() {
+		require.NoError(t, ratio_setting.UpdateModelPriceByJSONString(savedModelPrice))
+		require.NoError(t, ratio_setting.UpdateGroupRatioByJSONString(savedGroupRatio))
+		require.NoError(t, ratio_setting.UpdateModelGroupPriceByJSONString(savedModelGroupPrice))
+	})
+
+	require.NoError(t, ratio_setting.UpdateModelPriceByJSONString(`{"anthropic/claude-opus-5-5":10000000}`))
+	require.NoError(t, ratio_setting.UpdateGroupRatioByJSONString(`{"default":1,"llm-vip":1}`))
+	require.NoError(t, ratio_setting.UpdateModelGroupPriceByJSONString(`{"llm-vip":{"anthropic/claude-opus-5-5":0}}`))
+
+	recorder := httptest.NewRecorder()
+	ctx, _ := gin.CreateTestContext(recorder)
+	ctx.Request = httptest.NewRequest(http.MethodPost, "/v1/chat/completions", nil)
+	info := &relaycommon.RelayInfo{
+		OriginModelName: "anthropic/claude-opus-5-5",
+		UserGroup:       "llm-vip",
+		UsingGroup:      "llm-vip",
+	}
+
+	priceData, err := ModelPriceHelper(ctx, info, 20, &types.TokenCountMeta{})
+	require.NoError(t, err)
+	require.True(t, priceData.UsePrice)
+	require.True(t, priceData.FreeModel)
+	require.Equal(t, 0.0, priceData.ModelPrice)
+	require.Equal(t, 0, priceData.QuotaToPreConsume)
+
+	defaultInfo := &relaycommon.RelayInfo{
+		OriginModelName: "anthropic/claude-opus-5-5",
+		UserGroup:       "default",
+		UsingGroup:      "default",
+	}
+	defaultPrice, err := ModelPriceHelper(ctx, defaultInfo, 20, &types.TokenCountMeta{})
+	require.NoError(t, err)
+	require.False(t, defaultPrice.FreeModel)
+	require.Equal(t, 10000000.0, defaultPrice.ModelPrice)
+	require.Equal(t, int(10000000*common.QuotaPerUnit), defaultPrice.QuotaToPreConsume)
+}
