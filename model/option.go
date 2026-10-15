@@ -244,7 +244,7 @@ func ensureDopioRMBPricing() {
 		"seedance-2.0-mini-720p":             1,
 		"seedance-2.0-mini-480p-c2":          0.8,
 		"seedance-2.0-mini-720p-c2":          0.5,
-		"seedance-2.0-fast-480p":             0.8,
+		"seedance-2.0-fast-480p":             2,
 		"grok-imagine-720p":                  0.5,
 		"sd2-mini":                           0.6,
 		"sd2-fast":                           1,
@@ -587,14 +587,13 @@ func ensureDopioRMBPricing() {
 			groupPrices["seedance-2.0-mini-720p"] = 1
 			changed = true
 		}
-		for _, model := range []string{
-			"seedance-2.0-mini-480p-c2",
-			"seedance-2.0-fast-480p",
-		} {
-			if groupPrices[model] != 0.8 {
-				groupPrices[model] = 0.8
-				changed = true
-			}
+		if groupPrices["seedance-2.0-mini-480p-c2"] != 0.8 {
+			groupPrices["seedance-2.0-mini-480p-c2"] = 0.8
+			changed = true
+		}
+		if groupPrices["seedance-2.0-fast-480p"] != 2 {
+			groupPrices["seedance-2.0-fast-480p"] = 2
+			changed = true
 		}
 		for _, model := range []string{
 			"seedance-2.0-mini-720p-c2",
@@ -753,6 +752,9 @@ func ensureDopioRMBPricing() {
 	}
 	if err := ensureFlova2apiRouting(); err != nil {
 		common.SysLog("failed to enforce Flova video gateway routing: " + err.Error())
+	}
+	if err := ensureSeedanceFastRouting(); err != nil {
+		common.SysLog("failed to enforce Seedance 2.0 Fast gateway routing: " + err.Error())
 	}
 	if err := ensureClaudeChatRouting(); err != nil {
 		common.SysLog("failed to enforce Claude Chat gateway routing: " + err.Error())
@@ -992,13 +994,12 @@ func retireRoboneoNativeMini() error {
 
 func ensureAiveed2apiRouting() error {
 	const neutralName = "Seedance 2.0 Video C2"
-	const modelsCSV = "seedance-2.0-mini-480p-c2,seedance-2.0-mini-720p-c2,seedance-2.0-fast-480p,grok-imagine-720p"
-	const mappingJSON = `{"seedance-2.0-mini-480p-c2":"seedance-2.0-mini-480p-c2","seedance-2.0-mini-720p-c2":"seedance-2.0-mini-720p-c2","seedance-2.0-mini-720P-c2":"seedance-2.0-mini-720p-c2","seedance-2.0-fast-480p":"seedance-2.0-fast-480p","grok-imagine-720p":"grok-imagine-720p"}`
+	const modelsCSV = "seedance-2.0-mini-480p-c2,seedance-2.0-mini-720p-c2,grok-imagine-720p"
+	const mappingJSON = `{"seedance-2.0-mini-480p-c2":"seedance-2.0-mini-480p-c2","seedance-2.0-mini-720p-c2":"seedance-2.0-mini-720p-c2","seedance-2.0-mini-720P-c2":"seedance-2.0-mini-720p-c2","grok-imagine-720p":"grok-imagine-720p"}`
 	const groupsCSV = "default,vip,svip,vip1,vip2,vip3,vip6,vip9"
 	modelDescriptions := map[string]string{
 		"seedance-2.0-mini-480p-c2": "933 · 480p超分720p · 最长15秒 · 不卡人脸",
 		"seedance-2.0-mini-720p-c2": "913 · 720p · 最长10秒 · 不卡人脸",
-		"seedance-2.0-fast-480p":    "903 · 480p超分720p · 最长10秒 · 不卡人脸",
 		"grok-imagine-720p":         "720p · 最长15秒 · 最多1张参考图",
 	}
 	baseURL := strings.TrimSpace(os.Getenv("AIVEED2API_BASE_URL"))
@@ -1023,7 +1024,6 @@ func ensureAiveed2apiRouting() error {
 	publicModels := []string{
 		"seedance-2.0-mini-480p-c2",
 		"seedance-2.0-mini-720p-c2",
-		"seedance-2.0-fast-480p",
 		"grok-imagine-720p",
 	}
 	groups := []string{"default", "vip", "svip", "vip1", "vip2", "vip3", "vip6", "vip9"}
@@ -3158,7 +3158,7 @@ var retiredNonCoreModels = []string{
 	"seedance-2.0-c1", "seedance-2.5-c1", "seedance-2.5-c2",
 	"seedance-2.5-720p", "seedance-2.5-1080p",
 	"seedance-2.0-mini-480p-c2", "seedance-2.0-mini-720p-c2",
-	"seedance-2.0-fast-480p", "grok-imagine-480p", "grok-imagine-720p",
+	"grok-imagine-480p", "grok-imagine-720p",
 	"gemini-3.5-flash", "minimax-m3", "glm-5.3", "kimi-k3",
 	"deepseek-v4.1-flash",
 	"seedance-2.0-c2", "seedance-2.0-480p-c2", "seedance-2.0-fast-c2",

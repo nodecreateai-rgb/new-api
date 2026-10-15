@@ -142,6 +142,23 @@ func TestPublicErrorMessageHidesClaudeChatUpstream(t *testing.T) {
 	}
 }
 
+func TestPublicErrorMessageHidesSeedanceFastUpstream(t *testing.T) {
+	got := PublicErrorMessage(`updream generate: https://www.updream.cn/api/ai/generate-video/async smsbower biliapi.net/updream/aniforge sed2-fast`)
+	if got != "request failed" {
+		t.Fatalf("got %q", got)
+	}
+}
+
+func TestMaskUpstreamProviderInfoSeedanceFastUpstream(t *testing.T) {
+	got := MaskUpstreamProviderInfo("Updream updream2api www.updream.cn smsbower boss.biliapi.net aniforge sed2-fast")
+	lower := strings.ToLower(got)
+	for _, forbidden := range []string{"updream", "smsbower", "biliapi", "aniforge", "sed2-fast"} {
+		if strings.Contains(lower, forbidden) {
+			t.Fatalf("leaked %q in %q", forbidden, got)
+		}
+	}
+}
+
 func TestMaskUpstreamProviderInfoMyEdit(t *testing.T) {
 	got := MaskUpstreamProviderInfo("MyEdit2API myedit-generation-upstream myedit.online CyberLink cyberlink.com")
 	lower := strings.ToLower(got)
