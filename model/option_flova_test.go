@@ -50,10 +50,9 @@ func TestFlovaModelsStayOnAfterStartup(t *testing.T) {
 		`ChannelStatusEnabled`,
 		`"wan-3.0-prime"`,
 		`"minimax-h3"`,
-		`"sora-2"`,
+		`flovaRetiredModels = []string{"sora-2"}`,
 		`¥1.5/次，VIP9 ¥1/次，原生480P，2-30秒`,
 		`¥0.5/次，原生768P，4-15秒`,
-		`¥1/次，原生720P，时长仅4/8/12秒`,
 	} {
 		if !strings.Contains(s, want) {
 			t.Fatalf("missing %s", want)
