@@ -305,6 +305,7 @@ func ensureDopioRMBPricing() {
 		"vip7":    1,
 		"vip8":    1,
 		"vip9":    1,
+		"vip10":   1,
 		"llm-vip": 1,
 	}
 	targetUserUsableGroups := map[string]string{
@@ -312,6 +313,7 @@ func ensureDopioRMBPricing() {
 		"vip7":    "VIP7分组",
 		"vip8":    "VIP8分组",
 		"vip9":    "VIP9分组",
+		"vip10":   "VIP10分组",
 		"llm-vip": "LLM VIP分组",
 	}
 	// Fixed per-group RMB prices for Dopio video aliases. ModelGroupPrice
@@ -416,6 +418,9 @@ func ensureDopioRMBPricing() {
 			"seedance-2.5-720p":  3,
 			"seedance-2.5-1080p": 4,
 			"wan-3.0-prime":      1,
+		},
+		"vip10": {
+			"seedance-2.0-fast-480p": 1,
 		},
 		"llm-vip": {
 			"anthropic/claude-opus-5-5": 0,
@@ -591,7 +596,12 @@ func ensureDopioRMBPricing() {
 			groupPrices["seedance-2.0-mini-480p-c2"] = 0.8
 			changed = true
 		}
-		if groupPrices["seedance-2.0-fast-480p"] != 2 {
+		if group == "vip10" {
+			if groupPrices["seedance-2.0-fast-480p"] != 1 {
+				groupPrices["seedance-2.0-fast-480p"] = 1
+				changed = true
+			}
+		} else if groupPrices["seedance-2.0-fast-480p"] != 2 {
 			groupPrices["seedance-2.0-fast-480p"] = 2
 			changed = true
 		}
