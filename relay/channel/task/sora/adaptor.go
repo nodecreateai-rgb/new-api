@@ -426,8 +426,10 @@ func applyOriginModelDurationLimit(body map[string]interface{}, req relaycommon.
 		applyCatalogDurationLimit(body, req, 15)
 	case "seedance-2.0-mini-720p":
 		applyCatalogDurationLimit(body, req, 15)
-	case "seedance-2.0-mini-720p-c2", "seedance-2.0-mini-720P-c2", "seedance-2.0-fast-480p":
+	case "seedance-2.0-mini-720p-c2", "seedance-2.0-mini-720P-c2":
 		applyCatalogDurationLimit(body, req, 10)
+	case "seedance-2.0-fast-480p":
+		applyCatalogDurationRange(body, req, 10, 15)
 	case "grok-imagine-720p":
 		applyCatalogDurationLimit(body, req, 15)
 	case "seedance-2.0-c2", "seedance-2.0-480p-c2", "seedance-2.0-fast-c2", "seedance-2.0-fast-480p-c2", "seedance-2.0-mini-c2":
@@ -492,19 +494,26 @@ func applyFixedCatalogDuration(body map[string]interface{}, seconds int) {
 	body["seconds"] = strconv.Itoa(seconds)
 }
 
-func applyCatalogDurationLimit(body map[string]interface{}, req relaycommon.TaskSubmitReq, max int) {
+func applyCatalogDurationRange(body map[string]interface{}, req relaycommon.TaskSubmitReq, fallback, max int) {
 	if body == nil || max <= 0 {
 		return
 	}
 	duration := taskSubmitDuration(req)
 	if duration <= 0 {
-		duration = max
+		duration = fallback
 	}
 	if duration > max {
 		duration = max
 	}
+	if duration <= 0 {
+		return
+	}
 	body["duration"] = duration
 	body["seconds"] = strconv.Itoa(duration)
+}
+
+func applyCatalogDurationLimit(body map[string]interface{}, req relaycommon.TaskSubmitReq, max int) {
+	applyCatalogDurationRange(body, req, max, max)
 }
 
 func normalizeSoraVideoStatus(status string) string {

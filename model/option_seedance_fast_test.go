@@ -44,7 +44,7 @@ func TestSeedanceFastStaysOnAfterStartup(t *testing.T) {
 		`http://seedance-fast:38685`,
 		`SEEDANCE_FAST_BASE_URL`,
 		`{"seedance-2.0-fast-480p":"seedance-2.0-fast"}`,
-		`¥1.5/次，VIP10 ¥1/次，903，480p超分720P，最长10秒，不卡人脸，最多9张图、3段音频`,
+		`¥1.5/次，VIP10 ¥1/次，903，最长15秒，不卡人脸，最多9张图、3段音频`,
 		`vip10`,
 		seedanceFastPublicModel,
 	} {
