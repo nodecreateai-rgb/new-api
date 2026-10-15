@@ -87,7 +87,7 @@ func ensureFlova2apiRouting() error {
 		return err
 	}
 	for _, modelName := range flovaPublicModels {
-		if err := DB.Model(&Ability{}).Where("model = ? AND channel_id <> ?", modelName, channel.Id).
+		if err := DB.Model(&Ability{}).Where("model = ? AND channel_id NOT IN ?", modelName, flovaChannelIDs(channel.Id)).
 			Update("enabled", false).Error; err != nil {
 			return err
 		}
@@ -100,7 +100,7 @@ func ensureFlova2apiRouting() error {
 				return err
 			}
 			if err := DB.Model(&Ability{}).Where(commonGroupCol+" = ? AND model = ? AND channel_id = ?", group, modelName, channel.Id).
-				Updates(map[string]any{"enabled": true, "priority": int64(10), "weight": uint64(100)}).Error; err != nil {
+				Updates(map[string]any{"enabled": true, "priority": int64(10)}).Error; err != nil {
 				return err
 			}
 		}
@@ -191,7 +191,7 @@ func ensureFlova2apiRoutingClickHouse(neutralName, modelsCSV, mappingJSON, group
 	} else if err != nil {
 		return err
 	} else if err := DB.Exec(`ALTER TABLE channels UPDATE
-		type = ?, key = ?, status = ?, name = ?, base_url = ?, models = ?, `+commonGroupCol+` = ?, model_mapping = ?, priority = 10, weight = 100, auto_ban = 0
+		type = ?, key = ?, status = ?, name = ?, base_url = ?, models = ?, `+commonGroupCol+` = ?, model_mapping = ?, priority = 10, auto_ban = 0
 		WHERE id = ?`, constant.ChannelTypeSora, key, common.ChannelStatusEnabled, neutralName, baseURL, modelsCSV, groupsCSV, mappingJSON, channel.Id).Error; err != nil {
 		return err
 	}
@@ -202,7 +202,7 @@ func ensureFlova2apiRoutingClickHouse(neutralName, modelsCSV, mappingJSON, group
 	}
 
 	for _, modelName := range publicModels {
-		if err := DB.Model(&Ability{}).Where("model = ? AND channel_id <> ?", modelName, channel.Id).
+		if err := DB.Model(&Ability{}).Where("model = ? AND channel_id NOT IN ?", modelName, flovaChannelIDs(channel.Id)).
 			Update("enabled", false).Error; err != nil {
 			return err
 		}
@@ -219,7 +219,7 @@ func ensureFlova2apiRoutingClickHouse(neutralName, modelsCSV, mappingJSON, group
 					return err
 				}
 			} else if err := DB.Model(&Ability{}).Where(commonGroupCol+" = ? AND model = ? AND channel_id = ?", group, modelName, channel.Id).
-				Updates(map[string]any{"enabled": true, "priority": int64(10), "weight": uint64(100)}).Error; err != nil {
+				Updates(map[string]any{"enabled": true, "priority": int64(10)}).Error; err != nil {
 				return err
 			}
 		}
@@ -257,4 +257,19 @@ func ensureFlova2apiRoutingClickHouse(neutralName, modelsCSV, mappingJSON, group
 	InvalidatePricingCache()
 	InitChannelCache()
 	return nil
+}
+
+// flovaChannelIDs lists every Flova bridge channel ("Flova Video", "Flova Video 2", ...)
+// so startup routing keeps the operator-added remote bridges enabled.
+func flovaChannelIDs(primary int) []int {
+	ids := []int{primary}
+	var extra []int
+	if err := DB.Model(&Channel{}).Where("name LIKE ?", flovaChannelName+"%").Pluck("id", &extra).Error; err == nil {
+		for _, id := range extra {
+			if id != primary {
+				ids = append(ids, id)
+			}
+		}
+	}
+	return ids
 }
