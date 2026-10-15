@@ -244,7 +244,7 @@ func ensureDopioRMBPricing() {
 		"seedance-2.0-mini-720p":             1,
 		"seedance-2.0-mini-480p-c2":          0.8,
 		"seedance-2.0-mini-720p-c2":          0.5,
-		"seedance-2.0-fast-480p":             2,
+		"seedance-2.0-fast-480p":             1.5,
 		"grok-imagine-720p":                  0.5,
 		"sd2-mini":                           0.6,
 		"sd2-fast":                           1,
@@ -601,8 +601,8 @@ func ensureDopioRMBPricing() {
 				groupPrices["seedance-2.0-fast-480p"] = 1
 				changed = true
 			}
-		} else if groupPrices["seedance-2.0-fast-480p"] != 2 {
-			groupPrices["seedance-2.0-fast-480p"] = 2
+		} else if groupPrices["seedance-2.0-fast-480p"] != 1.5 {
+			groupPrices["seedance-2.0-fast-480p"] = 1.5
 			changed = true
 		}
 		for _, model := range []string{
