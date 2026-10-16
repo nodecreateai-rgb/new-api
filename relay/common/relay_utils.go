@@ -174,6 +174,24 @@ func validateMultipartTaskRequest(c *gin.Context, info *RelayInfo, action string
 			req.Images = append(req.Images, dataURL)
 		}
 	}
+	for _, field := range []string{"video", "video[]", "videos", "video_refs", "video_urls", "reference_videos", "reference_video"} {
+		for _, fileHeader := range form.File[field] {
+			dataURL, err := taskMultipartFileDataURL(fileHeader)
+			if err != nil {
+				return req, fmt.Errorf("read multipart %s: %w", field, err)
+			}
+			req.Videos = append(req.Videos, dataURL)
+		}
+	}
+	for _, field := range []string{"audio", "audio[]", "audios", "audio_refs", "audio_urls", "reference_audios", "reference_audio"} {
+		for _, fileHeader := range form.File[field] {
+			dataURL, err := taskMultipartFileDataURL(fileHeader)
+			if err != nil {
+				return req, fmt.Errorf("read multipart %s: %w", field, err)
+			}
+			req.Audios = append(req.Audios, dataURL)
+		}
+	}
 
 	for key, values := range formData {
 		if len(values) > 0 && !isKnownTaskField(key) {

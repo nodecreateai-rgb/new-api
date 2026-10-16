@@ -895,6 +895,9 @@ func taskSubmitReqToUpstreamVideoBody(req relaycommon.TaskSubmitReq, upstreamMod
 	}
 	if len(imageRefs) > 0 {
 		body["image_refs"] = imageRefs
+		body["images"] = imageRefs
+		body["image_urls"] = imageRefs
+		body["reference_images"] = imageRefs
 		// Keep the legacy scalar alias only for a genuinely singular request.
 		// Multi-reference upstreams already consume image_refs; repeating the
 		// first item in image_url makes non-deduplicating backends upload it twice.
