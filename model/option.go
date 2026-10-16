@@ -781,7 +781,7 @@ func ensureRoboneoMiniRouting() error {
 	const neutralName = "Roboneo Seedance Mini"
 	const modelsCSV = "seedance-2.0-mini-480p"
 	const mappingJSON = `{"seedance-2.0-mini-480p":"seedance-2.0-mini-480p"}`
-	const groupsCSV = "default,vip,svip,vip1,vip2,vip3,vip6,vip9"
+	const groupsCSV = "default,vip,svip,vip1,vip2,vip3,vip6,vip9,vip10"
 	baseURL := strings.TrimSpace(os.Getenv("ROBONEO2API_BASE_URL"))
 	if baseURL == "" {
 		baseURL = "http://roboneo2api:38688"
@@ -806,7 +806,7 @@ func ensureRoboneoMiniRouting() error {
 	}
 
 	publicModels := []string{"seedance-2.0-mini-480p"}
-	groups := []string{"default", "vip", "svip", "vip1", "vip2", "vip3", "vip6", "vip9"}
+	groups := []string{"default", "vip", "svip", "vip1", "vip2", "vip3", "vip6", "vip9", "vip10"}
 	modelDescriptions := map[string]string{
 		"seedance-2.0-mini-480p": "Seedance 2.0 Mini 480p 文生/图生视频（异步，¥0.4/次，903，超分720P，最长10秒）",
 	}
@@ -1006,7 +1006,7 @@ func ensureAiveed2apiRouting() error {
 	const neutralName = "Seedance 2.0 Video C2"
 	const modelsCSV = "seedance-2.0-mini-480p-c2,seedance-2.0-mini-720p-c2,grok-imagine-720p"
 	const mappingJSON = `{"seedance-2.0-mini-480p-c2":"seedance-2.0-mini-480p-c2","seedance-2.0-mini-720p-c2":"seedance-2.0-mini-720p-c2","seedance-2.0-mini-720P-c2":"seedance-2.0-mini-720p-c2","grok-imagine-720p":"grok-imagine-720p"}`
-	const groupsCSV = "default,vip,svip,vip1,vip2,vip3,vip6,vip9"
+	const groupsCSV = "default,vip,svip,vip1,vip2,vip3,vip6,vip9,vip10"
 	modelDescriptions := map[string]string{
 		"seedance-2.0-mini-480p-c2": "933 · 480p超分720p · 最长15秒 · 不卡人脸",
 		"seedance-2.0-mini-720p-c2": "913 · 720p · 最长10秒 · 不卡人脸",
@@ -1036,7 +1036,7 @@ func ensureAiveed2apiRouting() error {
 		"seedance-2.0-mini-720p-c2",
 		"grok-imagine-720p",
 	}
-	groups := []string{"default", "vip", "svip", "vip1", "vip2", "vip3", "vip6", "vip9"}
+	groups := []string{"default", "vip", "svip", "vip1", "vip2", "vip3", "vip6", "vip9", "vip10"}
 	endpoint := `{"openai-video":{"path":"/v1/videos","method":"POST"}}`
 
 	if common.UsingClickHouse {
@@ -2144,7 +2144,7 @@ func ensureStoryhubSeedanceRouting() error {
 	const neutralName = "StoryHub Seedance Video"
 	const modelsCSV = "seedance-2.0"
 	const mappingJSON = `{"seedance-2.0":"seedance-2.0"}`
-	const groupsCSV = "default,vip,svip,vip1,vip2,vip3,vip6,vip8,vip9"
+	const groupsCSV = "default,vip,svip,vip1,vip2,vip3,vip6,vip8,vip9,vip10"
 	baseURL := strings.TrimSpace(os.Getenv("STORYHUB2API_BASE_URL"))
 	if baseURL == "" {
 		baseURL = "http://storyhub2api:38690"
@@ -2165,7 +2165,7 @@ func ensureStoryhubSeedanceRouting() error {
 	}
 
 	publicModels := []string{"seedance-2.0"}
-	groups := []string{"default", "vip", "svip", "vip1", "vip2", "vip3", "vip6", "vip8", "vip9"}
+	groups := []string{"default", "vip", "svip", "vip1", "vip2", "vip3", "vip6", "vip8", "vip9", "vip10"}
 	modelDescriptions := map[string]string{
 		"seedance-2.0": "Seedance 2.0 文生/图生视频（异步，¥2/次）",
 	}
@@ -2272,7 +2272,7 @@ func ensureVobile2apiSeedanceRouting() error {
 	const legacyChannelName = "Vobile Seedance Video"
 	const modelsCSV = "seedance-2.0-c1,seedance-2.5-c1"
 	const mappingJSON = `{"seedance-2.0-c1":"seedance-2.0-c1","seedance-2.5-c1":"seedance-2.5-c1"}`
-	const groupsCSV = "default,vip,svip,vip1,vip2,vip3,vip6,vip8,vip9"
+	const groupsCSV = "default,vip,svip,vip1,vip2,vip3,vip6,vip8,vip9,vip10"
 	baseURL := strings.TrimSpace(os.Getenv("VOBILE2API_BASE_URL"))
 	if baseURL == "" {
 		baseURL = "http://vobile2api:38691"
@@ -2290,7 +2290,7 @@ func ensureVobile2apiSeedanceRouting() error {
 	}
 
 	publicModels := []string{"seedance-2.0-c1", "seedance-2.5-c1"}
-	groups := []string{"default", "vip", "svip", "vip1", "vip2", "vip3", "vip6", "vip8", "vip9"}
+	groups := []string{"default", "vip", "svip", "vip1", "vip2", "vip3", "vip6", "vip8", "vip9", "vip10"}
 	modelDescriptions := map[string]string{
 		"seedance-2.0-c1": "Seedance 2.0 文生/图生视频（异步，¥2.5/次）",
 		"seedance-2.5-c1": "Seedance 2.5 文生/图生视频（异步，¥4/次）",
@@ -2490,7 +2490,7 @@ func ensureGetunikey2apiSeedanceRouting() error {
 	const neutralName = "Seedance C2 Video"
 	const modelsCSV = "seedance-2.5-c2"
 	const mappingJSON = `{"seedance-2.5-c2":"bytedance/seedance-2.5"}`
-	const groupsCSV = "default,vip,svip,vip1,vip2,vip3,vip6,vip8,vip9"
+	const groupsCSV = "default,vip,svip,vip1,vip2,vip3,vip6,vip8,vip9,vip10"
 	baseURL := strings.TrimSpace(os.Getenv("GETUNIKEY2API_BASE_URL"))
 	if baseURL == "" {
 		baseURL = "http://getunikey2api:38720"
@@ -2508,7 +2508,7 @@ func ensureGetunikey2apiSeedanceRouting() error {
 	}
 
 	publicModels := []string{"seedance-2.5-c2"}
-	groups := []string{"default", "vip", "svip", "vip1", "vip2", "vip3", "vip6", "vip8", "vip9"}
+	groups := []string{"default", "vip", "svip", "vip1", "vip2", "vip3", "vip6", "vip8", "vip9", "vip10"}
 	modelDescriptions := map[string]string{
 		"seedance-2.5-c2": "",
 	}
@@ -2765,7 +2765,7 @@ func ensureGetunikey2apiChatRouting() error {
 	const neutralName = "UniKey Chat"
 	const modelsCSV = "gemini-3.5-flash,minimax-m3,glm-5.3,kimi-k3"
 	const mappingJSON = `{"gemini-3.5-flash":"google/gemini-3.5-flash","minimax-m3":"minimax/minimax-m3","glm-5.3":"z-ai/glm-5.2","kimi-k3":"kimi-k3"}`
-	const groupsCSV = "default,vip,svip,vip1,vip2,vip3,vip6,vip8,vip9"
+	const groupsCSV = "default,vip,svip,vip1,vip2,vip3,vip6,vip8,vip9,vip10"
 	baseURL := strings.TrimSpace(os.Getenv("GETUNIKEY2API_BASE_URL"))
 	if baseURL == "" {
 		baseURL = "http://getunikey2api:38720"
@@ -2783,7 +2783,7 @@ func ensureGetunikey2apiChatRouting() error {
 	}
 
 	publicModels := getunikeyChatPublicModels
-	groups := []string{"default", "vip", "svip", "vip1", "vip2", "vip3", "vip6", "vip8", "vip9"}
+	groups := []string{"default", "vip", "svip", "vip1", "vip2", "vip3", "vip6", "vip8", "vip9", "vip10"}
 	modelDescriptions := map[string]string{
 		"gemini-3.5-flash": "",
 		"minimax-m3":       "",
@@ -2798,7 +2798,7 @@ func ensureWorkbuddy2apiChatRouting() error {
 	const neutralName = "WorkBuddy Chat"
 	const modelsCSV = "deepseek-v4.1-flash"
 	const mappingJSON = `{"deepseek-v4.1-flash":"deepseek-v4.1-flash"}`
-	const groupsCSV = "default,vip,svip,vip1,vip2,vip3,vip6,vip8,vip9"
+	const groupsCSV = "default,vip,svip,vip1,vip2,vip3,vip6,vip8,vip9,vip10"
 	baseURL := strings.TrimSpace(os.Getenv("WORKBUDDY2API_BASE_URL"))
 	if baseURL == "" {
 		baseURL = "http://workbuddy2api:8788"
@@ -2816,7 +2816,7 @@ func ensureWorkbuddy2apiChatRouting() error {
 	}
 
 	publicModels := workbuddyChatPublicModels
-	groups := []string{"default", "vip", "svip", "vip1", "vip2", "vip3", "vip6", "vip8", "vip9"}
+	groups := []string{"default", "vip", "svip", "vip1", "vip2", "vip3", "vip6", "vip8", "vip9", "vip10"}
 	modelDescriptions := map[string]string{
 		"deepseek-v4.1-flash": "",
 	}

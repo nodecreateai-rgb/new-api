@@ -15,7 +15,7 @@ func ensureLaihua2apiSeedanceRouting() error {
 	const neutralName = "Laihua Seedance 2.5"
 	const modelsCSV = "seedance-2.5-720p,seedance-2.5-1080p"
 	const mappingJSON = `{"seedance-2.5-720p":"seedance-2.5-720p","seedance-2.5-1080p":"seedance-2.5-1080p"}`
-	const groupsCSV = "default,vip,svip,vip1,vip2,vip3,vip6,vip8,vip9"
+	const groupsCSV = "default,vip,svip,vip1,vip2,vip3,vip6,vip8,vip9,vip10"
 	baseURL := strings.TrimSpace(os.Getenv("LAIHUA2API_BASE_URL"))
 	if baseURL == "" {
 		baseURL = "http://laihua2api:38693"
@@ -33,7 +33,7 @@ func ensureLaihua2apiSeedanceRouting() error {
 	}
 
 	publicModels := []string{"seedance-2.5-720p", "seedance-2.5-1080p"}
-	groups := []string{"default", "vip", "svip", "vip1", "vip2", "vip3", "vip6", "vip8", "vip9"}
+	groups := []string{"default", "vip", "svip", "vip1", "vip2", "vip3", "vip6", "vip8", "vip9", "vip10"}
 	modelDescriptions := map[string]string{
 		"seedance-2.5-720p":  "Seedance 2.5 720p 文生/图生视频（异步，¥4/次）",
 		"seedance-2.5-1080p": "Seedance 2.5 1080p 文生/图生视频（异步，¥5/次）",

@@ -16,7 +16,7 @@ func ensureKsyunSeedanceRouting() error {
 	const neutralName = "Ksyun Seedance 2.5"
 	const modelsCSV = publicModel
 	const mappingJSON = `{"seedance-2.5":"seedance-2.5"}`
-	const groupsCSV = "default,vip,svip,vip1,vip2,vip3,vip6,vip7,vip8,vip9"
+	const groupsCSV = "default,vip,svip,vip1,vip2,vip3,vip6,vip7,vip8,vip9,vip10"
 	baseURL := strings.TrimSpace(os.Getenv("KSYUN2API_BASE_URL"))
 	if baseURL == "" {
 		baseURL = "http://ksyun2api:38922"
@@ -38,7 +38,7 @@ func ensureKsyunSeedanceRouting() error {
 	}
 
 	publicModels := []string{publicModel}
-	groups := []string{"default", "vip", "svip", "vip1", "vip2", "vip3", "vip6", "vip7", "vip8", "vip9"}
+	groups := []string{"default", "vip", "svip", "vip1", "vip2", "vip3", "vip6", "vip7", "vip8", "vip9", "vip10"}
 	modelDescriptions := map[string]string{
 		publicModel: "Seedance 2.5 文生/图生视频（异步，¥7/次，最长30秒）",
 	}

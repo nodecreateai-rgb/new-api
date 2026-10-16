@@ -15,7 +15,7 @@ const claudeChatNeutralName = "Claude Chat"
 func ensureClaudeChatRouting() error {
 	const modelsCSV = claudeOpus55PublicModel
 	const mappingJSON = `{"anthropic/claude-opus-5-5":"anthropic/claude-opus-5-5"}`
-	const groupsCSV = "default,vip,svip,vip1,vip2,vip3,vip6,vip7,vip8,vip9,llm-vip"
+	const groupsCSV = "default,vip,svip,vip1,vip2,vip3,vip6,vip7,vip8,vip9,vip10,llm-vip"
 	baseURL := strings.TrimSpace(os.Getenv("CLAUDE_CHAT_BASE_URL"))
 	if baseURL == "" {
 		baseURL = strings.TrimSpace(os.Getenv("RUNBIOS2API_BASE_URL"))
@@ -39,7 +39,7 @@ func ensureClaudeChatRouting() error {
 	}
 
 	publicModels := []string{claudeOpus55PublicModel}
-	groups := []string{"default", "vip", "svip", "vip1", "vip2", "vip3", "vip6", "vip7", "vip8", "vip9", "llm-vip"}
+	groups := []string{"default", "vip", "svip", "vip1", "vip2", "vip3", "vip6", "vip7", "vip8", "vip9", "vip10", "llm-vip"}
 	modelDescriptions := map[string]string{
 		claudeOpus55PublicModel: "",
 	}

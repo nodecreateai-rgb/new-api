@@ -17,7 +17,7 @@ func ensureSekotvMiniRouting() error {
 	const neutralName = "Seko Seedance Mini"
 	const modelsCSV = publicModel
 	const mappingJSON = `{"seedance-2.0-mini-720p":"seedance-2.0-mini"}`
-	const groupsCSV = "default,vip,svip,vip1,vip2,vip3,vip6,vip9"
+	const groupsCSV = "default,vip,svip,vip1,vip2,vip3,vip6,vip9,vip10"
 	baseURL := strings.TrimSpace(os.Getenv("SEKOTV2API_BASE_URL"))
 	if baseURL == "" {
 		baseURL = "http://sekotv2api:38683"
@@ -39,7 +39,7 @@ func ensureSekotvMiniRouting() error {
 	}
 
 	publicModels := []string{publicModel}
-	groups := []string{"default", "vip", "svip", "vip1", "vip2", "vip3", "vip6", "vip9"}
+	groups := []string{"default", "vip", "svip", "vip1", "vip2", "vip3", "vip6", "vip9", "vip10"}
 	modelDescriptions := map[string]string{
 		publicModel: "Seedance 2.0 Mini 720p 文生/图生视频（异步，¥1/次，933，原生720P，最长15秒）",
 	}

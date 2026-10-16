@@ -25,7 +25,7 @@ const flovaChannelName = "Flova Video"
 func ensureFlova2apiRouting() error {
 	const modelsCSV = "wan-3.0-prime,minimax-h3"
 	const mappingJSON = `{"wan-3.0-prime":"wan-3.0-prime","minimax-h3":"minimax-h3"}`
-	const groupsCSV = "default,vip,svip,vip1,vip2,vip3,vip6,vip8,vip9"
+	const groupsCSV = "default,vip,svip,vip1,vip2,vip3,vip6,vip8,vip9,vip10"
 	baseURL := strings.TrimSpace(os.Getenv("FLOVA2API_BASE_URL"))
 	if baseURL == "" {
 		baseURL = "http://flova2api:38686"
@@ -45,7 +45,7 @@ func ensureFlova2apiRouting() error {
 		key = "flova"
 	}
 
-	groups := []string{"default", "vip", "svip", "vip1", "vip2", "vip3", "vip6", "vip8", "vip9"}
+	groups := []string{"default", "vip", "svip", "vip1", "vip2", "vip3", "vip6", "vip8", "vip9", "vip10"}
 	modelDescriptions := map[string]string{
 		"wan-3.0-prime": "Wan 3.0 Prime 文生/图生视频（异步，¥1.5/次，VIP9 ¥1/次，原生480P，2-30秒，画幅 adaptive/16:9/4:3/1:1/3:4/9:16，最多10张图、5段视频、5段音频）",
 		"minimax-h3":    "MiniMax H3 文生/图生视频（异步，¥0.5/次，原生768P，4-15秒，画幅 21:9/16:9/4:3/1:1/3:4/9:16，最多9张图、3段视频、3段音频）",
