@@ -245,6 +245,8 @@ func ensureDopioRMBPricing() {
 		"seedance-2.0-mini-480p-c2":          0.8,
 		"seedance-2.0-mini-720p-c2":          0.5,
 		"seedance-2.0-fast-480p":             1.5,
+		"seedance-2.0-480p":                  1.5,
+		"seedance-2.5-480p":                  2,
 		"grok-imagine-720p":                  0.5,
 		"sd2-mini":                           0.6,
 		"sd2-fast":                           1,
@@ -306,6 +308,7 @@ func ensureDopioRMBPricing() {
 		"vip8":    1,
 		"vip9":    1,
 		"vip10":   1,
+		"vip11":   1,
 		"llm-vip": 1,
 	}
 	targetUserUsableGroups := map[string]string{
@@ -314,6 +317,7 @@ func ensureDopioRMBPricing() {
 		"vip8":    "VIP8分组",
 		"vip9":    "VIP9分组",
 		"vip10":   "VIP10分组",
+		"vip11":   "VIP11分组",
 		"llm-vip": "LLM VIP分组",
 	}
 	// Fixed per-group RMB prices for Dopio video aliases. ModelGroupPrice
@@ -422,6 +426,10 @@ func ensureDopioRMBPricing() {
 		"vip10": {
 			"seedance-2.0-fast-480p": 1,
 		},
+		"vip11": {
+			"seedance-2.0-480p": 1,
+			"seedance-2.5-480p": 1,
+		},
 		"llm-vip": {
 			"anthropic/claude-opus-5-5": 0,
 		},
@@ -469,7 +477,7 @@ func ensureDopioRMBPricing() {
 		}
 	}
 	changed := false
-	for _, staleModel := range append([]string{"happy-horse-1.1", "happyhorse-1.1", "kling-v3", "wan2.7", "viduq3", "seedance-video-fast", "seedance-video-standard", "seedance-video-fast-per-second", "seedance-video-standard-per-second", "seedance-2.0-fast", "seedance-2.0-480p", "minimax-h3-max"}, permanentlyRetiredPublicModels...) {
+	for _, staleModel := range append([]string{"happy-horse-1.1", "happyhorse-1.1", "kling-v3", "wan2.7", "viduq3", "seedance-video-fast", "seedance-video-standard", "seedance-video-fast-per-second", "seedance-video-standard-per-second", "seedance-2.0-fast", "minimax-h3-max"}, permanentlyRetiredPublicModels...) {
 		if _, exists := prices[staleModel]; exists {
 			delete(prices, staleModel)
 			changed = true
@@ -552,7 +560,7 @@ func ensureDopioRMBPricing() {
 	}
 	changed = false
 	for group, groupPrices := range modelGroupPrices {
-		for _, staleModel := range append([]string{"happy-horse-1.1", "happyhorse-1.1", "kling-v3", "wan2.7", "viduq3", "seedance-video-fast", "seedance-video-standard", "seedance-video-fast-per-second", "seedance-video-standard-per-second", "seedance-2.0-480p"}, permanentlyRetiredPublicModels...) {
+		for _, staleModel := range append([]string{"happy-horse-1.1", "happyhorse-1.1", "kling-v3", "wan2.7", "viduq3", "seedance-video-fast", "seedance-video-standard", "seedance-video-fast-per-second", "seedance-video-standard-per-second"}, permanentlyRetiredPublicModels...) {
 			if _, exists := groupPrices[staleModel]; exists {
 				delete(groupPrices, staleModel)
 				changed = true
@@ -604,6 +612,25 @@ func ensureDopioRMBPricing() {
 		} else if groupPrices["seedance-2.0-fast-480p"] != 1.5 {
 			groupPrices["seedance-2.0-fast-480p"] = 1.5
 			changed = true
+		}
+		if group == "vip11" {
+			if groupPrices["seedance-2.0-480p"] != 1 {
+				groupPrices["seedance-2.0-480p"] = 1
+				changed = true
+			}
+			if groupPrices["seedance-2.5-480p"] != 1 {
+				groupPrices["seedance-2.5-480p"] = 1
+				changed = true
+			}
+		} else {
+			if groupPrices["seedance-2.0-480p"] != 1.5 {
+				groupPrices["seedance-2.0-480p"] = 1.5
+				changed = true
+			}
+			if groupPrices["seedance-2.5-480p"] != 2 {
+				groupPrices["seedance-2.5-480p"] = 2
+				changed = true
+			}
 		}
 		for _, model := range []string{
 			"seedance-2.0-mini-720p-c2",
@@ -769,8 +796,14 @@ func ensureDopioRMBPricing() {
 	if err := ensureClaudeChatRouting(); err != nil {
 		common.SysLog("failed to enforce Claude Chat gateway routing: " + err.Error())
 	}
+	if err := ensureSeedance480Routing(); err != nil {
+		common.SysLog("failed to enforce Seedance 480p gateway routing: " + err.Error())
+	}
 	if err := ensureLLMVipOnEnabledChannels(); err != nil {
 		common.SysLog("failed to ensure llm-vip channel abilities: " + err.Error())
+	}
+	if err := ensureVIP11OnEnabledChannels(); err != nil {
+		common.SysLog("failed to ensure vip11 channel abilities: " + err.Error())
 	}
 	common.SysLog("enforced Dopio RMB pricing incl sd2.5=0.5 per call, sd2-c7=0.5 per call, sd2-fast=1 per call, vip6 Seedance 720p fast=1/full=2, oauth2=0.3, pay=0.5, sd2-c6=0.5, seedance-2.0-mini-480p=0.4, seedance-2.0-mini-720p=1, sd2-c11=2.5, sd2-c12=3, anthropic/claude-opus-5-5=10000000, llm-vip opus free, Price=1, USDExchangeRate=1, quota_display_type=CNY")
 }
@@ -3095,7 +3128,6 @@ var permanentlyRetiredPublicModels = []string{
 	"seedance-2.0-mini",
 	"seedance-2.0-720p",
 	"wan-3.0-480p-c2",
-	"seedance-2.5-480p",
 	"seedance-2.5",
 	"gpt-image-2",
 	"gpt-image-2.5-flare",

@@ -75,6 +75,23 @@ func TestMaskPublicTaskTextCollapsesSekoError(t *testing.T) {
 	}
 }
 
+func TestPublicErrorMessageHidesManyverse(t *testing.T) {
+	got := PublicErrorMessage("manyverse2api manyverse.app asset.manyverse.io finished without a video")
+	if got != "request failed" {
+		t.Fatalf("got %q", got)
+	}
+}
+
+func TestMaskUpstreamProviderInfoManyverse(t *testing.T) {
+	got := MaskUpstreamProviderInfo("Manyverse manyverse2api asset.manyverse.io www.manyverse.app domiex-manyverse-lgqmy2-manyverse2api-1")
+	lower := strings.ToLower(got)
+	for _, forbidden := range []string{"manyverse", "manyverse2api", "manyverse.app", "manyverse.io"} {
+		if strings.Contains(lower, forbidden) {
+			t.Fatalf("leaked %q in %q", forbidden, got)
+		}
+	}
+}
+
 func TestPublicErrorMessageHidesFlova(t *testing.T) {
 	got := PublicErrorMessage("flova finished without a video")
 	if got != "request failed" {

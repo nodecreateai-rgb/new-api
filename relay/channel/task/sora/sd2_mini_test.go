@@ -39,6 +39,7 @@ func TestSeedanceC2UsesFixedPerRequestBilling(t *testing.T) {
 	a := &TaskAdaptor{}
 	require.False(t, a.UseRequestBillingRatios(&relaycommon.RelayInfo{OriginModelName: "seedance-2.5-c1"}))
 	require.False(t, a.UseRequestBillingRatios(&relaycommon.RelayInfo{OriginModelName: "seedance-2.5-c2"}))
+	require.False(t, a.UseRequestBillingRatios(&relaycommon.RelayInfo{OriginModelName: "seedance-2.0-480p"}))
 	require.False(t, a.UseRequestBillingRatios(&relaycommon.RelayInfo{OriginModelName: "seedance-2.5-480p"}))
 	require.False(t, a.UseRequestBillingRatios(&relaycommon.RelayInfo{OriginModelName: "seedance-2.5-720p"}))
 	require.False(t, a.UseRequestBillingRatios(&relaycommon.RelayInfo{OriginModelName: "seedance-2.5-1080p"}))
@@ -59,12 +60,22 @@ func TestMitoCatalogLocksDurationAndResolution(t *testing.T) {
 	require.Equal(t, "720p", body["size"])
 
 	body = map[string]interface{}{"duration": 4, "seconds": "4", "size": "720x1280"}
-	applyOriginModelDurationLimit(body, relaycommon.TaskSubmitReq{}, "seedance-2.5-480p")
+	applyOriginModelDurationLimit(body, relaycommon.TaskSubmitReq{Duration: 12}, "seedance-2.5-480p")
 	applyOriginModelResolution(body, "seedance-2.5-480p")
-	require.Equal(t, 30, body["duration"])
-	require.Equal(t, "30", body["seconds"])
+	require.Equal(t, 12, body["duration"])
+	require.Equal(t, "12", body["seconds"])
 	require.Equal(t, "480p", body["resolution"])
 	require.Equal(t, "480p", body["size"])
+
+	body = map[string]interface{}{}
+	applyOriginModelDurationLimit(body, relaycommon.TaskSubmitReq{Duration: 40}, "seedance-2.5-480p")
+	require.Equal(t, 30, body["duration"])
+	applyOriginModelDurationLimit(body, relaycommon.TaskSubmitReq{Duration: 2}, "seedance-2.0-480p")
+	applyOriginModelResolution(body, "seedance-2.0-480p")
+	require.Equal(t, 4, body["duration"])
+	require.Equal(t, "480p", body["resolution"])
+	applyOriginModelDurationLimit(body, relaycommon.TaskSubmitReq{Duration: 20}, "seedance-2.0-480p")
+	require.Equal(t, 15, body["duration"])
 }
 
 func TestLaihuaSeedanceLocksResolutionFromModel(t *testing.T) {

@@ -33,6 +33,16 @@ var upstreamBrandReplacers = strings.NewReplacer(
 	"Flova Video", "Video service",
 	"Flova", "Video service",
 	"flova", "video service",
+	"domiex-manyverse-lgqmy2-manyverse2api-1", "video-upstream",
+	"manyverse2api", "video service",
+	"Manyverse2API", "Video service",
+	"MANYVERSE2API", "VIDEO_SERVICE",
+	"asset.manyverse.io", "video-upstream",
+	"www.manyverse.app", "video-upstream",
+	"manyverse.app", "video-upstream",
+	"manyverse.io", "video-upstream",
+	"Manyverse", "Video service",
+	"manyverse", "video service",
 	"domiex-fotor-9dfnxp-fotor2api-1", "video-upstream",
 	"fotor-generation-upstream", "video-upstream",
 	"fotor2api", "video service",
@@ -421,7 +431,7 @@ func MaskUpstreamProviderInfo(str string) string {
 }
 
 var publicErrorNeedles = []string{
-	"flova", "ribbi", "roboneo", "dola2", "storyhub", "laihua", "workbuddy", "unikey",
+	"flova", "manyverse", "ribbi", "roboneo", "dola2", "storyhub", "laihua", "workbuddy", "unikey",
 	"vobile", "aiveed", "oreate", "myedit", "cyberlink", "mediaio", "pixverse",
 	"seko", "ksyun", "kspmas", "kingsoft", "金山云", "fotor", "mito2api",
 	"runbios", "rb2api", "api.runbios.ai",

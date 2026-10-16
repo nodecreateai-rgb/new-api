@@ -39,12 +39,17 @@ func TestMito480pIsRetiredOnStartup(t *testing.T) {
 	body := string(option)
 	for _, want := range []string{
 		`retireMito2apiRouting()`,
-		`"seedance-2.5-480p"`,
+		`ensureSeedance480Routing()`,
 		`"Mito Video"`,
 	} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("missing %s", want)
 		}
+	}
+	mito := strings.Index(body, `retireMito2apiRouting()`)
+	publish := strings.Index(body, `ensureSeedance480Routing()`)
+	if mito < 0 || publish < 0 || publish < mito {
+		t.Fatal("480p catalog must be published again after the Mito channel is retired")
 	}
 	for _, forbidden := range []string{
 		`ensureMito2apiRouting()`,
@@ -53,7 +58,7 @@ func TestMito480pIsRetiredOnStartup(t *testing.T) {
 		`"seedance-2.5-480p":  1.5`,
 	} {
 		if strings.Contains(body, forbidden) {
-			t.Fatalf("seedance-2.5-480p must stay retired: %s", forbidden)
+			t.Fatalf("old mito 480p price must not return: %s", forbidden)
 		}
 	}
 }

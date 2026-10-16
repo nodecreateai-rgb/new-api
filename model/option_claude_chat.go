@@ -85,7 +85,10 @@ func ensureClaudeChatVendor() error {
 }
 
 func ensureLLMVipOnEnabledChannels() error {
-	const group = "llm-vip"
+	return ensureGroupOnEnabledChannels("llm-vip")
+}
+
+func ensureGroupOnEnabledChannels(group string) error {
 	var channels []Channel
 	if err := DB.Where("status = ?", common.ChannelStatusEnabled).Find(&channels).Error; err != nil {
 		return err
