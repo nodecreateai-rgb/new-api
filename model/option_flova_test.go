@@ -14,13 +14,13 @@ func TestFlovaModelsStayOnAfterStartup(t *testing.T) {
 	body := string(option)
 	for _, want := range []string{
 		`ensureFlova2apiRouting()`,
-		`"wan-3.0-prime"`,
+		`"wan-3.0"`,
 		`"minimax-h3"`,
 		`"sora-2"`,
-		`"wan-3.0-prime":                      1.5`,
+		`"wan-3.0":                            1,`,
 		`"minimax-h3":                         0.5`,
 		`"sora-2":                             1`,
-		`"wan-3.0-prime":      1`,
+		`"wan-3.0":            0.8`,
 	} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("missing %s", want)
@@ -28,9 +28,9 @@ func TestFlovaModelsStayOnAfterStartup(t *testing.T) {
 	}
 	for _, forbidden := range []string{
 		`retireFlova2apiRouting()`,
-		`"wan-3.0-prime":                      2`,
+		`"wan-3.0-prime":                      1.5`,
 		`"sora-2":                             1.5`,
-		`"wan-3.0-prime":      1.5`,
+		`"wan-3.0-prime":      1`,
 	} {
 		if strings.Contains(body, forbidden) {
 			t.Fatalf("retired flova setting must not return: %s", forbidden)
@@ -48,10 +48,10 @@ func TestFlovaModelsStayOnAfterStartup(t *testing.T) {
 		`http://flova2api:38686`,
 		`FLOVA2API_BASE_URL`,
 		`ChannelStatusEnabled`,
-		`"wan-3.0-prime"`,
+		`"wan-3.0"`,
 		`"minimax-h3"`,
-		`flovaRetiredModels = []string{"sora-2"}`,
-		`¥1.5/次，VIP9 ¥1/次，原生480P，2-30秒`,
+		`flovaRetiredModels = []string{"sora-2", "wan-3.0-prime"}`,
+		`¥1/次，VIP9 ¥0.8/次，原生480P，2-20秒`,
 		`¥0.5/次，原生768P，4-15秒`,
 	} {
 		if !strings.Contains(s, want) {

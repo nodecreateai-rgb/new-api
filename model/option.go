@@ -280,8 +280,7 @@ func ensureDopioRMBPricing() {
 		"oauth2":                             0.3,
 		"pay":                                0.5,
 		"seedance-2.0":                       2,
-		"wan-3.0":                            2,
-		"wan-3.0-prime":                      1.5,
+		"wan-3.0":                            1,
 		"minimax-h3":                         0.5,
 		"sora-2":                             1,
 		"seedance-2.5-720p":                  4,
@@ -421,7 +420,7 @@ func ensureDopioRMBPricing() {
 			"seedance-2.5-c1":    3,
 			"seedance-2.5-720p":  3,
 			"seedance-2.5-1080p": 4,
-			"wan-3.0-prime":      1,
+			"wan-3.0":            0.8,
 		},
 		"vip10": {
 			"seedance-2.0-fast-480p": 1,
@@ -682,7 +681,7 @@ func ensureDopioRMBPricing() {
 				changed = true
 			}
 		}
-		for _, model := range append([]string{"seedance-2.0", "wan-3.0", "seedance-2.0-c2", "seedance-2.0-480p-c2", "seedance-2.0-fast-c2", "seedance-2.0-fast-480p-c2", "seedance-2.0-mini-c2", "wan-3.0-c2"}, permanentlyRetiredPublicModels...) {
+		for _, model := range append([]string{"seedance-2.0", "seedance-2.0-c2", "seedance-2.0-480p-c2", "seedance-2.0-fast-c2", "seedance-2.0-fast-480p-c2", "seedance-2.0-mini-c2", "wan-3.0-c2"}, permanentlyRetiredPublicModels...) {
 			if _, exists := groupPrices[model]; exists {
 				delete(groupPrices, model)
 				changed = true
@@ -3205,7 +3204,7 @@ var retiredNonCoreModels = []string{
 	"deepseek-v4.1-flash",
 	"seedance-2.0-c2", "seedance-2.0-480p-c2", "seedance-2.0-fast-c2",
 	"seedance-2.0-fast-480p-c2", "seedance-2.0-mini-c2", "wan-3.0-c2",
-	"seedance-2.0", "wan-3.0",
+	"seedance-2.0",
 	"seedance-2.0-mini", "seedance-2.0-720p", "wan-3.0-480p-c2",
 }
 
