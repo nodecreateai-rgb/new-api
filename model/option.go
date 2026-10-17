@@ -1321,9 +1321,10 @@ func ensureDolaSeedanceRouting() error {
 	}
 
 	// Per-model group availability (aligned with remote abilities).
+	// Every group can use both models; discounts come from ModelGroupPrice.
 	modelGroups := map[string][]string{
-		"sd2-c6": {"default", "vip", "svip", "vip1", "vip2", "vip3", "vip6"},
-		"sd2-c7": {"default", "vip", "svip", "vip1", "vip2", "vip3", "vip7"},
+		"sd2-c6": channel.EffectiveGroups(),
+		"sd2-c7": channel.EffectiveGroups(),
 	}
 	if err := DB.Model(&Ability{}).Where("channel_id = ? AND model NOT IN ?", channel.Id, []string{"sd2-c6", "sd2-c7"}).
 		Update("enabled", false).Error; err != nil {

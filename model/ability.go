@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/QuantumNous/new-api/common"
 
@@ -401,7 +402,12 @@ func SyncAllGroupAbilities() {
 		return
 	}
 	for _, ch := range channels {
-		if err := ch.UpdateAbilities(nil); err != nil {
+		err := ch.UpdateAbilities(nil)
+		if err != nil {
+			time.Sleep(500 * time.Millisecond)
+			err = ch.UpdateAbilities(nil)
+		}
+		if err != nil {
 			common.SysError(fmt.Sprintf("sync group abilities: channel %d: %s", ch.Id, err.Error()))
 		}
 	}
