@@ -536,9 +536,16 @@ func ensureDopioRMBPricing() {
 		}
 	}
 	changed = false
-	for group, description := range targetUserUsableGroups {
-		if userUsableGroups[group] != description {
-			userUsableGroups[group] = description
+	// Discount tiers must not be public; users get them only by assignment.
+	for group := range targetUserUsableGroups {
+		if _, ok := userUsableGroups[group]; ok {
+			delete(userUsableGroups, group)
+			changed = true
+		}
+	}
+	for _, group := range []string{"vip", "vip1", "vip2", "vip3", "svip"} {
+		if _, ok := userUsableGroups[group]; ok {
+			delete(userUsableGroups, group)
 			changed = true
 		}
 	}

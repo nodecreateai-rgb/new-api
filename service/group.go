@@ -28,12 +28,42 @@ func GetUserUsableGroups(userGroup string) map[string]string {
 				}
 			}
 		}
+	}
+	// Discount tiers are never public: only the tier an admin assigned to the
+	// user (or one granted through GroupSpecialUsableGroup) stays usable, even
+	// if the global UserUsableGroups lists it.
+	for g := range groupsCopy {
+		if IsRestrictedGroup(g) && g != userGroup && !specialGrants(userGroup, g) {
+			delete(groupsCopy, g)
+		}
+	}
+	if userGroup != "" {
 		// 如果userGroup不在UserUsableGroups中，返回UserUsableGroups + userGroup
 		if _, ok := groupsCopy[userGroup]; !ok {
 			groupsCopy[userGroup] = "用户分组"
 		}
 	}
 	return groupsCopy
+}
+
+// IsRestrictedGroup reports a discount tier (vip*, svip, llm-vip) that a user
+// may only use when an admin assigned it.
+func IsRestrictedGroup(g string) bool {
+	g = strings.ToLower(strings.TrimSpace(g))
+	return strings.HasPrefix(g, "vip") || g == "svip" || g == "llm-vip"
+}
+
+func specialGrants(userGroup, group string) bool {
+	if userGroup == "" {
+		return false
+	}
+	special, ok := ratio_setting.GetGroupRatioSetting().GroupSpecialUsableGroup.Get(userGroup)
+	if !ok {
+		return false
+	}
+	_, plain := special[group]
+	_, plus := special["+:"+group]
+	return plain || plus
 }
 
 func GroupInUserUsableGroups(userGroup, groupName string) bool {

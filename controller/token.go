@@ -9,6 +9,7 @@ import (
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/i18n"
 	"github.com/QuantumNous/new-api/model"
+	"github.com/QuantumNous/new-api/service"
 	"github.com/QuantumNous/new-api/setting/operation_setting"
 
 	"github.com/gin-gonic/gin"
@@ -201,6 +202,9 @@ func AddToken(c *gin.Context) {
 		})
 		return
 	}
+	if !tokenGroupAllowed(c, token.Group) {
+		return
+	}
 	key, err := common.GenerateKey()
 	if err != nil {
 		common.ApiErrorI18n(c, i18n.MsgTokenGenerateFailed)
@@ -290,6 +294,9 @@ func UpdateToken(c *gin.Context) {
 		cleanToken.Status = token.Status
 	} else {
 		// If you add more fields, please also update token.Update()
+		if token.Group != cleanToken.Group && !tokenGroupAllowed(c, token.Group) {
+			return
+		}
 		cleanToken.Name = token.Name
 		cleanToken.ExpiredTime = token.ExpiredTime
 		cleanToken.RemainQuota = token.RemainQuota
@@ -356,4 +363,22 @@ func GetTokenKeysBatch(c *gin.Context) {
 		keysMap[t.Id] = t.GetFullKey()
 	}
 	common.ApiSuccess(c, gin.H{"keys": keysMap})
+}
+
+// tokenGroupAllowed rejects a token group the user may not use (for example a
+// discount tier the admin did not assign).
+func tokenGroupAllowed(c *gin.Context, group string) bool {
+	if group == "" || group == "auto" {
+		return true
+	}
+	userGroup, err := model.GetUserGroup(c.GetInt("id"), false)
+	if err != nil {
+		common.ApiError(c, err)
+		return false
+	}
+	if !service.GroupInUserUsableGroups(userGroup, group) {
+		c.JSON(http.StatusOK, gin.H{"success": false, "message": fmt.Sprintf("无权使用 %s 分组", group)})
+		return false
+	}
+	return true
 }
