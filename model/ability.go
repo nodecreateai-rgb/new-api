@@ -3,6 +3,8 @@ package model
 import (
 	"errors"
 	"fmt"
+	"github.com/QuantumNous/new-api/setting/ratio_setting"
+	"sort"
 	"strings"
 	"sync"
 
@@ -155,7 +157,7 @@ func GetChannel(group string, model string, retry int) (*Channel, error) {
 
 func (channel *Channel) AddAbilities(tx *gorm.DB) error {
 	models_ := strings.Split(channel.Models, ",")
-	groups_ := strings.Split(channel.Group, ",")
+	groups_ := channel.EffectiveGroups()
 	abilitySet := make(map[string]struct{})
 	abilities := make([]Ability, 0, len(models_))
 	for _, model := range models_ {
@@ -227,7 +229,7 @@ func (channel *Channel) UpdateAbilities(tx *gorm.DB) error {
 
 	// Then add new abilities
 	models_ := strings.Split(channel.Models, ",")
-	groups_ := strings.Split(channel.Group, ",")
+	groups_ := channel.EffectiveGroups()
 	abilitySet := make(map[string]struct{})
 	abilities := make([]Ability, 0, len(models_))
 	for _, model := range models_ {
@@ -348,4 +350,61 @@ func FixAbility() (int, int, error) {
 	}
 	InitChannelCache()
 	return successCount, failCount, nil
+}
+
+// EffectiveGroups is the channel's own group list plus every group defined in
+// GroupRatio. Every model is therefore reachable from every group: a new
+// model on a channel serves all groups, and a new group (for example vip12)
+// can use every model without editing channels. Discounts stay per group via
+// ModelGroupPrice / GroupRatio; who may use a group is decided by user groups.
+func (channel *Channel) EffectiveGroups() []string {
+	seen := make(map[string]struct{})
+	out := make([]string, 0, 16)
+	add := func(g string) {
+		g = strings.TrimSpace(g)
+		if g == "" {
+			return
+		}
+		if _, ok := seen[g]; ok {
+			return
+		}
+		seen[g] = struct{}{}
+		out = append(out, g)
+	}
+	for _, g := range strings.Split(channel.Group, ",") {
+		add(g)
+	}
+	groups := make([]string, 0)
+	for g := range ratio_setting.GetGroupRatioCopy() {
+		groups = append(groups, g)
+	}
+	sort.Strings(groups)
+	for _, g := range groups {
+		add(g)
+	}
+	return out
+}
+
+var groupAbilitySyncLock sync.Mutex
+
+// SyncAllGroupAbilities rebuilds abilities so every channel covers every
+// group. It runs after GroupRatio changes so a new group works at once.
+func SyncAllGroupAbilities() {
+	if DB == nil {
+		return
+	}
+	groupAbilitySyncLock.Lock()
+	defer groupAbilitySyncLock.Unlock()
+	var channels []*Channel
+	if err := DB.Model(&Channel{}).Find(&channels).Error; err != nil {
+		common.SysError("sync group abilities: load channels: " + err.Error())
+		return
+	}
+	for _, ch := range channels {
+		if err := ch.UpdateAbilities(nil); err != nil {
+			common.SysError(fmt.Sprintf("sync group abilities: channel %d: %s", ch.Id, err.Error()))
+		}
+	}
+	InitChannelCache()
+	common.SysLog(fmt.Sprintf("group abilities synced for %d channels", len(channels)))
 }

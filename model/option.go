@@ -3974,7 +3974,11 @@ func updateOptionMap(key string, value string) (err error) {
 	case "ModelRatio":
 		err = ratio_setting.UpdateModelRatioByJSONString(value)
 	case "GroupRatio":
+		before := ratio_setting.GetGroupRatioCopy()
 		err = ratio_setting.UpdateGroupRatioByJSONString(value)
+		if err == nil && groupSetChanged(before, ratio_setting.GetGroupRatioCopy()) {
+			go SyncAllGroupAbilities()
+		}
 	case "GroupGroupRatio":
 		err = ratio_setting.UpdateGroupGroupRatioByJSONString(value)
 	case "UserUsableGroups":
@@ -4060,4 +4064,16 @@ func handleConfigUpdate(key, value string) bool {
 	}
 
 	return true // 已处理
+}
+
+func groupSetChanged(a, b map[string]float64) bool {
+	if len(a) != len(b) {
+		return true
+	}
+	for k := range a {
+		if _, ok := b[k]; !ok {
+			return true
+		}
+	}
+	return false
 }
