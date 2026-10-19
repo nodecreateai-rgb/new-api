@@ -24,6 +24,7 @@ func TestSD2MiniUsesFixedPerRequestBilling(t *testing.T) {
 	require.False(t, a.UseRequestBillingRatios(&relaycommon.RelayInfo{OriginModelName: "kling-o3"}))
 	require.False(t, a.UseRequestBillingRatios(&relaycommon.RelayInfo{OriginModelName: "wan-3.0"}))
 	require.False(t, a.UseRequestBillingRatios(&relaycommon.RelayInfo{OriginModelName: "minimax-h3"}))
+	require.False(t, a.UseRequestBillingRatios(&relaycommon.RelayInfo{OriginModelName: "minimax-h3-max"}))
 	require.False(t, a.UseRequestBillingRatios(&relaycommon.RelayInfo{OriginModelName: "seedance-2.0-fast"}))
 	require.False(t, a.UseRequestBillingRatios(&relaycommon.RelayInfo{OriginModelName: "sora-2"}))
 }
@@ -32,6 +33,7 @@ func TestFlovaUsesFixedPerRequestBilling(t *testing.T) {
 	a := &TaskAdaptor{}
 	require.False(t, a.UseRequestBillingRatios(&relaycommon.RelayInfo{OriginModelName: "wan-3.0"}))
 	require.False(t, a.UseRequestBillingRatios(&relaycommon.RelayInfo{OriginModelName: "minimax-h3"}))
+	require.False(t, a.UseRequestBillingRatios(&relaycommon.RelayInfo{OriginModelName: "minimax-h3-max"}))
 	require.False(t, a.UseRequestBillingRatios(&relaycommon.RelayInfo{OriginModelName: "sora-2"}))
 }
 
@@ -133,6 +135,17 @@ func TestLaihuaSeedanceLocksResolutionFromModel(t *testing.T) {
 	applyOriginModelResolution(body, "minimax-h3")
 	require.Equal(t, "768p", body["resolution"])
 	require.Equal(t, "768p", body["size"])
+
+	body = map[string]interface{}{"duration": 20, "seconds": "20", "resolution": "2k"}
+	applyOriginModelDurationLimit(body, relaycommon.TaskSubmitReq{Duration: 20}, "minimax-h3-max")
+	applyOriginModelResolution(body, "minimax-h3-max")
+	require.Equal(t, 12, body["duration"])
+	require.Equal(t, "12", body["seconds"])
+	require.Equal(t, "768p", body["resolution"])
+	require.Equal(t, "768p", body["size"])
+	body = map[string]interface{}{}
+	applyOriginModelDurationLimit(body, relaycommon.TaskSubmitReq{}, "minimax-h3-max")
+	require.Equal(t, 12, body["duration"])
 
 	body = map[string]interface{}{"size": "1080x1920"}
 	applyOriginModelResolution(body, "sora-2")

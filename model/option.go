@@ -282,6 +282,7 @@ func ensureDopioRMBPricing() {
 		"seedance-2.0":                       2,
 		"wan-3.0":                            1,
 		"minimax-h3":                         0.5,
+		"minimax-h3-max":                     0.4,
 		"sora-2":                             1,
 		"seedance-2.5-720p":                  4,
 		"seedance-2.5-1080p":                 5,
@@ -421,6 +422,7 @@ func ensureDopioRMBPricing() {
 			"seedance-2.5-720p":  3,
 			"seedance-2.5-1080p": 4,
 			"wan-3.0":            0.8,
+			"minimax-h3-max":     0.3,
 		},
 		"vip10": {
 			"seedance-2.0-fast-480p": 1,
@@ -476,7 +478,7 @@ func ensureDopioRMBPricing() {
 		}
 	}
 	changed := false
-	for _, staleModel := range append([]string{"happy-horse-1.1", "happyhorse-1.1", "kling-v3", "wan2.7", "viduq3", "seedance-video-fast", "seedance-video-standard", "seedance-video-fast-per-second", "seedance-video-standard-per-second", "seedance-2.0-fast", "minimax-h3-max"}, permanentlyRetiredPublicModels...) {
+	for _, staleModel := range append([]string{"happy-horse-1.1", "happyhorse-1.1", "kling-v3", "wan2.7", "viduq3", "seedance-video-fast", "seedance-video-standard", "seedance-video-fast-per-second", "seedance-video-standard-per-second", "seedance-2.0-fast"}, permanentlyRetiredPublicModels...) {
 		if _, exists := prices[staleModel]; exists {
 			delete(prices, staleModel)
 			changed = true
@@ -795,6 +797,9 @@ func ensureDopioRMBPricing() {
 	}
 	if err := ensureFlova2apiRouting(); err != nil {
 		common.SysLog("failed to enforce Flova video gateway routing: " + err.Error())
+	}
+	if err := ensureFlick2apiRouting(); err != nil {
+		common.SysLog("failed to enforce Flick video gateway routing: " + err.Error())
 	}
 	if err := ensureSeedanceFastRouting(); err != nil {
 		common.SysLog("failed to enforce Seedance 2.0 Fast gateway routing: " + err.Error())
@@ -2173,7 +2178,7 @@ func retireSeedance480Model() error {
 		return err
 	}
 
-	if err := retireMarketplaceModels([]string{modelName, "seedance-2.0-fast", "minimax-h3-max"}); err != nil {
+	if err := retireMarketplaceModels([]string{modelName, "seedance-2.0-fast"}); err != nil {
 		return err
 	}
 	InvalidatePricingCache()

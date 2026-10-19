@@ -92,6 +92,23 @@ func TestMaskUpstreamProviderInfoManyverse(t *testing.T) {
 	}
 }
 
+func TestPublicErrorMessageHidesFlick(t *testing.T) {
+	got := PublicErrorMessage("Flick Video flick2api auth.flick.art could not create video")
+	if got != "request failed" {
+		t.Fatalf("got %q", got)
+	}
+}
+
+func TestMaskUpstreamProviderInfoFlick(t *testing.T) {
+	got := MaskUpstreamProviderInfo("Flick Video flick2api auth.flick.art cdn.flick.art domiex-flick-ulmocy-flick2api-1")
+	lower := strings.ToLower(got)
+	for _, forbidden := range []string{"flick", "flick2api"} {
+		if strings.Contains(lower, forbidden) {
+			t.Fatalf("leaked %q in %q", forbidden, got)
+		}
+	}
+}
+
 func TestPublicErrorMessageHidesFlova(t *testing.T) {
 	got := PublicErrorMessage("flova finished without a video")
 	if got != "request failed" {
