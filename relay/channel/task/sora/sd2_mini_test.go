@@ -154,11 +154,12 @@ func TestLaihuaSeedanceLocksResolutionFromModel(t *testing.T) {
 }
 
 func TestMinimaxH3MaxRequiresReferenceImage(t *testing.T) {
-	err := minimaxH3MaxReferenceImageError("minimax-h3-max", false)
+	err := minimaxH3MaxReferenceImageError("minimax-h3-max", nil)
 	require.NotNil(t, err)
 	require.Equal(t, "至少上传一张参考图", err.Message)
-	require.Nil(t, minimaxH3MaxReferenceImageError("minimax-h3-max", true))
-	require.Nil(t, minimaxH3MaxReferenceImageError("minimax-h3", false))
+	require.NotNil(t, minimaxH3MaxReferenceImageError("minimax-h3-max", []string{}))
+	require.Nil(t, minimaxH3MaxReferenceImageError("minimax-h3-max", []string{"https://example.com/a.png"}))
+	require.Nil(t, minimaxH3MaxReferenceImageError("minimax-h3", nil))
 }
 
 func TestKlingO3UpstreamBodyPassesDurationAspectAndImages(t *testing.T) {
