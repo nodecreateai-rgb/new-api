@@ -34,7 +34,7 @@ func TestFlickModelStaysOnAfterStartup(t *testing.T) {
 		`http://flick2api:38710`,
 		`FLICK2API_BASE_URL`,
 		`933，原生768P，5-12秒`,
-		`最多9张图、3段视频、3段音频`,
+		`至少1张参考图，最多9张图、3段视频、3段音频`,
 		`minimax-h3-ref-selfhost`,
 		`¥0.4/次，VIP9 ¥0.3/次`,
 	} {

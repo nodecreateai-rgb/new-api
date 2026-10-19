@@ -110,7 +110,25 @@ func (a *TaskAdaptor) ValidateRequestAndSetAction(c *gin.Context, info *relaycom
 	if err == nil && isSeedanceModel(info.OriginModelName) && promptMentionsImageReference(req.Prompt) && !req.HasImage() {
 		return &dto.TaskError{Code: "missing_reference_image", Message: "prompt references an image, but no image material was received; send image/image_url/reference_image/image_refs", StatusCode: http.StatusBadRequest, LocalError: true, Error: fmt.Errorf("missing reference image material")}
 	}
+	if err == nil {
+		if taskErr := minimaxH3MaxReferenceImageError(info.OriginModelName, req.HasImage()); taskErr != nil {
+			return taskErr
+		}
+	}
 	return nil
+}
+
+func minimaxH3MaxReferenceImageError(model string, hasImage bool) *dto.TaskError {
+	if !strings.EqualFold(strings.TrimSpace(model), "minimax-h3-max") || hasImage {
+		return nil
+	}
+	return &dto.TaskError{
+		Code:       "missing_reference_image",
+		Message:    "至少上传一张参考图",
+		StatusCode: http.StatusBadRequest,
+		LocalError: true,
+		Error:      fmt.Errorf("至少上传一张参考图"),
+	}
 }
 
 func isSeedanceModel(model string) bool {

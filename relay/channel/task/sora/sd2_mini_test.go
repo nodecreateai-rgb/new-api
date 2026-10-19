@@ -153,6 +153,14 @@ func TestLaihuaSeedanceLocksResolutionFromModel(t *testing.T) {
 	require.Equal(t, "720p", body["size"])
 }
 
+func TestMinimaxH3MaxRequiresReferenceImage(t *testing.T) {
+	err := minimaxH3MaxReferenceImageError("minimax-h3-max", false)
+	require.NotNil(t, err)
+	require.Equal(t, "至少上传一张参考图", err.Message)
+	require.Nil(t, minimaxH3MaxReferenceImageError("minimax-h3-max", true))
+	require.Nil(t, minimaxH3MaxReferenceImageError("minimax-h3", false))
+}
+
 func TestKlingO3UpstreamBodyPassesDurationAspectAndImages(t *testing.T) {
 	req := relaycommon.TaskSubmitReq{
 		Prompt:      "cinematic apple on table",

@@ -40,7 +40,7 @@ func ensureFlick2apiRouting() error {
 
 	groups := []string{"default", "vip", "svip", "vip1", "vip2", "vip3", "vip6", "vip8", "vip9", "vip10"}
 	modelDescriptions := map[string]string{
-		"minimax-h3-max": "MiniMax H3 Max 文生/参考生视频（异步，¥0.4/次，VIP9 ¥0.3/次，933，原生768P，5-12秒，画幅 16:9/9:16/1:1/21:9/4:3/3:4，最多9张图、3段视频、3段音频）",
+		"minimax-h3-max": "MiniMax H3 Max 参考生视频（异步，¥0.4/次，VIP9 ¥0.3/次，933，原生768P，5-12秒，画幅 16:9/9:16/1:1/21:9/4:3/3:4，至少1张参考图，最多9张图、3段视频、3段音频）",
 	}
 	endpoint := `{"openai-video":{"path":"/v1/videos","method":"POST"}}`
 
