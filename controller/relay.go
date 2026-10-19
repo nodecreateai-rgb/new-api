@@ -568,7 +568,7 @@ func RelayTask(c *gin.Context) {
 			}
 		} else {
 			var channelErr *types.NewAPIError
-			channel, channelErr = getChannel(c, relayInfo, retryParam)
+			channel, channelErr = getTaskChannel(c, relayInfo, retryParam)
 			if channelErr != nil {
 				logger.LogError(c, channelErr.Error())
 				taskErr = service.TaskErrorWrapperLocal(channelErr.Err, "get_channel_failed", http.StatusInternalServerError)
@@ -642,6 +642,30 @@ func RelayTask(c *gin.Context) {
 	if taskErr != nil {
 		respondTaskError(c, taskErr)
 	}
+}
+
+// taskChannelPicks bounds re-draws when a retry lands on a channel that
+// already failed this request.
+const taskChannelPicks = 8
+
+// getTaskChannel picks a channel for a task retry, preferring one this
+// request has not tried yet. Weighted random selection otherwise keeps
+// drawing the same saturated channel (72->72->72) while another channel
+// with free capacity sits idle.
+func getTaskChannel(c *gin.Context, info *relaycommon.RelayInfo, retryParam *service.RetryParam) (*model.Channel, *types.NewAPIError) {
+	used := map[string]bool{}
+	for _, id := range c.GetStringSlice("use_channel") {
+		used[id] = true
+	}
+	var channel *model.Channel
+	var err *types.NewAPIError
+	for i := 0; i < taskChannelPicks; i++ {
+		channel, err = getChannel(c, info, retryParam)
+		if err != nil || len(used) == 0 || !used[fmt.Sprintf("%d", channel.Id)] {
+			return channel, err
+		}
+	}
+	return channel, err
 }
 
 // respondTaskError 统一输出 Task 错误响应（含 429 限流提示改写）
