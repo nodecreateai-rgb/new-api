@@ -82,11 +82,29 @@ func SaveQuotaDataCache() {
 			//DB.Table("quota_data").Save(quotaDataDB)
 			increaseQuotaData(quotaData.UserID, quotaData.Username, quotaData.ModelName, quotaData.Count, quotaData.Quota, quotaData.CreatedAt, quotaData.TokenUsed)
 		} else {
-			DB.Table("quota_data").Create(quotaData)
+			if err := insertQuotaData(quotaData); err != nil {
+				common.SysLog(fmt.Sprintf("insert quota data error: %s", err))
+			}
 		}
 	}
 	CacheQuotaData = make(map[string]*QuotaData)
 	common.SysLog(fmt.Sprintf("保存数据看板数据成功，共保存%d条数据", size))
+}
+
+// insertQuotaData writes one dashboard row. On ClickHouse, GORM Create sends a
+// native batch INSERT that the server rejects mid-stream (ATTEMPT_TO_READ_AFTER_EOF),
+// leaving the pooled connection out of protocol sync so the next statement on
+// it fails with "Unexpected packet" (code 101) — which can hit unrelated
+// writes such as task inserts. Plain parameterised INSERT avoids that path.
+func insertQuotaData(q *QuotaData) error {
+	if !common.UsingClickHouse {
+		return DB.Table("quota_data").Create(q).Error
+	}
+	if q.Id == 0 {
+		q.Id = int(nextClickHouseTableID(DB, "quota_data"))
+	}
+	return DB.Exec("INSERT INTO quota_data (id, user_id, username, model_name, created_at, token_used, count, quota) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+		int64(q.Id), int64(q.UserID), q.Username, q.ModelName, q.CreatedAt, int64(q.TokenUsed), int64(q.Count), int64(q.Quota)).Error
 }
 
 func increaseQuotaData(userId int, username string, modelName string, count int, quota int, createdAt int64, tokenUsed int) {
