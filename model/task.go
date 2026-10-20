@@ -601,7 +601,28 @@ func (Task *Task) insertClickHouse() error {
 		data = JSONRaw("{}")
 	}
 	// ClickHouse GORM Create fails on several typed/JSON columns; insert primitives.
-	err = DB.Exec(
+	// A pooled connection left mid-protocol by another writer fails the next
+	// statement with "Unexpected packet" (code 101). The task id was already
+	// returned to the caller, so retry on a fresh connection instead of
+	// losing the row.
+	for attempt := 0; ; attempt++ {
+		err = insertClickHouseTaskRow(Task, props, priv, data)
+		if err == nil || attempt >= 4 {
+			break
+		}
+		common.SysError(fmt.Sprintf("clickhouse insert task %s attempt %d: %v", Task.TaskID, attempt+1, err))
+		time.Sleep(time.Duration(200*(attempt+1)) * time.Millisecond)
+	}
+	if err != nil {
+		return fmt.Errorf("clickhouse insert task %s: %w", Task.TaskID, err)
+	}
+	common.SysLog(fmt.Sprintf("inserted clickhouse task id=%d task_id=%s platform=%s", Task.ID, Task.TaskID, Task.Platform))
+	cacheSetTaskLookup(Task)
+	return nil
+}
+
+func insertClickHouseTaskRow(Task *Task, props, priv []byte, data JSONRaw) error {
+	return DB.Exec(
 		"INSERT INTO tasks (id, created_at, updated_at, task_id, platform, user_id, "+commonGroupCol+", channel_id, quota, action, status, fail_reason, submit_time, start_time, finish_time, progress, properties, private_data, data) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
 		Task.ID,
 		Task.CreatedAt,
@@ -623,12 +644,6 @@ func (Task *Task) insertClickHouse() error {
 		string(priv),
 		string(data),
 	).Error
-	if err != nil {
-		return fmt.Errorf("clickhouse insert task %s: %w", Task.TaskID, err)
-	}
-	common.SysLog(fmt.Sprintf("inserted clickhouse task id=%d task_id=%s platform=%s", Task.ID, Task.TaskID, Task.Platform))
-	cacheSetTaskLookup(Task)
-	return nil
 }
 
 type TaskSnapshot struct {
