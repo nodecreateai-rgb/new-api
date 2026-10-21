@@ -47,7 +47,7 @@ func ensureFlova2apiRouting() error {
 
 	groups := []string{"default", "vip", "svip", "vip1", "vip2", "vip3", "vip6", "vip8", "vip9", "vip10"}
 	modelDescriptions := map[string]string{
-		"wan-3.0":       "Wan 3.0 文生/图生视频（异步，¥1/次，VIP9 ¥0.8/次，原生480P，2-20秒，画幅 adaptive/16:9/4:3/1:1/3:4/9:16，最多10张图片、0段视频、5段音频）",
+		"wan-3.0":       "Wan 3.0 文生/图生视频（异步，¥1/次，原生480P，2-20秒，画幅 adaptive/16:9/4:3/1:1/3:4/9:16，最多10张图片、0段视频、5段音频）",
 		"minimax-h3":    "MiniMax H3 文生/图生视频（异步，¥0.5/次，原生768P，4-15秒，画幅 21:9/16:9/4:3/1:1/3:4/9:16，最多9张图、3段视频、3段音频）",
 	}
 	endpoint := `{"openai-video":{"path":"/v1/videos","method":"POST"}}`

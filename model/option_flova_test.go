@@ -20,7 +20,6 @@ func TestFlovaModelsStayOnAfterStartup(t *testing.T) {
 		`"wan-3.0":                            1,`,
 		`"minimax-h3":                         0.5`,
 		`"sora-2":                             1`,
-		`"wan-3.0":            0.8`,
 	} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("missing %s", want)
@@ -51,7 +50,7 @@ func TestFlovaModelsStayOnAfterStartup(t *testing.T) {
 		`"wan-3.0"`,
 		`"minimax-h3"`,
 		`flovaRetiredModels = []string{"sora-2", "wan-3.0-prime"}`,
-		`¥1/次，VIP9 ¥0.8/次，原生480P，2-20秒`,
+		`¥1/次，原生480P，2-20秒`,
 		`¥0.5/次，原生768P，4-15秒`,
 	} {
 		if !strings.Contains(s, want) {

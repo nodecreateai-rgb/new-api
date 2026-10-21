@@ -421,7 +421,6 @@ func ensureDopioRMBPricing() {
 			"seedance-2.5-c1":    3,
 			"seedance-2.5-720p":  3,
 			"seedance-2.5-1080p": 4,
-			"wan-3.0":            0.8,
 			"minimax-h3-max":     0.3,
 		},
 		"vip10": {
