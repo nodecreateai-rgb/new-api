@@ -15,13 +15,13 @@ func TestSeedance480StaysOnAfterStartup(t *testing.T) {
 	for _, want := range []string{
 		`ensureSeedance480Routing()`,
 		`ensureVIP11OnEnabledChannels()`,
-		`"seedance-2.0-480p":                  1.5`,
-		`"seedance-2.5-480p":                  2`,
+		`"seedance-2.0-480p":                  1`,
+		`"seedance-2.5-480p":                  1.5`,
 		`"vip11":   "VIP11分组"`,
 		`"seedance-2.0-480p": 1`,
 		`"seedance-2.5-480p": 1`,
-		`groupPrices["seedance-2.0-480p"] = 1.5`,
-		`groupPrices["seedance-2.5-480p"] = 2`,
+		`groupPrices["seedance-2.0-480p"] = 1`,
+		`groupPrices["seedance-2.5-480p"] = 1.5`,
 	} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("missing %s", want)
@@ -47,8 +47,8 @@ func TestSeedance480StaysOnAfterStartup(t *testing.T) {
 		`http://manyverse2api:38748`,
 		`SEEDANCE480_BASE_URL`,
 		`{"seedance-2.0-480p":"seedance-2.0","seedance-2.5-480p":"seedance-2.5"}`,
-		`¥1.5/次，VIP11 ¥1/次，原生480P，最长15秒，全参，卡脸`,
-		`¥2/次，VIP11 ¥1/次，原生480P，最长30秒，全参，卡脸`,
+		`¥1/次，原生480P，最长15秒，全参，卡脸`,
+		`¥1.5/次，VIP11 ¥1/次，原生480P，最长30秒，全参，卡脸`,
 		`channel_id NOT IN`,
 		`model NOT IN`,
 		`vip11`,

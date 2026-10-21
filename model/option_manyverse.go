@@ -17,8 +17,8 @@ const (
 	seedance480MappingJSON = `{"seedance-2.0-480p":"seedance-2.0","seedance-2.5-480p":"seedance-2.5"}`
 	seedance480GroupsCSV   = "default,vip,svip,vip1,vip2,vip3,vip6,vip7,vip8,vip9,vip10,vip11,llm-vip"
 	seedance480Endpoint    = `{"openai-video":{"path":"/v1/videos","method":"POST"}}`
-	seedance20480Desc      = "Seedance 2.0 480p 文生/图生视频（异步，¥1.5/次，VIP11 ¥1/次，原生480P，最长15秒，全参，卡脸，最多9张图、3段视频、3段音频）"
-	seedance25480Desc      = "Seedance 2.5 480p 文生/图生视频（异步，¥2/次，VIP11 ¥1/次，原生480P，最长30秒，全参，卡脸，最多9张图片、3段视频、3段音频）"
+	seedance20480Desc      = "Seedance 2.0 480p 文生/图生视频（异步，¥1/次，原生480P，最长15秒，全参，卡脸，最多9张图、3段视频、3段音频）"
+	seedance25480Desc      = "Seedance 2.5 480p 文生/图生视频（异步，¥1.5/次，VIP11 ¥1/次，原生480P，最长30秒，全参，卡脸，最多9张图片、3段视频、3段音频）"
 )
 
 var seedance480PublicModels = []string{"seedance-2.0-480p", "seedance-2.5-480p"}
