@@ -46,7 +46,7 @@ func TestSeedance480StaysOnAfterStartup(t *testing.T) {
 		`seedance480ChannelName = "Seedance 480p Video"`,
 		`http://manyverse2api:38748`,
 		`SEEDANCE480_BASE_URL`,
-		`{"seedance-2.0-480p":"seedance-2.0","seedance-2.5-480p":"seedance-2.5"}`,
+		`{"seedance-2.0-480p":"seedance-2.0","seedance-2.5-480p":"seedance-2.5","wan-3.0-prime-720p":"wan-3.0-prime"}`,
 		`¥1/次，原生480P，最长15秒，全参，卡脸`,
 		`¥1.5/次，VIP11 ¥1/次，原生480P，最长30秒，全参，卡脸`,
 		`channel_id NOT IN`,

@@ -247,6 +247,7 @@ func ensureDopioRMBPricing() {
 		"seedance-2.0-fast-480p":             1.5,
 		"seedance-2.0-480p":                  1,
 		"seedance-2.5-480p":                  1.5,
+		"wan-3.0-prime-720p":                 1.5,
 		"grok-imagine-720p":                  0.5,
 		"sd2-mini":                           0.6,
 		"sd2-fast":                           1,
@@ -638,6 +639,10 @@ func ensureDopioRMBPricing() {
 				groupPrices["seedance-2.5-480p"] = 1.5
 				changed = true
 			}
+		}
+		if groupPrices["wan-3.0-prime-720p"] != 1.5 {
+			groupPrices["wan-3.0-prime-720p"] = 1.5
+			changed = true
 		}
 		for _, model := range []string{
 			"seedance-2.0-mini-720p-c2",

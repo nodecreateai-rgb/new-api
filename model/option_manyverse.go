@@ -13,15 +13,16 @@ import (
 
 const (
 	seedance480ChannelName = "Seedance 480p Video"
-	seedance480ModelsCSV   = "seedance-2.0-480p,seedance-2.5-480p"
-	seedance480MappingJSON = `{"seedance-2.0-480p":"seedance-2.0","seedance-2.5-480p":"seedance-2.5"}`
+	seedance480ModelsCSV   = "seedance-2.0-480p,seedance-2.5-480p,wan-3.0-prime-720p"
+	seedance480MappingJSON = `{"seedance-2.0-480p":"seedance-2.0","seedance-2.5-480p":"seedance-2.5","wan-3.0-prime-720p":"wan-3.0-prime"}`
 	seedance480GroupsCSV   = "default,vip,svip,vip1,vip2,vip3,vip6,vip7,vip8,vip9,vip10,vip11,llm-vip"
 	seedance480Endpoint    = `{"openai-video":{"path":"/v1/videos","method":"POST"}}`
 	seedance20480Desc      = "Seedance 2.0 480p 文生/图生视频（异步，¥1/次，原生480P，最长15秒，全参，卡脸，最多9张图、3段视频、3段音频）"
 	seedance25480Desc      = "Seedance 2.5 480p 文生/图生视频（异步，¥1.5/次，VIP11 ¥1/次，原生480P，最长30秒，全参，卡脸，最多9张图片、3段视频、3段音频）"
+	wanPrime720Desc        = "Wan 3.0 Prime 720p 文生/图生视频（异步，¥1.5/次，原生720P，默认生成音频，时长2-30秒，最多10张参考图、5段参考音频，不支持参考视频 video_refs）"
 )
 
-var seedance480PublicModels = []string{"seedance-2.0-480p", "seedance-2.5-480p"}
+var seedance480PublicModels = []string{"seedance-2.0-480p", "seedance-2.5-480p", "wan-3.0-prime-720p"}
 
 func ensureSeedance480Routing() error {
 	baseURL := strings.TrimSpace(os.Getenv("SEEDANCE480_BASE_URL"))
@@ -42,8 +43,9 @@ func ensureSeedance480Routing() error {
 
 	groups := []string{"default", "vip", "svip", "vip1", "vip2", "vip3", "vip6", "vip7", "vip8", "vip9", "vip10", "vip11", "llm-vip"}
 	modelDescriptions := map[string]string{
-		"seedance-2.0-480p": seedance20480Desc,
-		"seedance-2.5-480p": seedance25480Desc,
+		"seedance-2.0-480p":  seedance20480Desc,
+		"seedance-2.5-480p":  seedance25480Desc,
+		"wan-3.0-prime-720p": wanPrime720Desc,
 	}
 
 	if common.UsingClickHouse {
