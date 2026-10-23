@@ -100,6 +100,9 @@ func main() {
 	// 热更新配置
 	go model.SyncOptions(common.SyncFrequency)
 
+	// ClickHouse: keep lightweight-update patch parts from piling up
+	model.StartClickHousePatchSweeper()
+
 	// 数据看板
 	go model.UpdateQuotaData()
 
