@@ -49,7 +49,7 @@ func TestSeedanceFastStaysOnAfterStartup(t *testing.T) {
 		seedanceFastPublicModel,
 		`seedanceFast720Model`,
 		`"seedance-2.0-720p":"seedance-2.0-720p"`,
-		`¥3/次，VIP10 ¥2.5/次`,
+		`¥3/次，VIP10 ¥2.4/次`,
 	} {
 		if !strings.Contains(s, want) {
 			t.Fatalf("missing %s", want)
