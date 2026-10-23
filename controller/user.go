@@ -560,6 +560,7 @@ func GetUserModels(c *gin.Context) {
 			}
 		}
 	}
+	models = model.FilterModelsForUser(models, id)
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",

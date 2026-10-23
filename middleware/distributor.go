@@ -48,7 +48,7 @@ func Distribute() func(c *gin.Context) {
 				abortWithOpenAiMessage(c, http.StatusInternalServerError, "failed to check model status")
 				return
 			}
-			if !enabled {
+			if !enabled || !model.IsModelVisibleToUser(modelRequest.Model, c.GetInt("id")) {
 				abortWithOpenAiMessage(c, http.StatusNotFound, fmt.Sprintf("The model '%s' does not exist or is disabled", modelRequest.Model), types.ErrorCodeModelNotFound)
 				return
 			}

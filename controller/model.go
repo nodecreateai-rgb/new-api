@@ -268,6 +268,7 @@ func ListModels(c *gin.Context, modelType int) {
 		}
 	}
 
+	userModelNames = model.FilterModelsForUser(userModelNames, c.GetInt("id"))
 	userModelNames, err = model.FilterEnabledModelsForRelay(userModelNames)
 	if err != nil {
 		common.SysLog(fmt.Sprintf("FilterEnabledModelsForRelay error: %v", err))
@@ -348,7 +349,7 @@ func EnabledListModels(c *gin.Context) {
 
 func RetrieveModel(c *gin.Context, modelType int) {
 	modelId := c.Param("model")
-	if aiModel, ok := openAIModelsMap[modelId]; ok {
+	if aiModel, ok := openAIModelsMap[modelId]; ok && model.IsModelVisibleToUser(modelId, c.GetInt("id")) {
 		switch modelType {
 		case constant.ChannelTypeAnthropic:
 			c.JSON(200, dto.AnthropicModel{
