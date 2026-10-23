@@ -623,7 +623,7 @@ func ensureDopioRMBPricing() {
 			changed = true
 		}
 		price720 := 3.0
-		if group == "vip11" {
+		if group == "vip10" {
 			price720 = 2.5
 		}
 		if groupPrices["seedance-2.0-720p"] != price720 {
