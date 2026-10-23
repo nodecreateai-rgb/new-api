@@ -259,7 +259,7 @@ func ensureDopioRMBPricing() {
 		"sd2-c11":                            2.5,
 		"sd2-c12":                            3,
 		"seedance-720":                       higgsSeedancePrice,
-		"seedance-2.0-fast-720p":             2,
+		"seedance-2.0-fast-720p":             2.5,
 		"seedance-2.0-1080p":                 4,
 		"seedance-video-fast-per-second":     0.2,
 		"seedance-video-standard-per-second": 0.33,
@@ -330,7 +330,7 @@ func ensureDopioRMBPricing() {
 		"default": {
 			"seedance-video-fast":                3,
 			"seedance-video-standard":            5,
-			"seedance-2.0-fast-720p":             2,
+			"seedance-2.0-fast-720p":             2.5,
 			"seedance-2.0-1080p":                 4,
 			"seedance-video-fast-per-second":     0.2,
 			"seedance-video-standard-per-second": 0.33,
@@ -345,7 +345,7 @@ func ensureDopioRMBPricing() {
 		"vip1": {
 			"seedance-video-fast":                3,
 			"seedance-video-standard":            5,
-			"seedance-2.0-fast-720p":             2,
+			"seedance-2.0-fast-720p":             2.5,
 			"seedance-2.0-1080p":                 4,
 			"seedance-video-fast-per-second":     0.2,
 			"seedance-video-standard-per-second": 0.33,
@@ -359,7 +359,7 @@ func ensureDopioRMBPricing() {
 		"vip": {
 			"seedance-video-fast":                3,
 			"seedance-video-standard":            5,
-			"seedance-2.0-fast-720p":             2,
+			"seedance-2.0-fast-720p":             2.5,
 			"seedance-2.0-1080p":                 4,
 			"seedance-video-fast-per-second":     0.2,
 			"seedance-video-standard-per-second": 0.33,
@@ -373,7 +373,7 @@ func ensureDopioRMBPricing() {
 		"svip": {
 			"seedance-video-fast":                3,
 			"seedance-video-standard":            5,
-			"seedance-2.0-fast-720p":             2,
+			"seedance-2.0-fast-720p":             2.5,
 			"seedance-2.0-1080p":                 4,
 			"seedance-video-fast-per-second":     0.2,
 			"seedance-video-standard-per-second": 0.33,
@@ -387,7 +387,7 @@ func ensureDopioRMBPricing() {
 		"vip2": {
 			"seedance-video-fast":                3,
 			"seedance-video-standard":            5,
-			"seedance-2.0-fast-720p":             2,
+			"seedance-2.0-fast-720p":             2.5,
 			"seedance-2.0-1080p":                 4,
 			"seedance-video-fast-per-second":     0.2,
 			"seedance-video-standard-per-second": 0.33,
@@ -404,13 +404,13 @@ func ensureDopioRMBPricing() {
 		"vip3": {
 			"seedance-video-fast":                3,
 			"seedance-video-standard":            5,
-			"seedance-2.0-fast-720p":             2,
+			"seedance-2.0-fast-720p":             2.5,
 			"seedance-2.0-1080p":                 4,
 			"seedance-video-fast-per-second":     0.2,
 			"seedance-video-standard-per-second": 0.33,
 		},
 		"vip6": {
-			"seedance-2.0-fast-720p": 1,
+			"seedance-2.0-fast-720p": 2.5,
 			"sd2.5":                  0.5,
 		},
 		"vip7": {
@@ -3445,7 +3445,8 @@ func ensureSeedance720HiggsRouting() error {
 	return nil
 }
 
-var seedanceClassicPublicModels = []string{"seedance-2.0-fast-720p", "kling-o3"}
+// seedance-2.0-fast-720p moved to the Seedance 2.0 Fast (updream) channel.
+var seedanceClassicPublicModels = []string{"kling-o3"}
 
 func ensureCSVValue(csv, value string) string {
 	value = strings.TrimSpace(value)
@@ -3477,8 +3478,7 @@ func ensureAdobeSeedanceClassicRouting() error {
 	}
 	publicModels := seedanceClassicPublicModels
 	mapping := map[string]string{
-		"seedance-2.0-fast-720p": "seedance-2.0-fast",
-		"kling-o3":               "kling-o3",
+		"kling-o3": "kling-o3",
 	}
 	mappingJSON, err := json.Marshal(mapping)
 	if err != nil {

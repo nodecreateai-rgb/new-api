@@ -10,7 +10,6 @@ import (
 
 func TestSeedanceClassicPublicModels(t *testing.T) {
 	require.ElementsMatch(t, []string{
-		"seedance-2.0-fast-720p",
 		"kling-o3",
 	}, seedanceClassicPublicModels)
 }
