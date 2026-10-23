@@ -245,6 +245,7 @@ func ensureDopioRMBPricing() {
 		"seedance-2.0-mini-480p-c2":          0.8,
 		"seedance-2.0-mini-720p-c2":          0.5,
 		"seedance-2.0-fast-480p":             1.5,
+		"seedance-2.0-720p":                  3,
 		"seedance-2.0-480p":                  1,
 		"seedance-2.5-480p":                  1.5,
 		"wan-3.0-prime-720p":                 1.5,
@@ -619,6 +620,14 @@ func ensureDopioRMBPricing() {
 			}
 		} else if groupPrices["seedance-2.0-fast-480p"] != 1.5 {
 			groupPrices["seedance-2.0-fast-480p"] = 1.5
+			changed = true
+		}
+		price720 := 3.0
+		if group == "vip11" {
+			price720 = 2.5
+		}
+		if groupPrices["seedance-2.0-720p"] != price720 {
+			groupPrices["seedance-2.0-720p"] = price720
 			changed = true
 		}
 		if group == "vip11" {
@@ -3145,7 +3154,6 @@ func ensureStoryhubSeedanceRoutingClickHouse(neutralName, modelsCSV, mappingJSON
 // them again from Mito, Fotor, and the price enforcer after an earlier retire.
 var permanentlyRetiredPublicModels = []string{
 	"seedance-2.0-mini",
-	"seedance-2.0-720p",
 	"wan-3.0-480p-c2",
 	"seedance-2.5",
 	"gpt-image-2",
@@ -3225,7 +3233,7 @@ var retiredNonCoreModels = []string{
 	"seedance-2.0-c2", "seedance-2.0-480p-c2", "seedance-2.0-fast-c2",
 	"seedance-2.0-fast-480p-c2", "seedance-2.0-mini-c2", "wan-3.0-c2",
 	"seedance-2.0",
-	"seedance-2.0-mini", "seedance-2.0-720p", "wan-3.0-480p-c2",
+	"seedance-2.0-mini", "wan-3.0-480p-c2",
 }
 
 var retiredNonCoreChannelNames = []string{

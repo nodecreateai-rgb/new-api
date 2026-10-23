@@ -335,6 +335,7 @@ var defaultModelPrice = map[string]float64{
 	"seedance-2.0-480p":                  1,
 	"seedance-2.5-480p":                  1.5,
 	"wan-3.0-prime-720p":                 1.5,
+	"seedance-2.0-720p":                  3,
 	"seedance-2.0-480p-c2":               1.5,
 	"seedance-2.0-fast-c2":               1,
 	"seedance-2.0-fast-480p-c2":          1,

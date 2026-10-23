@@ -12,13 +12,17 @@ import (
 )
 
 const (
-	seedanceFastPublicModel  = "seedance-2.0-fast-480p"
-	seedanceFastChannelName  = "Seedance 2.0 Fast"
-	seedanceFastModelsCSV    = seedanceFastPublicModel
-	seedanceFastMappingJSON  = `{"seedance-2.0-fast-480p":"seedance-2.0-fast"}`
-	seedanceFastGroupsCSV    = "default,vip,svip,vip1,vip2,vip3,vip6,vip8,vip9,vip10"
-	seedanceFastDescription  = "Seedance 2.0 Fast 480p 文生/图生视频（异步，¥1.5/次，VIP10 ¥1/次，903，最长15秒，不卡人脸，最多9张图、3段音频）"
-	seedanceFastEndpointJSON = `{"openai-video":{"path":"/v1/videos","method":"POST"}}`
+	seedanceFastPublicModel = "seedance-2.0-fast-480p"
+	seedanceFastChannelName = "Seedance 2.0 Fast"
+	// seedanceFast720Model is the same pool rendered at 720p (45 credits/s,
+	// 15 s = 675, so one 1000-credit login covers one 720p plus one 480p).
+	seedanceFast720Model       = "seedance-2.0-720p"
+	seedanceFast720Description = "Seedance 2.0 720p 文生/图生视频（异步，¥3/次，VIP11 ¥2.5/次，903，原生720P，15秒，不卡人脸，最多9张图、3段音频）"
+	seedanceFastModelsCSV      = seedanceFastPublicModel + "," + seedanceFast720Model
+	seedanceFastMappingJSON    = `{"seedance-2.0-fast-480p":"seedance-2.0-fast","seedance-2.0-720p":"seedance-2.0-720p"}`
+	seedanceFastGroupsCSV      = "default,vip,svip,vip1,vip2,vip3,vip6,vip8,vip9,vip10"
+	seedanceFastDescription    = "Seedance 2.0 Fast 480p 文生/图生视频（异步，¥1.5/次，VIP10 ¥1/次，903，最长15秒，不卡人脸，最多9张图、3段音频）"
+	seedanceFastEndpointJSON   = `{"openai-video":{"path":"/v1/videos","method":"POST"}}`
 )
 
 func ensureSeedanceFastRouting() error {
@@ -38,9 +42,12 @@ func ensureSeedanceFastRouting() error {
 		key = "seedance"
 	}
 
-	publicModels := []string{seedanceFastPublicModel}
+	publicModels := []string{seedanceFastPublicModel, seedanceFast720Model}
 	groups := []string{"default", "vip", "svip", "vip1", "vip2", "vip3", "vip6", "vip8", "vip9", "vip10"}
-	modelDescriptions := map[string]string{seedanceFastPublicModel: seedanceFastDescription}
+	modelDescriptions := map[string]string{
+		seedanceFastPublicModel: seedanceFastDescription,
+		seedanceFast720Model:    seedanceFast720Description,
+	}
 
 	if common.UsingClickHouse {
 		return ensureSeedanceFastRoutingClickHouse(baseURL, key, publicModels, groups, modelDescriptions)
