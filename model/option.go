@@ -246,7 +246,8 @@ func ensureDopioRMBPricing() {
 		"seedance-2.0-mini-720p-c2":          0.5,
 		"seedance-2.0-fast-480p":             1.5,
 		"seedance-2.0-720p":                  3,
-		"seedance-2.0-480p":                  1,
+		"seedance-2.0-480p":                  1.6,
+		"seedance-2.0-fast-480p-c1":          1.2,
 		"seedance-2.5-480p":                  1.5,
 		"wan-3.0-prime-720p":                 1.5,
 		"grok-imagine-720p":                  0.5,
@@ -429,7 +430,6 @@ func ensureDopioRMBPricing() {
 			"seedance-2.0-fast-480p": 1,
 		},
 		"vip11": {
-			"seedance-2.0-480p": 1,
 			"seedance-2.5-480p": 1,
 		},
 		"llm-vip": {
@@ -631,8 +631,8 @@ func ensureDopioRMBPricing() {
 			changed = true
 		}
 		if group == "vip11" {
-			if groupPrices["seedance-2.0-480p"] != 1 {
-				groupPrices["seedance-2.0-480p"] = 1
+			if groupPrices["seedance-2.0-480p"] != 1.6 {
+				groupPrices["seedance-2.0-480p"] = 1.6
 				changed = true
 			}
 			if groupPrices["seedance-2.5-480p"] != 1 {
@@ -640,8 +640,8 @@ func ensureDopioRMBPricing() {
 				changed = true
 			}
 		} else {
-			if groupPrices["seedance-2.0-480p"] != 1 {
-				groupPrices["seedance-2.0-480p"] = 1
+			if groupPrices["seedance-2.0-480p"] != 1.6 {
+				groupPrices["seedance-2.0-480p"] = 1.6
 				changed = true
 			}
 			if groupPrices["seedance-2.5-480p"] != 1.5 {
@@ -822,6 +822,10 @@ func ensureDopioRMBPricing() {
 	}
 	if err := ensureSeedance480Routing(); err != nil {
 		common.SysLog("failed to enforce Seedance 480p gateway routing: " + err.Error())
+	}
+	// After the old 480p retire steps: this channel republishes seedance-2.0-480p.
+	if err := ensureUvera2apiRouting(); err != nil {
+		common.SysLog("failed to enforce Seedance 480p Lite gateway routing: " + err.Error())
 	}
 	if err := ensureLLMVipOnEnabledChannels(); err != nil {
 		common.SysLog("failed to ensure llm-vip channel abilities: " + err.Error())
