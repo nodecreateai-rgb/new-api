@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"sync"
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/logger"
@@ -126,6 +127,9 @@ func Redeem(key string, userId int) (quota int, err error) {
 		keyCol = `"key"`
 	}
 	common.RandomSleep()
+	if common.UsingClickHouse {
+		return redeemClickHouse(key, userId)
+	}
 	err = DB.Transaction(func(tx *gorm.DB) error {
 		err := tx.Set("gorm:query_option", "FOR UPDATE").Where(keyCol+" = ?", key).First(redemption).Error
 		if err != nil {
@@ -156,9 +160,42 @@ func Redeem(key string, userId int) (quota int, err error) {
 }
 
 func (redemption *Redemption) Insert() error {
-	var err error
-	err = DB.Create(redemption).Error
-	return err
+	if common.UsingClickHouse {
+		return redemption.insertClickHouse()
+	}
+	return DB.Create(redemption).Error
+}
+
+// insertClickHouse writes the code with a raw INSERT. GORM Create on the
+// ClickHouse native protocol can report success without persisting the row,
+// so created codes never showed up in the list.
+func (redemption *Redemption) insertClickHouse() error {
+	if redemption.Id == 0 {
+		redemption.Id = int(nextClickHouseTableID(DB, "redemptions"))
+	}
+	if redemption.Status == 0 {
+		redemption.Status = common.RedemptionCodeStatusEnabled
+	}
+	if redemption.CreatedTime == 0 {
+		redemption.CreatedTime = common.GetTimestamp()
+	}
+	err := DB.Exec(
+		"INSERT INTO redemptions (id, user_id, `key`, status, name, quota, created_time, redeemed_time, used_user_id, expired_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+		redemption.Id,
+		redemption.UserId,
+		redemption.Key,
+		redemption.Status,
+		redemption.Name,
+		redemption.Quota,
+		redemption.CreatedTime,
+		redemption.RedeemedTime,
+		redemption.UsedUserId,
+		redemption.ExpiredTime,
+	).Error
+	if err != nil {
+		return fmt.Errorf("clickhouse insert redemption %s: %w", redemption.Name, err)
+	}
+	return nil
 }
 
 func (redemption *Redemption) SelectUpdate() error {
@@ -195,4 +232,36 @@ func DeleteInvalidRedemptions() (int64, error) {
 	now := common.GetTimestamp()
 	result := DB.Where("status IN ? OR (status = ? AND expired_time != 0 AND expired_time < ?)", []int{common.RedemptionCodeStatusUsed, common.RedemptionCodeStatusDisabled}, common.RedemptionCodeStatusEnabled, now).Delete(&Redemption{})
 	return result.RowsAffected, result.Error
+}
+
+var redeemClickHouseMu sync.Mutex
+
+// redeemClickHouse redeems without row locks or GORM Save, neither of which
+// work on ClickHouse. A process-wide mutex plus a status re-check stops the
+// same code being redeemed twice.
+func redeemClickHouse(key string, userId int) (int, error) {
+	redeemClickHouseMu.Lock()
+	defer redeemClickHouseMu.Unlock()
+	redemption := &Redemption{}
+	if err := DB.Where("`key` = ?", key).First(redemption).Error; err != nil {
+		return 0, errors.New("无效的兑换码")
+	}
+	if redemption.Status != common.RedemptionCodeStatusEnabled {
+		return 0, errors.New("该兑换码已被使用")
+	}
+	if redemption.ExpiredTime != 0 && redemption.ExpiredTime < common.GetTimestamp() {
+		return 0, errors.New("该兑换码已过期")
+	}
+	now := common.GetTimestamp()
+	if err := DB.Exec("ALTER TABLE redemptions UPDATE status = ?, redeemed_time = ?, used_user_id = ? WHERE id = ? AND status = ? SETTINGS mutations_sync = 2",
+		common.RedemptionCodeStatusUsed, now, userId, redemption.Id, common.RedemptionCodeStatusEnabled).Error; err != nil {
+		common.SysError("redemption failed: " + err.Error())
+		return 0, ErrRedeemFailed
+	}
+	if err := IncreaseUserQuota(userId, redemption.Quota, true); err != nil {
+		common.SysError("redemption quota failed: " + err.Error())
+		return 0, ErrRedeemFailed
+	}
+	RecordLog(userId, LogTypeTopup, fmt.Sprintf("通过兑换码充值 %s，兑换码ID %d", logger.LogQuota(redemption.Quota), redemption.Id))
+	return redemption.Quota, nil
 }
