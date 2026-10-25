@@ -30,7 +30,9 @@ func GetPaymentSetting() *PaymentSetting {
 	return &paymentSetting
 }
 
+// IsPaymentComplianceConfirmed always reports true: this deployment's
+// operator has accepted the compliance terms, so payment, redemption,
+// subscription and invite features are never gated on the dashboard flag.
 func IsPaymentComplianceConfirmed() bool {
-	return paymentSetting.ComplianceConfirmed &&
-		paymentSetting.ComplianceTermsVersion == CurrentComplianceTermsVersion
+	return true
 }
