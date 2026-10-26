@@ -366,6 +366,74 @@ func UpdateVideoTasks(ctx context.Context, platform constant.TaskPlatform, taskC
 	return nil
 }
 
+// notFoundPollGrace is how long a "task not found" status lookup is treated
+// as a glitch. After that the task is failed, so a genuinely missing id
+// does not poll until the global task timeout.
+const notFoundPollGrace = 20 * time.Minute
+
+func taskPollAge(task *model.Task) time.Duration {
+	if task == nil {
+		return 0
+	}
+	stamp := task.SubmitTime
+	if stamp <= 0 {
+		stamp = task.CreatedAt
+	}
+	if stamp <= 0 {
+		return 0
+	}
+	return time.Since(time.Unix(stamp, 0))
+}
+
+// retryableVideoPoll reports a status response that should be retried.
+// A payload that already carries a generation status is never retryable:
+// "failed" with a timeout in the message is a real result.
+func retryableVideoPoll(statusCode int, body []byte, age time.Duration) bool {
+	if statusCode == http.StatusTooManyRequests || statusCode == http.StatusRequestTimeout || statusCode >= 500 {
+		return true
+	}
+	var probe struct {
+		Status  string `json:"status"`
+		Message string `json:"message"`
+		Error   struct {
+			Message string `json:"message"`
+		} `json:"error"`
+	}
+	if err := common.Unmarshal(body, &probe); err != nil {
+		return false
+	}
+	if strings.TrimSpace(probe.Status) != "" {
+		return false
+	}
+	msg := strings.ToLower(strings.TrimSpace(probe.Error.Message))
+	if msg == "" {
+		msg = strings.ToLower(strings.TrimSpace(probe.Message))
+	}
+	if msg == "" {
+		return false
+	}
+	if strings.Contains(msg, "task not found") {
+		return age < notFoundPollGrace
+	}
+	for _, marker := range []string{
+		"status temporarily unavailable",
+		"context deadline exceeded",
+		"gateway timeout",
+		"bad gateway",
+		"timeout",
+		"timed out",
+		"unexpected eof",
+		"bad record mac",
+		"connection reset",
+		"connection refused",
+	} {
+		if strings.Contains(msg, marker) {
+			return true
+		}
+	}
+	return false
+}
+
 func updateVideoTasks(ctx context.Context, platform constant.TaskPlatform, channelId int, taskIds []string, taskM map[string]*model.Task) error {
 	logger.LogInfo(ctx, fmt.Sprintf("Channel #%d pending video tasks: %d", channelId, len(taskIds)))
 	if len(taskIds) == 0 {
@@ -436,6 +504,12 @@ func updateVideoSingleTask(ctx context.Context, adaptor TaskPollingAdaptor, ch *
 	responseBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return fmt.Errorf("readAll failed for task %s: %w", taskId, err)
+	}
+	// A slow or missing status lookup is not a finished generation. Failing
+	// here refunds a video that is still rendering. Keep polling instead.
+	if retryableVideoPoll(resp.StatusCode, responseBody, taskPollAge(task)) {
+		logger.LogInfo(ctx, fmt.Sprintf("Task %s status poll is retryable (http %d); keeping it in progress", taskId, resp.StatusCode))
+		return nil
 	}
 
 	logger.LogDebug(ctx, "updateVideoSingleTask response: %s", responseBody)

@@ -6,6 +6,28 @@ import (
 	"time"
 )
 
+func TestRetryableVideoPollKeepsASlowLookupInProgress(t *testing.T) {
+	body := []byte(`{"error":{"message":"task not found","type":"invalid_request_error"}}`)
+	if !retryableVideoPoll(404, body, 5*time.Minute) {
+		t.Fatal("a fresh task-not-found lookup should be retried")
+	}
+	if retryableVideoPoll(404, body, 21*time.Minute) {
+		t.Fatal("a long-missing task should be allowed to fail")
+	}
+	if !retryableVideoPoll(200, []byte(`{"error":{"message":"context deadline exceeded"}}`), time.Minute) {
+		t.Fatal("a deadline with no generation status should be retried")
+	}
+	if !retryableVideoPoll(503, []byte(`gateway timeout`), time.Minute) {
+		t.Fatal("http 503 should be retried")
+	}
+	if retryableVideoPoll(200, []byte(`{"status":"failed","error":{"message":"generation timed out"}}`), time.Minute) {
+		t.Fatal("a failed generation must not be retried")
+	}
+	if retryableVideoPoll(200, []byte(`{"status":"processing","progress":40}`), time.Minute) {
+		t.Fatal("an in-progress payload is a normal poll result")
+	}
+}
+
 func TestTaskPollingIntervalDefaultsToTenSeconds(t *testing.T) {
 	if got := taskPollingInterval(); got != 10*time.Second {
 		t.Fatalf("task polling interval=%s", got)
