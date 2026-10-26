@@ -286,6 +286,7 @@ func ensureDopioRMBPricing() {
 		"seedance-2.0":                       2,
 		"wan-3.0":                            1,
 		"wan-3.0-c1":                         0.8,
+		"wan-3.0-480p":                       1.5,
 		"minimax-h3":                         0.5,
 		"minimax-h3-max":                     0.4,
 		"sora-2":                             1,
@@ -826,6 +827,9 @@ func ensureDopioRMBPricing() {
 	}
 	if err := ensurePlayad2apiRouting(); err != nil {
 		common.SysLog("failed to enforce Playad video gateway routing: " + err.Error())
+	}
+	if err := ensureVibbit2apiRouting(); err != nil {
+		common.SysLog("failed to enforce Vibbit video gateway routing: " + err.Error())
 	}
 	if err := ensureSeedanceFastRouting(); err != nil {
 		common.SysLog("failed to enforce Seedance 2.0 Fast gateway routing: " + err.Error())

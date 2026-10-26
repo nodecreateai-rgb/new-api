@@ -33,6 +33,16 @@ var upstreamBrandReplacers = strings.NewReplacer(
 	"Playad Video", "Video service",
 	"Playad", "Video service",
 	"playad", "video service",
+	"domiex-vibbit-lxye1x-vibbit2api-1", "video-upstream",
+	"vibbit2api", "video service",
+	"Vibbit2API", "Video service",
+	"VIBBIT2API", "VIDEO_SERVICE",
+	"api.vibbit.ai", "video-upstream",
+	"app.vibbit.ai", "video-upstream",
+	"vibbit.ai", "video-upstream",
+	"Vibbit Video", "Video service",
+	"Vibbit", "Video service",
+	"vibbit", "video service",
 	"domiex-flova-blwg71-flova2api-1", "video-upstream",
 	"flova-generation-upstream", "video-upstream",
 	"flova2api", "video service",
@@ -478,7 +488,7 @@ func MaskUpstreamProviderInfo(str string) string {
 }
 
 var publicErrorNeedles = []string{
-	"playad", "flova", "flick", "uvera", "apiverse", "newtake", "manyverse", "ribbi", "roboneo", "dola2", "storyhub", "laihua", "workbuddy", "unikey",
+	"playad", "vibbit", "flova", "flick", "uvera", "apiverse", "newtake", "manyverse", "ribbi", "roboneo", "dola2", "storyhub", "laihua", "workbuddy", "unikey",
 	"remainingseconds", "blockduration", "120000042", `"blocked"`,
 	"vobile", "aiveed", "oreate", "myedit", "cyberlink", "mediaio", "pixverse",
 	"seko", "ksyun", "kspmas", "kingsoft", "金山云", "fotor", "mito2api",

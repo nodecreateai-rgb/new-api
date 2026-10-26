@@ -130,6 +130,27 @@ func TestMaskUpstreamProviderInfoNewtake(t *testing.T) {
 	}
 }
 
+func TestPublicErrorMessageHidesVibbit(t *testing.T) {
+	got := PublicErrorMessage("Vibbit Video vibbit2api api.vibbit.ai finished without a video")
+	if got != "request failed" {
+		t.Fatalf("got %q", got)
+	}
+	got = PublicErrorMessage(`Post "http://vibbit2api:38688/v1/videos": dial tcp: connection refused`)
+	if got != "request failed" {
+		t.Fatalf("got %q", got)
+	}
+}
+
+func TestMaskUpstreamProviderInfoVibbit(t *testing.T) {
+	got := MaskUpstreamProviderInfo("Vibbit Video Vibbit vibbit2api api.vibbit.ai app.vibbit.ai")
+	lower := strings.ToLower(got)
+	for _, forbidden := range []string{"vibbit", "vibbit2api"} {
+		if strings.Contains(lower, forbidden) {
+			t.Fatalf("leaked %q in %q", forbidden, got)
+		}
+	}
+}
+
 func TestPublicErrorMessageHidesPlayad(t *testing.T) {
 	got := PublicErrorMessage("playad finished without a video")
 	if got != "request failed" {

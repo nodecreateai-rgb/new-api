@@ -345,6 +345,7 @@ var defaultModelPrice = map[string]float64{
 	"seedance-2.0-mini-c2":               0.8,
 	"wan-3.0-c2":                         2,
 	"wan-3.0-c1":                         0.8,
+	"wan-3.0-480p":                       1.5,
 	"anthropic/claude-opus-5-5":          10000000,
 }
 
