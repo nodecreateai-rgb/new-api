@@ -102,6 +102,9 @@ func (a *TaskAdaptor) ValidateRequestAndSetAction(c *gin.Context, info *relaycom
 		return taskErr
 	}
 	req, err := relaycommon.GetTaskRequest(c)
+	if err == nil && strings.EqualFold(strings.TrimSpace(info.OriginModelName), "kling-o3-omni") && len(collectUpstreamVideoAudioRefs(req)) > 0 {
+		return &dto.TaskError{Code: "audio_reference_not_supported", Message: "audio reference is not supported", StatusCode: http.StatusBadRequest, LocalError: true, Error: fmt.Errorf("audio reference is not supported")}
+	}
 	if err == nil && isKlingO3Model(info.OriginModelName) {
 		if imageCount := len(collectUpstreamVideoImageRefs(req)); imageCount > 2 {
 			return &dto.TaskError{Code: "too_many_reference_images", Message: "kling-o3 supports at most 2 reference images", StatusCode: http.StatusBadRequest, LocalError: true, Error: fmt.Errorf("kling-o3 supports at most 2 reference images, got %d", imageCount)}
@@ -251,7 +254,7 @@ func (a *TaskAdaptor) ForceApplyBillingRatios(info *relaycommon.RelayInfo) bool 
 // IDs are fixed-price per generated video, independent of requested duration.
 func (a *TaskAdaptor) UseRequestBillingRatios(info *relaycommon.RelayInfo) bool {
 	switch strings.TrimSpace(info.OriginModelName) {
-	case "sd2.5", "sd2-mini", "sd2-fast", "sd2-c6", "sd2-c7", "seedance-720", "seedance-2.0-mini", "seedance-2.0-mini-480p", "seedance-2.0-mini-720p", "seedance-2.0-mini-480p-c2", "seedance-2.0-mini-720p-c2", "seedance-2.0-fast", "seedance-2.0-fast-480p", "seedance-2.0-fast-480p-c1", "grok-imagine-720p", "seedance-2.0-fast-720p", "seedance-2.0-fast-720p-c1", "seedance-2.0-720p", "seedance-2.0-1080p", "seedance-2.0", "seedance-2.5", "seedance-2.0-480p", "seedance-2.5-480p", "seedance-2.5-720p", "seedance-2.5-1080p", "seedance-2.0-c1", "seedance-2.5-c1", "seedance-2.5-c2", "seedance-2.0-c2", "seedance-2.0-480p-c2", "seedance-2.0-fast-c2", "seedance-2.0-fast-480p-c2", "seedance-2.0-mini-c2", "wan-3.0-c2", "wan-3.0-480p-c2", "wan-3.0", "wan-3.0-c1", "wan-3.0-480p", "minimax-h3", "minimax-h3-max", "sora-2", "kling-o3":
+	case "sd2.5", "sd2-mini", "sd2-fast", "sd2-c6", "sd2-c7", "seedance-720", "seedance-2.0-mini", "seedance-2.0-mini-480p", "seedance-2.0-mini-720p", "seedance-2.0-mini-480p-c2", "seedance-2.0-mini-720p-c2", "seedance-2.0-fast", "seedance-2.0-fast-480p", "seedance-2.0-fast-480p-c1", "grok-imagine-720p", "seedance-2.0-fast-720p", "seedance-2.0-fast-720p-c1", "seedance-2.0-720p", "seedance-2.0-1080p", "seedance-2.0", "seedance-2.5", "seedance-2.0-480p", "seedance-2.5-480p", "seedance-2.5-720p", "seedance-2.5-1080p", "seedance-2.0-c1", "seedance-2.5-c1", "seedance-2.5-c2", "seedance-2.0-c2", "seedance-2.0-480p-c2", "seedance-2.0-fast-c2", "seedance-2.0-fast-480p-c2", "seedance-2.0-mini-c2", "wan-3.0-c2", "wan-3.0-480p-c2", "wan-3.0", "wan-3.0-c1", "wan-3.0-480p", "minimax-h3", "minimax-h3-max", "sora-2", "kling-o3", "kling-o3-omni":
 		return false
 	default:
 		return true
@@ -492,6 +495,8 @@ func applyOriginModelDurationLimit(body map[string]interface{}, req relaycommon.
 		applyCatalogDurationLimit(body, req, 15)
 	case "seedance-2.0-mini-720p":
 		applyCatalogDurationLimit(body, req, 15)
+	case "kling-o3-omni":
+		applyCatalogDurationBounds(body, req, 5, 3, 12)
 	case "seedance-2.0-480p", "seedance-2.0-fast-480p-c1", "seedance-2.0-fast-720p-c1":
 		applyCatalogDurationBounds(body, req, 5, 4, 15)
 	case "seedance-2.5-480p":

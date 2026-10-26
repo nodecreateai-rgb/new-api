@@ -14,14 +14,15 @@ func TestSekotvMiniRoutingUsesSekotvGateway(t *testing.T) {
 	s := string(data)
 	for _, want := range []string{
 		`func ensureSekotvMiniRouting()`,
-		`const publicModel = "seedance-2.0-mini-720p"`,
-		`const upstreamModel = "seedance-2.0-mini"`,
+		`const publicModel = "kling-o3-omni"`,
+		`const legacyName = "Seko Seedance Mini"`,
 		`baseURL = "http://sekotv2api:38683"`,
-		`{"seedance-2.0-mini-720p":"seedance-2.0-mini"}`,
+		`{"kling-o3-omni":"kling-o3-omni"}`,
 		`os.Getenv("SEKOTV2API_BASE_URL")`,
 		`os.Getenv("SEKOTV2API_GATEWAY_KEY")`,
-		`¥1/次`,
-		`933，原生720P，最长15秒`,
+		`¥0.5/次`,
+		`不支持音频参考（异步，¥0.5/次，最长12秒）`,
+		`seedance-2.0-mini-720p`,
 	} {
 		if !strings.Contains(s, want) {
 			t.Fatalf("missing %s", want)

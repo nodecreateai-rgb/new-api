@@ -12,11 +12,11 @@ import (
 )
 
 func ensureSekotvMiniRouting() error {
-	const publicModel = "seedance-2.0-mini-720p"
-	const upstreamModel = "seedance-2.0-mini"
-	const neutralName = "Seko Seedance Mini"
+	const publicModel = "kling-o3-omni"
+	const neutralName = "Kling O3 Omni"
+	const legacyName = "Seko Seedance Mini"
 	const modelsCSV = publicModel
-	const mappingJSON = `{"seedance-2.0-mini-720p":"seedance-2.0-mini"}`
+	const mappingJSON = `{"kling-o3-omni":"kling-o3-omni"}`
 	const groupsCSV = "default,vip,svip,vip1,vip2,vip3,vip6,vip9,vip10"
 	baseURL := strings.TrimSpace(os.Getenv("SEKOTV2API_BASE_URL"))
 	if baseURL == "" {
@@ -41,7 +41,7 @@ func ensureSekotvMiniRouting() error {
 	publicModels := []string{publicModel}
 	groups := []string{"default", "vip", "svip", "vip1", "vip2", "vip3", "vip6", "vip9", "vip10"}
 	modelDescriptions := map[string]string{
-		publicModel: "Seedance 2.0 Mini 720p 文生/图生视频（异步，¥1/次，933，原生720P，最长15秒）",
+		publicModel: "可灵 3.0 Omni，支持文生视频、图片参考和视频参考，不支持音频参考（异步，¥0.5/次，最长12秒）",
 	}
 	endpoint := `{"openai-video":{"path":"/v1/videos","method":"POST"}}`
 
@@ -51,6 +51,9 @@ func ensureSekotvMiniRouting() error {
 
 	var channel Channel
 	err := DB.Where("name = ?", neutralName).First(&channel).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		err = DB.Where("name = ?", legacyName).First(&channel).Error
+	}
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		weight := uint64(100)
 		priority := int64(10)
@@ -137,13 +140,30 @@ func ensureSekotvMiniRouting() error {
 			return err
 		}
 	}
+	if err := retireSekotvMiniModel(); err != nil {
+		return err
+	}
 	InvalidatePricingCache()
 	return nil
 }
 
+func retireSekotvMiniModel() error {
+	const retiredModel = "seedance-2.0-mini-720p"
+	if err := DB.Model(&Ability{}).Where("model = ?", retiredModel).Update("enabled", false).Error; err != nil {
+		return err
+	}
+	return DB.Model(&Model{}).Where("model_name = ?", retiredModel).Updates(map[string]any{
+		"status": 0, "updated_time": common.GetTimestamp(),
+	}).Error
+}
+
 func ensureSekotvMiniRoutingClickHouse(neutralName, modelsCSV, mappingJSON, groupsCSV, baseURL, key string, publicModels, groups []string, modelDescriptions map[string]string, endpoint string) error {
+	const legacyName = "Seko Seedance Mini"
 	var channel Channel
 	err := DB.Where("name = ?", neutralName).First(&channel).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		err = DB.Where("name = ?", legacyName).First(&channel).Error
+	}
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		id := nextClickHouseTableID(DB, "channels")
 		now := common.GetTimestamp()
@@ -224,6 +244,9 @@ func ensureSekotvMiniRoutingClickHouse(neutralName, modelsCSV, mappingJSON, grou
 		if err := DB.Exec(`ALTER TABLE models UPDATE description = ? WHERE id = ?`, desc, meta.Id).Error; err != nil {
 			return err
 		}
+	}
+	if err := retireSekotvMiniModel(); err != nil {
+		return err
 	}
 	InvalidatePricingCache()
 	return nil

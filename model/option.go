@@ -242,6 +242,7 @@ func ensureDopioRMBPricing() {
 		"sd2-c7":                             0.5,
 		"seedance-2.0-mini-480p":             0.4,
 		"seedance-2.0-mini-720p":             1,
+		"kling-o3-omni":                      0.5,
 		"seedance-2.0-mini-480p-c2":          0.8,
 		"seedance-2.0-mini-720p-c2":          0.5,
 		"seedance-2.0-fast-480p":             1.5,
@@ -615,6 +616,10 @@ func ensureDopioRMBPricing() {
 		}
 		if groupPrices["seedance-2.0-mini-720p"] != 1 {
 			groupPrices["seedance-2.0-mini-720p"] = 1
+			changed = true
+		}
+		if groupPrices["kling-o3-omni"] != 0.5 {
+			groupPrices["kling-o3-omni"] = 0.5
 			changed = true
 		}
 		if groupPrices["seedance-2.0-mini-480p-c2"] != 0.8 {
