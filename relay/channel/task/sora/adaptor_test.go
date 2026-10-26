@@ -120,6 +120,19 @@ func TestTaskSubmitReqToUpstreamVideoBody(t *testing.T) {
 	require.Equal(t, "colored-pencil", body["compliance_mode"])
 }
 
+func TestApplyParsedReferencesFillsImagesWhenOnlyAliasPresent(t *testing.T) {
+	body := map[string]interface{}{
+		"image_refs": []interface{}{"https://cdn.example/a.png", "https://cdn.example/b.png"},
+		"audio_refs": []interface{}{"https://cdn.example/voice.mp3"},
+	}
+	applyParsedReferences(body, relaycommon.TaskSubmitReq{
+		ImageRefs: []string{"https://cdn.example/a.png", "https://cdn.example/b.png"},
+		AudioRefs: []string{"https://cdn.example/voice.mp3"},
+	})
+	require.Equal(t, []string{"https://cdn.example/a.png", "https://cdn.example/b.png"}, body["images"])
+	require.Equal(t, []string{"https://cdn.example/voice.mp3"}, body["audios"])
+}
+
 func TestApplyCanonicalVideoControlsConvertsStringBooleanBeforeUpstream(t *testing.T) {
 	enabled := true
 	promptCompliance := true

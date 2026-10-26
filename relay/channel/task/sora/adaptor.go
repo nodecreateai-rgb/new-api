@@ -299,6 +299,7 @@ func (a *TaskAdaptor) BuildRequestBody(c *gin.Context, info *relaycommon.RelayIn
 			if parsed, reqErr := relaycommon.GetTaskRequest(c); reqErr == nil {
 				applyCanonicalVideoControls(bodyMap, parsed)
 				applyOriginModelDurationLimit(bodyMap, parsed, info.OriginModelName)
+				applyParsedReferences(bodyMap, parsed)
 			}
 			normalizeOpenAIVideoAspectBody(bodyMap)
 			applyOriginModelResolution(bodyMap, info.OriginModelName)
@@ -374,6 +375,52 @@ func (a *TaskAdaptor) BuildRequestBody(c *gin.Context, info *relaycommon.RelayIn
 // DoRequest delegates to common helper.
 func (a *TaskAdaptor) DoRequest(c *gin.Context, info *relaycommon.RelayInfo, requestBody io.Reader) (*http.Response, error) {
 	return channel.DoTaskApiRequest(a, c, info, requestBody)
+}
+
+// applyParsedReferences copies parsed media onto the JSON body when the
+// original payload used an alias the upstream create API does not read
+// (image_refs, reference_image, audio_refs, …). Fields the upstream already
+// accepts are left untouched.
+func applyParsedReferences(body map[string]interface{}, req relaycommon.TaskSubmitReq) {
+	if body == nil {
+		return
+	}
+	if imgs := collectUpstreamVideoImageRefs(req); len(imgs) > 0 &&
+		!bodyHasMedia(body, "image", "image_url", "images", "image_urls", "reference_images", "input_reference") {
+		body["images"] = imgs
+	}
+	if vids := collectUpstreamVideoVideoRefs(req); len(vids) > 0 &&
+		!bodyHasMedia(body, "video", "video_url", "videos", "video_urls", "reference_videos") {
+		body["videos"] = vids
+	}
+	if auds := collectUpstreamVideoAudioRefs(req); len(auds) > 0 &&
+		!bodyHasMedia(body, "audio", "audio_url", "audios", "audio_urls", "reference_audios") {
+		body["audios"] = auds
+	}
+}
+
+func bodyHasMedia(body map[string]interface{}, keys ...string) bool {
+	for _, key := range keys {
+		switch v := body[key].(type) {
+		case string:
+			if strings.TrimSpace(v) != "" {
+				return true
+			}
+		case []string:
+			if len(v) > 0 {
+				return true
+			}
+		case []interface{}:
+			if len(v) > 0 {
+				return true
+			}
+		case map[string]interface{}:
+			if len(v) > 0 {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func applyCanonicalVideoControls(body map[string]interface{}, req relaycommon.TaskSubmitReq) {
