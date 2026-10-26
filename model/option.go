@@ -261,6 +261,7 @@ func ensureDopioRMBPricing() {
 		"sd2-c12":                            3,
 		"seedance-720":                       higgsSeedancePrice,
 		"seedance-2.0-fast-720p":             2.5,
+		"seedance-2.0-fast-720p-c1":          1.8,
 		"seedance-2.0-1080p":                 4,
 		"seedance-video-fast-per-second":     0.2,
 		"seedance-video-standard-per-second": 0.33,
@@ -284,6 +285,7 @@ func ensureDopioRMBPricing() {
 		"pay":                                0.5,
 		"seedance-2.0":                       2,
 		"wan-3.0":                            1,
+		"wan-3.0-c1":                         0.8,
 		"minimax-h3":                         0.5,
 		"minimax-h3-max":                     0.4,
 		"sora-2":                             1,
@@ -312,6 +314,7 @@ func ensureDopioRMBPricing() {
 		"vip9":    1,
 		"vip10":   1,
 		"vip11":   1,
+		"vip13":   1,
 		"llm-vip": 1,
 	}
 	targetUserUsableGroups := map[string]string{
@@ -321,6 +324,7 @@ func ensureDopioRMBPricing() {
 		"vip9":    "VIP9分组",
 		"vip10":   "VIP10分组",
 		"vip11":   "VIP11分组",
+		"vip13":   "VIP13分组",
 		"llm-vip": "LLM VIP分组",
 	}
 	// Fixed per-group RMB prices for Dopio video aliases. ModelGroupPrice
@@ -431,6 +435,9 @@ func ensureDopioRMBPricing() {
 		},
 		"vip11": {
 			"seedance-2.5-480p": 1,
+		},
+		"vip13": {
+			"wan-3.0-c1": 0.5,
 		},
 		"llm-vip": {
 			"anthropic/claude-opus-5-5": 0,
@@ -814,6 +821,12 @@ func ensureDopioRMBPricing() {
 	if err := ensureFlick2apiRouting(); err != nil {
 		common.SysLog("failed to enforce Flick video gateway routing: " + err.Error())
 	}
+	if err := ensureNewtake2apiRouting(); err != nil {
+		common.SysLog("failed to enforce Newtake video gateway routing: " + err.Error())
+	}
+	if err := ensurePlayad2apiRouting(); err != nil {
+		common.SysLog("failed to enforce Playad video gateway routing: " + err.Error())
+	}
 	if err := ensureSeedanceFastRouting(); err != nil {
 		common.SysLog("failed to enforce Seedance 2.0 Fast gateway routing: " + err.Error())
 	}
@@ -832,6 +845,9 @@ func ensureDopioRMBPricing() {
 	}
 	if err := ensureVIP11OnEnabledChannels(); err != nil {
 		common.SysLog("failed to ensure vip11 channel abilities: " + err.Error())
+	}
+	if err := ensureVIP13OnEnabledChannels(); err != nil {
+		common.SysLog("failed to ensure vip13 channel abilities: " + err.Error())
 	}
 	if err := retireDeadVideoModels(); err != nil {
 		common.SysLog("failed to retire dead video models: " + err.Error())

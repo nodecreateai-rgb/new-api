@@ -9,10 +9,10 @@ import (
 func TestResolveTaskPricePatchesIncludesFixedPriceMyEditModels(t *testing.T) {
 	patches := resolveTaskPricePatches("")
 	for _, model := range []string{
-		"sd2.5", "sd2-fast", "seedance-720", "seedance-2.0-mini", "seedance-2.0-mini-480p", "seedance-2.0-mini-720p", "seedance-2.0-fast-720p", "seedance-2.0-720p", "seedance-2.0-1080p",
+		"sd2.5", "sd2-fast", "seedance-720", "seedance-2.0-mini", "seedance-2.0-mini-480p", "seedance-2.0-mini-720p", "seedance-2.0-fast-720p", "seedance-2.0-fast-720p-c1", "seedance-2.0-720p", "seedance-2.0-1080p",
 		"wan2.7-720p", "wan2.7-1080p", "viduq3-turbo-720p", "viduq3-pro-1080p",
 		"happyhorse-1.1-1080p", "sora-2-1080p", "kling-v3-4k", "seedance-2.5-c1", "seedance-2.5-c2", "seedance-2.0-480p", "seedance-2.5-480p", "seedance-2.5-720p", "seedance-2.5-1080p", "seedance-2.0-c2", "seedance-2.0-480p-c2", "seedance-2.0-fast-c2", "seedance-2.0-fast-480p-c2",
-		"wan-3.0", "minimax-h3", "wan-3.0-480p-c2",
+		"wan-3.0", "wan-3.0-c1", "minimax-h3", "wan-3.0-480p-c2",
 	} {
 		require.Contains(t, patches, model)
 	}

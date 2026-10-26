@@ -217,6 +217,28 @@ func TestUpstreamVideoTaskPrefersJSON(t *testing.T) {
 	require.False(t, upstreamVideoTaskPrefersJSON("https://api.openai.com"))
 }
 
+func TestConvertToOpenAIVideoHidesNewtakeError(t *testing.T) {
+	task := &model.Task{
+		TaskID:   "task_public",
+		Status:   model.TaskStatusFailure,
+		Progress: "100%",
+		Data: []byte(`{
+			"id":"upstream",
+			"status":"failed",
+			"error":{"message":"Get \"https://api2.newtake.tv/api/www/tv/login\": TLS handshake timeout"},
+			"remote_url":"https://www.newtake.ai/out.mp4",
+			"upstream_task_id":"nt-secret"
+		}`),
+	}
+	body, err := (&TaskAdaptor{}).ConvertToOpenAIVideo(task)
+	require.NoError(t, err)
+	lower := strings.ToLower(string(body))
+	for _, forbidden := range []string{"newtake", "api2.", "remote_url", "nt-secret"} {
+		require.NotContains(t, lower, forbidden)
+	}
+	require.Equal(t, "request failed", gjson.GetBytes(body, "error.message").String())
+}
+
 func TestConvertToOpenAIVideoHidesSekoError(t *testing.T) {
 	task := &model.Task{
 		TaskID:   "task_public",

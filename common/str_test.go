@@ -109,6 +109,48 @@ func TestMaskUpstreamProviderInfoFlick(t *testing.T) {
 	}
 }
 
+func TestPublicErrorMessageHidesNewtake(t *testing.T) {
+	got := PublicErrorMessage("Newtake Video newtake2api www.newtake.ai could not create video")
+	if got != "request failed" {
+		t.Fatalf("got %q", got)
+	}
+	got = PublicErrorMessage(`{"blocked":true,"remainingSeconds":300,"blockDurationSeconds":300} (code 1200000421)`)
+	if got != "request failed" {
+		t.Fatalf("blocked leak %q", got)
+	}
+}
+
+func TestMaskUpstreamProviderInfoNewtake(t *testing.T) {
+	got := MaskUpstreamProviderInfo("Newtake Video newtake2api www.newtake.ai api2.newtake.tv domiex-newtake-wtqoop-newtake2api-1")
+	lower := strings.ToLower(got)
+	for _, forbidden := range []string{"newtake", "newtake2api"} {
+		if strings.Contains(lower, forbidden) {
+			t.Fatalf("leaked %q in %q", forbidden, got)
+		}
+	}
+}
+
+func TestPublicErrorMessageHidesPlayad(t *testing.T) {
+	got := PublicErrorMessage("playad finished without a video")
+	if got != "request failed" {
+		t.Fatalf("got %q", got)
+	}
+	got = PublicErrorMessage(`Post "http://playad2api:38690/v1/videos": dial tcp: connection refused`)
+	if got != "request failed" {
+		t.Fatalf("got %q", got)
+	}
+}
+
+func TestMaskUpstreamProviderInfoPlayad(t *testing.T) {
+	got := MaskUpstreamProviderInfo("Playad Video Playad playad2api playad-generation-upstream api.playad.ai autopilot.playad.ai")
+	lower := strings.ToLower(got)
+	for _, forbidden := range []string{"playad", "playad2api"} {
+		if strings.Contains(lower, forbidden) {
+			t.Fatalf("leaked %q in %q", forbidden, got)
+		}
+	}
+}
+
 func TestPublicErrorMessageHidesFlova(t *testing.T) {
 	got := PublicErrorMessage("flova finished without a video")
 	if got != "request failed" {

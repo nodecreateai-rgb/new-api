@@ -45,6 +45,25 @@ func TestTaskModel2DtoHidesChannel(t *testing.T) {
 	}
 }
 
+func TestTaskModel2DtoRedactsNewtakeVideoTask(t *testing.T) {
+	task := &model.Task{
+		TaskID:     "task_public",
+		Status:     model.TaskStatusFailure,
+		FailReason: "newtake2api Get \"https://api2.newtake.tv/api/task\": unexpected EOF",
+		Data:       []byte(`{"id":"upstream-id","remote_url":"https://www.newtake.ai/x.mp4","account_email":"user@example.com"}`),
+	}
+	dto := TaskModel2Dto(task)
+	combined := strings.ToLower(dto.FailReason + dto.ResultURL + string(dto.Data))
+	for _, forbidden := range []string{"newtake", "example.com", "upstream-id", "account_email", "remote_url"} {
+		if strings.Contains(combined, forbidden) {
+			t.Fatalf("leaked %q in %s", forbidden, combined)
+		}
+	}
+	if dto.FailReason != "request failed" {
+		t.Fatalf("fail_reason=%q", dto.FailReason)
+	}
+}
+
 func TestTaskModel2DtoRedactsSekoVideoTask(t *testing.T) {
 	task := &model.Task{
 		TaskID:     "task_liPjh1CAc6NItGvylLCdwURyFLRu3sDO",

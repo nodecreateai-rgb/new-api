@@ -251,7 +251,7 @@ func (a *TaskAdaptor) ForceApplyBillingRatios(info *relaycommon.RelayInfo) bool 
 // IDs are fixed-price per generated video, independent of requested duration.
 func (a *TaskAdaptor) UseRequestBillingRatios(info *relaycommon.RelayInfo) bool {
 	switch strings.TrimSpace(info.OriginModelName) {
-	case "sd2.5", "sd2-mini", "sd2-fast", "sd2-c6", "sd2-c7", "seedance-720", "seedance-2.0-mini", "seedance-2.0-mini-480p", "seedance-2.0-mini-720p", "seedance-2.0-mini-480p-c2", "seedance-2.0-mini-720p-c2", "seedance-2.0-fast", "seedance-2.0-fast-480p", "seedance-2.0-fast-480p-c1", "grok-imagine-720p", "seedance-2.0-fast-720p", "seedance-2.0-720p", "seedance-2.0-1080p", "seedance-2.0", "seedance-2.5", "seedance-2.0-480p", "seedance-2.5-480p", "seedance-2.5-720p", "seedance-2.5-1080p", "seedance-2.0-c1", "seedance-2.5-c1", "seedance-2.5-c2", "seedance-2.0-c2", "seedance-2.0-480p-c2", "seedance-2.0-fast-c2", "seedance-2.0-fast-480p-c2", "seedance-2.0-mini-c2", "wan-3.0-c2", "wan-3.0-480p-c2", "wan-3.0", "minimax-h3", "minimax-h3-max", "sora-2", "kling-o3":
+	case "sd2.5", "sd2-mini", "sd2-fast", "sd2-c6", "sd2-c7", "seedance-720", "seedance-2.0-mini", "seedance-2.0-mini-480p", "seedance-2.0-mini-720p", "seedance-2.0-mini-480p-c2", "seedance-2.0-mini-720p-c2", "seedance-2.0-fast", "seedance-2.0-fast-480p", "seedance-2.0-fast-480p-c1", "grok-imagine-720p", "seedance-2.0-fast-720p", "seedance-2.0-fast-720p-c1", "seedance-2.0-720p", "seedance-2.0-1080p", "seedance-2.0", "seedance-2.5", "seedance-2.0-480p", "seedance-2.5-480p", "seedance-2.5-720p", "seedance-2.5-1080p", "seedance-2.0-c1", "seedance-2.5-c1", "seedance-2.5-c2", "seedance-2.0-c2", "seedance-2.0-480p-c2", "seedance-2.0-fast-c2", "seedance-2.0-fast-480p-c2", "seedance-2.0-mini-c2", "wan-3.0-c2", "wan-3.0-480p-c2", "wan-3.0", "wan-3.0-c1", "minimax-h3", "minimax-h3-max", "sora-2", "kling-o3":
 		return false
 	default:
 		return true
@@ -444,7 +444,7 @@ func applyOriginModelDurationLimit(body map[string]interface{}, req relaycommon.
 		applyCatalogDurationLimit(body, req, 15)
 	case "seedance-2.0-mini-720p":
 		applyCatalogDurationLimit(body, req, 15)
-	case "seedance-2.0-480p", "seedance-2.0-fast-480p-c1":
+	case "seedance-2.0-480p", "seedance-2.0-fast-480p-c1", "seedance-2.0-fast-720p-c1":
 		applyCatalogDurationBounds(body, req, 5, 4, 15)
 	case "seedance-2.5-480p":
 		applyCatalogDurationBounds(body, req, 5, 4, 30)
@@ -458,7 +458,7 @@ func applyOriginModelDurationLimit(body map[string]interface{}, req relaycommon.
 		applyCatalogDurationLimit(body, req, 15)
 	case "wan-3.0-c2":
 		applyCatalogDurationLimit(body, req, 30)
-	case "wan-3.0":
+	case "wan-3.0", "wan-3.0-c1":
 		applyCatalogDurationBounds(body, req, 5, 2, 20)
 	case "wan-3.0-480p-c2":
 		applyCatalogDurationLimit(body, req, 20)
@@ -478,10 +478,10 @@ func applyOriginModelResolution(body map[string]interface{}, originModel string)
 		return
 	}
 	switch strings.TrimSpace(originModel) {
-	case "seedance-2.0-480p", "seedance-2.0-fast-480p-c1", "seedance-2.5-480p", "seedance-2.0-mini-480p-c2", "seedance-2.0-fast-480p", "seedance-2.0-480p-c2", "seedance-2.0-fast-480p-c2", "wan-3.0-480p-c2", "wan-3.0":
+	case "seedance-2.0-480p", "seedance-2.0-fast-480p-c1", "seedance-2.5-480p", "seedance-2.0-mini-480p-c2", "seedance-2.0-fast-480p", "seedance-2.0-480p-c2", "seedance-2.0-fast-480p-c2", "wan-3.0-480p-c2", "wan-3.0", "wan-3.0-c1":
 		body["resolution"] = "480p"
 		body["size"] = "480p"
-	case "seedance-2.0-720p", "seedance-2.5-720p", "seedance-2.0-mini-720p", "seedance-2.0-mini-720p-c2", "seedance-2.0-mini-720P-c2", "grok-imagine-720p", "sora-2":
+	case "seedance-2.0-720p", "seedance-2.5-720p", "seedance-2.0-mini-720p", "seedance-2.0-mini-720p-c2", "seedance-2.0-mini-720P-c2", "grok-imagine-720p", "sora-2", "seedance-2.0-fast-720p-c1":
 		body["resolution"] = "720p"
 		body["size"] = "720p"
 	case "minimax-h3", "minimax-h3-max":

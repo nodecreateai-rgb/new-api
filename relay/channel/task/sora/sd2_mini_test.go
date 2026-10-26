@@ -23,15 +23,18 @@ func TestSD2MiniUsesFixedPerRequestBilling(t *testing.T) {
 	require.False(t, a.UseRequestBillingRatios(&relaycommon.RelayInfo{OriginModelName: "seedance-720"}))
 	require.False(t, a.UseRequestBillingRatios(&relaycommon.RelayInfo{OriginModelName: "kling-o3"}))
 	require.False(t, a.UseRequestBillingRatios(&relaycommon.RelayInfo{OriginModelName: "wan-3.0"}))
+	require.False(t, a.UseRequestBillingRatios(&relaycommon.RelayInfo{OriginModelName: "wan-3.0-c1"}))
 	require.False(t, a.UseRequestBillingRatios(&relaycommon.RelayInfo{OriginModelName: "minimax-h3"}))
 	require.False(t, a.UseRequestBillingRatios(&relaycommon.RelayInfo{OriginModelName: "minimax-h3-max"}))
 	require.False(t, a.UseRequestBillingRatios(&relaycommon.RelayInfo{OriginModelName: "seedance-2.0-fast"}))
+	require.False(t, a.UseRequestBillingRatios(&relaycommon.RelayInfo{OriginModelName: "seedance-2.0-fast-720p-c1"}))
 	require.False(t, a.UseRequestBillingRatios(&relaycommon.RelayInfo{OriginModelName: "sora-2"}))
 }
 
 func TestFlovaUsesFixedPerRequestBilling(t *testing.T) {
 	a := &TaskAdaptor{}
 	require.False(t, a.UseRequestBillingRatios(&relaycommon.RelayInfo{OriginModelName: "wan-3.0"}))
+	require.False(t, a.UseRequestBillingRatios(&relaycommon.RelayInfo{OriginModelName: "wan-3.0-c1"}))
 	require.False(t, a.UseRequestBillingRatios(&relaycommon.RelayInfo{OriginModelName: "minimax-h3"}))
 	require.False(t, a.UseRequestBillingRatios(&relaycommon.RelayInfo{OriginModelName: "minimax-h3-max"}))
 	require.False(t, a.UseRequestBillingRatios(&relaycommon.RelayInfo{OriginModelName: "sora-2"}))
@@ -121,10 +124,31 @@ func TestLaihuaSeedanceLocksResolutionFromModel(t *testing.T) {
 	require.Equal(t, "720p", body["resolution"])
 	require.Equal(t, "720p", body["size"])
 
+	body = map[string]interface{}{"duration": 20, "seconds": "20", "size": "1080x1920"}
+	applyOriginModelDurationLimit(body, relaycommon.TaskSubmitReq{Duration: 20}, "seedance-2.0-fast-720p-c1")
+	applyOriginModelResolution(body, "seedance-2.0-fast-720p-c1")
+	require.Equal(t, 15, body["duration"])
+	require.Equal(t, "15", body["seconds"])
+	require.Equal(t, "720p", body["resolution"])
+	require.Equal(t, "720p", body["size"])
+	body = map[string]interface{}{}
+	applyOriginModelDurationLimit(body, relaycommon.TaskSubmitReq{Duration: 2}, "seedance-2.0-fast-720p-c1")
+	require.Equal(t, 4, body["duration"])
+
 	body = map[string]interface{}{"size": "1080x1920"}
 	applyOriginModelResolution(body, "wan-3.0")
 	require.Equal(t, "480p", body["resolution"])
 	require.Equal(t, "480p", body["size"])
+
+	body = map[string]interface{}{"size": "1080x1920"}
+	applyOriginModelResolution(body, "wan-3.0-c1")
+	require.Equal(t, "480p", body["resolution"])
+	require.Equal(t, "480p", body["size"])
+	body = map[string]interface{}{}
+	applyOriginModelDurationLimit(body, relaycommon.TaskSubmitReq{Duration: 1}, "wan-3.0-c1")
+	require.Equal(t, 2, body["duration"])
+	applyOriginModelDurationLimit(body, relaycommon.TaskSubmitReq{Duration: 30}, "wan-3.0-c1")
+	require.Equal(t, 20, body["duration"])
 
 	body = map[string]interface{}{"size": "1080x1920"}
 	applyOriginModelResolution(body, "wan-3.0-480p-c2")
