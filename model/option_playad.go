@@ -40,7 +40,7 @@ func ensurePlayad2apiRouting() error {
 
 	groups := []string{"default", "vip", "svip", "vip1", "vip2", "vip3", "vip6", "vip7", "vip8", "vip9", "vip10", "vip11", "vip13", "llm-vip"}
 	modelDescriptions := map[string]string{
-		"seedance-2.0-fast-720p-c1": "Seedance 2.0 Fast 720p 文生/图生视频（异步，¥1.8/次，原生720P，4-15秒，默认带声音且不可关闭，画幅 16:9/9:16/1:1/4:3/3:4/21:9，最多9张图片、3段视频、3段音频）",
+		"seedance-2.0-fast-720p-c1": "Seedance 2.0 Fast 720p 文生/图生视频（异步，¥1.8/次，原生720P，4-15秒，画幅 16:9/9:16/1:1/4:3/3:4/21:9，最多9张图片、3段视频、3段音频）",
 	}
 	endpoint := `{"openai-video":{"path":"/v1/videos","method":"POST"}}`
 
