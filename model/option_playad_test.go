@@ -33,7 +33,7 @@ func TestPlayadModelStaysOnAfterStartup(t *testing.T) {
 		`http://playad2api:38690`,
 		`PLAYAD2API_BASE_URL`,
 		`{"seedance-2.0-fast-720p-c1":"seedance-2.0-fast"}`,
-		`¥1.8/次，原生720P，4-15秒`,
+		`¥1.8/次，原生720P，4-15秒，默认带声音且不可关闭`,
 		`画幅 16:9/9:16/1:1/4:3/3:4/21:9`,
 		`最多9张图片、3段视频、3段音频`,
 	} {

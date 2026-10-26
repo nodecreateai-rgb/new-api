@@ -302,6 +302,7 @@ func (a *TaskAdaptor) BuildRequestBody(c *gin.Context, info *relaycommon.RelayIn
 			}
 			normalizeOpenAIVideoAspectBody(bodyMap)
 			applyOriginModelResolution(bodyMap, info.OriginModelName)
+			applyOriginModelAudio(bodyMap, info.OriginModelName)
 			if newBody, err := common.Marshal(bodyMap); err == nil {
 				return bytes.NewReader(newBody), nil
 			}
@@ -470,6 +471,16 @@ func applyOriginModelDurationLimit(body map[string]interface{}, req relaycommon.
 		applyCatalogDurationLimit(body, req, 12)
 	case "seedance-2.0-720p":
 		applyFixedCatalogDuration(body, 15)
+	}
+}
+
+func applyOriginModelAudio(body map[string]interface{}, originModel string) {
+	if body == nil {
+		return
+	}
+	switch strings.TrimSpace(originModel) {
+	case "seedance-2.0-fast-720p-c1":
+		body["generate_audio"] = true
 	}
 }
 
@@ -870,6 +881,7 @@ func buildUpstreamVideoJSONFromMultipart(c *gin.Context, info *relaycommon.Relay
 	applyOriginModelDurationLimit(bodyMap, req, info.OriginModelName)
 	normalizeOpenAIVideoAspectBody(bodyMap)
 	applyOriginModelResolution(bodyMap, info.OriginModelName)
+	applyOriginModelAudio(bodyMap, info.OriginModelName)
 	return common.Marshal(bodyMap)
 }
 
