@@ -436,7 +436,7 @@ func ensureDopioRMBPricing() {
 			"minimax-h3-max":     0.3,
 		},
 		"vip10": {
-			"seedance-2.0-fast-480p": 1,
+			"seedance-2.0-fast-480p": 1.4,
 		},
 		"vip11": {
 			"seedance-2.5-480p": 1,
