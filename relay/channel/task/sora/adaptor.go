@@ -515,8 +515,10 @@ func applyOriginModelDurationLimit(body map[string]interface{}, req relaycommon.
 		applyCatalogDurationBounds(body, req, 5, 2, 20)
 	case "wan-3.0-480p":
 		applyCatalogDurationBounds(body, req, 5, 2, 30)
-	case "wan-3.0-480p-c3", "seedance-2.0-mini-480p-c3":
+	case "wan-3.0-480p-c3":
 		applyCatalogDurationBounds(body, req, 5, 4, 8)
+	case "seedance-2.0-mini-480p-c3":
+		applyCatalogDurationBounds(body, req, 5, 4, 15)
 	case "seedance-2.0-480p-c3", "seedance-2.0-fast-480p-c3":
 		applyFixedCatalogDuration(body, 4)
 	case "wan-3.0-480p-c2":
