@@ -629,8 +629,12 @@ func ensureDopioRMBPricing() {
 			groupPrices["seedance-2.0-mini-480p-c2"] = 0.8
 			changed = true
 		}
-		if groupPrices["seedance-2.0-fast-480p"] != 1.5 {
-			groupPrices["seedance-2.0-fast-480p"] = 1.5
+		priceFast480 := 1.5
+		if group == "vip10" {
+			priceFast480 = 1.4
+		}
+		if groupPrices["seedance-2.0-fast-480p"] != priceFast480 {
+			groupPrices["seedance-2.0-fast-480p"] = priceFast480
 			changed = true
 		}
 		price720 := 3.0

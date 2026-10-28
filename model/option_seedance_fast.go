@@ -25,7 +25,7 @@ const (
 	seedanceFastModelsCSV            = seedanceFastPublicModel + "," + seedanceFast720Model + "," + seedanceFastPublic720Model
 	seedanceFastMappingJSON          = `{"seedance-2.0-fast-480p":"seedance-2.0-fast","seedance-2.0-720p":"seedance-2.0-720p","seedance-2.0-fast-720p":"seedance-2.0-720p"}`
 	seedanceFastGroupsCSV            = "default,vip,svip,vip1,vip2,vip3,vip6,vip8,vip9,vip10"
-	seedanceFastDescription          = "Seedance 2.0 Fast 480p 文生/图生视频（异步，¥1.5/次，903，最长15秒，不卡人脸，最多9张图、3段音频）"
+	seedanceFastDescription          = "Seedance 2.0 Fast 480p 文生/图生视频（异步，¥1.5/次，VIP10 ¥1.4/次，903，最长15秒，不卡人脸，最多9张图、3段音频）"
 	seedanceFastEndpointJSON         = `{"openai-video":{"path":"/v1/videos","method":"POST"}}`
 )
 
