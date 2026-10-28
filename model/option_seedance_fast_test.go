@@ -44,13 +44,13 @@ func TestSeedanceFastStaysOnAfterStartup(t *testing.T) {
 		`http://seedance-fast:38685`,
 		`SEEDANCE_FAST_BASE_URL`,
 		`{"seedance-2.0-fast-480p":"seedance-2.0-fast","seedance-2.0-720p":"seedance-2.0-720p","seedance-2.0-fast-720p":"seedance-2.0-720p"}`,
-		`¥1.5/次，VIP10 ¥1/次，903，最长15秒，不卡人脸，最多9张图、3段音频`,
+		`¥1.5/次，903，最长15秒，不卡人脸，最多9张图、3段音频`,
 		`vip10`,
 		seedanceFastPublicModel,
 		`seedanceFast720Model`,
 		`seedanceFastPublic720Model`,
 		`"seedance-2.0-720p":"seedance-2.0-720p"`,
-		`¥3/次，VIP10 ¥2.4/次`,
+		`¥3/次，VIP10 ¥2.5/次`,
 	} {
 		if !strings.Contains(s, want) {
 			t.Fatalf("missing %s", want)

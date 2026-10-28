@@ -626,18 +626,13 @@ func ensureDopioRMBPricing() {
 			groupPrices["seedance-2.0-mini-480p-c2"] = 0.8
 			changed = true
 		}
-		if group == "vip10" {
-			if groupPrices["seedance-2.0-fast-480p"] != 1 {
-				groupPrices["seedance-2.0-fast-480p"] = 1
-				changed = true
-			}
-		} else if groupPrices["seedance-2.0-fast-480p"] != 1.5 {
+		if groupPrices["seedance-2.0-fast-480p"] != 1.5 {
 			groupPrices["seedance-2.0-fast-480p"] = 1.5
 			changed = true
 		}
 		price720 := 3.0
 		if group == "vip10" {
-			price720 = 2.4
+			price720 = 2.5
 		}
 		if groupPrices["seedance-2.0-720p"] != price720 {
 			groupPrices["seedance-2.0-720p"] = price720
@@ -835,6 +830,9 @@ func ensureDopioRMBPricing() {
 	}
 	if err := ensureVibbit2apiRouting(); err != nil {
 		common.SysLog("failed to enforce Vibbit video gateway routing: " + err.Error())
+	}
+	if err := ensureAiimagetovideo2apiRouting(); err != nil {
+		common.SysLog("failed to enforce Spark video gateway routing: " + err.Error())
 	}
 	if err := ensureSeedanceFastRouting(); err != nil {
 		common.SysLog("failed to enforce Seedance 2.0 Fast gateway routing: " + err.Error())
