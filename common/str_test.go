@@ -172,6 +172,23 @@ func TestMaskUpstreamProviderInfoPlayad(t *testing.T) {
 	}
 }
 
+func TestPublicErrorMessageHidesAiimagetovideo(t *testing.T) {
+	got := PublicErrorMessage("aiimagetovideo2api finished without a video")
+	if got != "request failed" {
+		t.Fatalf("got %q", got)
+	}
+}
+
+func TestMaskUpstreamProviderInfoAiimagetovideo(t *testing.T) {
+	got := MaskUpstreamProviderInfo("Spark Video aiimagetovideo2api aiimagetovideo.pro https://aiimagetovideo.pro/x.mp4")
+	lower := strings.ToLower(got)
+	for _, forbidden := range []string{"aiimagetovideo", "spark video"} {
+		if strings.Contains(lower, forbidden) {
+			t.Fatalf("leaked %q in %q", forbidden, got)
+		}
+	}
+}
+
 func TestPublicErrorMessageHidesFlova(t *testing.T) {
 	got := PublicErrorMessage("flova finished without a video")
 	if got != "request failed" {

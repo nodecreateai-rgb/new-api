@@ -906,6 +906,7 @@ func scrubVideoResponsePayload(payload map[string]any) {
 		"upstream_task_id", "chat_id", "chatId", "log_id", "logId", "conversation_id",
 		"url", "video_url", "public_url", "download_url", "no_watermark_url", "watermark_url",
 		"remote_url", "output_url", "upstream_video_url", "poster", "thumb", "bytesBase64Encoded",
+		"thumbnail_url", "thumb_url", "file_url", "fileUrl", "file_thumb_url",
 	} {
 		delete(payload, key)
 	}

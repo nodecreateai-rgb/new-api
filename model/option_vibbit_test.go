@@ -14,6 +14,7 @@ func TestVibbitModelStaysOnAfterStartup(t *testing.T) {
 	body := string(option)
 	for _, want := range []string{
 		`ensureVibbit2apiRouting()`,
+		`ensureAiimagetovideo2apiRouting()`,
 		`"wan-3.0-480p":                       1.5`,
 	} {
 		if !strings.Contains(body, want) {
@@ -30,15 +31,14 @@ func TestVibbitModelStaysOnAfterStartup(t *testing.T) {
 	s := string(routing)
 	for _, want := range []string{
 		`vibbitChannelName = "Vibbit Video"`,
-		`http://vibbit2api:38688`,
-		`VIBBIT2API_BASE_URL`,
-		`{"wan-3.0-480p":"wan3"}`,
-		`¥1.5/次，固定480P，2-30秒`,
-		`画幅 16:9/9:16/1:1/4:3/3:4`,
-		`最多10张图片、0段视频、5段音频`,
+		`disableChannelByName(vibbitChannelName)`,
+		`Spark Video`,
 	} {
 		if !strings.Contains(s, want) {
 			t.Fatalf("missing %s", want)
 		}
+	}
+	if strings.Contains(s, `{"wan-3.0-480p":"wan3"}`) {
+		t.Fatal("Vibbit Video must not keep wan-3.0-480p mapping")
 	}
 }

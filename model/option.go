@@ -288,6 +288,10 @@ func ensureDopioRMBPricing() {
 		"wan-3.0":                            1,
 		"wan-3.0-c1":                         0.8,
 		"wan-3.0-480p":                       1.5,
+		"wan-3.0-480p-c3":                    0.8,
+		"seedance-2.0-480p-c3":               1,
+		"seedance-2.0-mini-480p-c3":          0.6,
+		"seedance-2.0-fast-480p-c3":          0.8,
 		"minimax-h3":                         0.5,
 		"minimax-h3-max":                     0.4,
 		"sora-2":                             1,
@@ -843,9 +847,12 @@ func ensureDopioRMBPricing() {
 	if err := ensureSeedance480Routing(); err != nil {
 		common.SysLog("failed to enforce Seedance 480p gateway routing: " + err.Error())
 	}
-	// After the old 480p retire steps: this channel republishes seedance-2.0-480p.
+	// Retires seedance-2.0-480p / seedance-2.0-fast-480p-c1.
 	if err := ensureUvera2apiRouting(); err != nil {
-		common.SysLog("failed to enforce Seedance 480p Lite gateway routing: " + err.Error())
+		common.SysLog("failed to retire Seedance 480p Lite gateway routing: " + err.Error())
+	}
+	if err := ensureMindvideo2apiRouting(); err != nil {
+		common.SysLog("failed to enforce Video 480p C3 gateway routing: " + err.Error())
 	}
 	if err := ensureLLMVipOnEnabledChannels(); err != nil {
 		common.SysLog("failed to ensure llm-vip channel abilities: " + err.Error())

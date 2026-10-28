@@ -22,6 +22,15 @@ var (
 )
 
 var upstreamBrandReplacers = strings.NewReplacer(
+	"mindvideo2api", "video service",
+	"Mindvideo2API", "Video service",
+	"MINDVIDEO2API", "VIDEO_SERVICE",
+	"static.mindvideo.ai", "video-upstream",
+	"api.mindvideo.ai", "video-upstream",
+	"mindvideo.ai", "video-upstream",
+	"MindVideo", "Video service",
+	"Mindvideo", "Video service",
+	"mindvideo", "video service",
 	"domiex-playad-xrdpho-playad2api-1", "video-upstream",
 	"playad-generation-upstream", "video-upstream",
 	"playad2api", "video service",
@@ -33,6 +42,15 @@ var upstreamBrandReplacers = strings.NewReplacer(
 	"Playad Video", "Video service",
 	"Playad", "Video service",
 	"playad", "video service",
+	"domiex-aiimagetovideo-4rjst7-aiimagetovideo2api-1", "video-upstream",
+	"aiimagetovideo2api", "video service",
+	"Aiimagetovideo2API", "Video service",
+	"AIIMAGETOVIDEO2API", "VIDEO_SERVICE",
+	"www.aiimagetovideo.pro", "video-upstream",
+	"aiimagetovideo.pro", "video-upstream",
+	"Spark Video", "Video service",
+	"aiimagetovideo", "video service",
+	"Aiimagetovideo", "Video service",
 	"domiex-vibbit-lxye1x-vibbit2api-1", "video-upstream",
 	"vibbit2api", "video service",
 	"Vibbit2API", "Video service",
@@ -489,6 +507,7 @@ func MaskUpstreamProviderInfo(str string) string {
 
 var publicErrorNeedles = []string{
 	"playad", "vibbit", "flova", "flick", "uvera", "apiverse", "newtake", "manyverse", "ribbi", "roboneo", "dola2", "storyhub", "laihua", "workbuddy", "unikey",
+	"aiimagetovideo", "mindvideo",
 	"remainingseconds", "blockduration", "120000042", `"blocked"`,
 	"vobile", "aiveed", "oreate", "myedit", "cyberlink", "mediaio", "pixverse",
 	"seko", "ksyun", "kspmas", "kingsoft", "金山云", "fotor", "mito2api",
