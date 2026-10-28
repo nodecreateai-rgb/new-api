@@ -15,7 +15,6 @@ func TestVibbitModelStaysOnAfterStartup(t *testing.T) {
 	for _, want := range []string{
 		`ensureVibbit2apiRouting()`,
 		`ensureAiimagetovideo2apiRouting()`,
-		`"wan-3.0-480p":                       1.5`,
 	} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("missing %s", want)

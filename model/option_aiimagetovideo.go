@@ -2,8 +2,6 @@ package model
 
 import (
 	"errors"
-	"os"
-	"strings"
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/constant"
@@ -15,131 +13,18 @@ var aivideoPublicModels = []string{"wan-3.0-480p"}
 
 const aivideoChannelName = "Spark Video"
 
+// ensureAiimagetovideo2apiRouting retires wan-3.0-480p: the Spark Video
+// channel is disabled and the model is withdrawn on every startup.
 func ensureAiimagetovideo2apiRouting() error {
 	if err := disableChannelByName("Vibbit Video"); err != nil {
 		return err
 	}
-	const modelsCSV = "wan-3.0-480p"
-	const mappingJSON = `{"wan-3.0-480p":"wan3.0-spark"}`
-	const groupsCSV = "default,vip,svip,vip1,vip2,vip3,vip6,vip7,vip8,vip9,vip10,vip11,vip13,llm-vip"
-	baseURL := strings.TrimSpace(os.Getenv("AIIMAGETOVIDEO2API_BASE_URL"))
-	if baseURL == "" {
-		baseURL = "http://aiimagetovideo2api:38691"
-	}
-	key := strings.TrimSpace(os.Getenv("AIIMAGETOVIDEO2API_GATEWAY_KEY"))
-	if key == "" {
-		if keyFile := strings.TrimSpace(os.Getenv("AIIMAGETOVIDEO2API_GATEWAY_KEY_FILE")); keyFile != "" {
-			if raw, err := os.ReadFile(keyFile); err == nil {
-				key = strings.TrimSpace(string(raw))
-			}
-		}
-	}
-	if key == "" {
-		key = strings.TrimSpace(os.Getenv("AIIMAGETOVIDEO2API_API_KEY"))
-	}
-	if key == "" {
-		key = "aiv"
-	}
-
-	groups := []string{"default", "vip", "svip", "vip1", "vip2", "vip3", "vip6", "vip7", "vip8", "vip9", "vip10", "vip11", "vip13", "llm-vip"}
-	modelDescriptions := map[string]string{
-		"wan-3.0-480p": "Wan 3.0 480p 文生/图生视频（异步，¥1.5/次，固定480P，2-30秒，画幅 16:9/9:16/1:1/4:3/3:4，最多10张图片、0段视频、5段音频）",
-	}
-	endpoint := `{"openai-video":{"path":"/v1/videos","method":"POST"}}`
-
-	if common.UsingClickHouse {
-		return ensureAiimagetovideo2apiRoutingClickHouse(aivideoChannelName, modelsCSV, mappingJSON, groupsCSV, baseURL, key, aivideoPublicModels, groups, modelDescriptions, endpoint)
-	}
-
-	var channel Channel
-	err := DB.Where("name = ?", aivideoChannelName).First(&channel).Error
-	if errors.Is(err, gorm.ErrRecordNotFound) {
-		weight := uint64(100)
-		priority := int64(10)
-		autoBan := 0
-		mapping := mappingJSON
-		channel = Channel{
-			Type: constant.ChannelTypeSora, Key: key, Status: common.ChannelStatusEnabled,
-			Name: aivideoChannelName, Weight: &weight, CreatedTime: common.GetTimestamp(),
-			BaseURL: stringPtr(baseURL), Models: modelsCSV, Group: groupsCSV,
-			ModelMapping: &mapping, Priority: &priority, AutoBan: &autoBan,
-		}
-		if err := DB.Create(&channel).Error; err != nil {
-			return err
-		}
-	} else if err != nil {
-		return err
-	} else if err := DB.Model(&Channel{}).Where("id = ?", channel.Id).Updates(map[string]any{
-		"type": constant.ChannelTypeSora, "key": key, "status": common.ChannelStatusEnabled,
-		"name": aivideoChannelName, "base_url": baseURL, "models": modelsCSV, "group": groupsCSV,
-		"model_mapping": mappingJSON, "priority": 10, "weight": 100, "auto_ban": 0,
-	}).Error; err != nil {
+	if err := disableChannelByName(aivideoChannelName); err != nil {
 		return err
 	}
-
-	if err := DB.Model(&Ability{}).Where("channel_id = ? AND model NOT IN ?", channel.Id, aivideoPublicModels).
-		Update("enabled", false).Error; err != nil {
+	if err := retireMarketplaceModels(aivideoPublicModels); err != nil {
 		return err
 	}
-	for _, modelName := range aivideoPublicModels {
-		if err := DB.Model(&Ability{}).Where("model = ? AND channel_id NOT IN ?", modelName, aivideoChannelIDs(channel.Id)).
-			Update("enabled", false).Error; err != nil {
-			return err
-		}
-		allowed := map[string]struct{}{}
-		for _, group := range groups {
-			allowed[group] = struct{}{}
-			ability := Ability{Group: group, Model: modelName, ChannelId: channel.Id}
-			if err := DB.Where(commonGroupCol+" = ? AND model = ? AND channel_id = ?", group, modelName, channel.Id).
-				FirstOrCreate(&ability).Error; err != nil {
-				return err
-			}
-			if err := DB.Model(&Ability{}).Where(commonGroupCol+" = ? AND model = ? AND channel_id = ?", group, modelName, channel.Id).
-				Updates(map[string]any{"enabled": true, "priority": int64(10)}).Error; err != nil {
-				return err
-			}
-		}
-		var existing []Ability
-		if err := DB.Where("model = ? AND channel_id = ?", modelName, channel.Id).Find(&existing).Error; err != nil {
-			return err
-		}
-		for _, ability := range existing {
-			if _, ok := allowed[ability.Group]; ok {
-				continue
-			}
-			if err := DB.Model(&Ability{}).Where(commonGroupCol+" = ? AND model = ? AND channel_id = ?", ability.Group, modelName, channel.Id).
-				Update("enabled", false).Error; err != nil {
-				return err
-			}
-		}
-	}
-
-	for _, publicModel := range aivideoPublicModels {
-		desc := modelDescriptions[publicModel]
-		var meta Model
-		err = DB.Unscoped().Where("model_name = ?", publicModel).First(&meta).Error
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			meta = Model{
-				ModelName: publicModel, Description: desc, Icon: "", Tags: "video",
-				Endpoints: endpoint, Status: 1, SyncOfficial: 0,
-				CreatedTime: common.GetTimestamp(), UpdatedTime: common.GetTimestamp(),
-			}
-			if err := DB.Create(&meta).Error; err != nil {
-				return err
-			}
-			continue
-		}
-		if err != nil {
-			return err
-		}
-		if err := DB.Unscoped().Model(&Model{}).Where("id = ?", meta.Id).Updates(map[string]any{
-			"description": desc, "icon": "", "tags": "video", "endpoints": endpoint,
-			"status": 1, "sync_official": 0, "deleted_at": nil, "updated_time": common.GetTimestamp(),
-		}).Error; err != nil {
-			return err
-		}
-	}
-	InvalidatePricingCache()
 	InitChannelCache()
 	return nil
 }

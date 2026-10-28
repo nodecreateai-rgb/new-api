@@ -287,11 +287,10 @@ func ensureDopioRMBPricing() {
 		"seedance-2.0":                       2,
 		"wan-3.0":                            1,
 		"wan-3.0-c1":                         0.8,
-		"wan-3.0-480p":                       1.5,
-		"wan-3.0-480p-c3":                    0.8,
-		"seedance-2.0-480p-c3":               1,
-		"seedance-2.0-mini-480p-c3":          0.6,
-		"seedance-2.0-fast-480p-c3":          0.8,
+		"wan-3.0-480p-c3":                    1.5,
+		"seedance-2.0-480p-c3":               2,
+		"seedance-2.0-mini-480p-c3":          1,
+		"seedance-2.0-fast-480p-c3":          1.5,
 		"minimax-h3":                         0.5,
 		"minimax-h3-max":                     0.4,
 		"sora-2":                             1,
@@ -3187,6 +3186,7 @@ func ensureStoryhubSeedanceRoutingClickHouse(neutralName, modelsCSV, mappingJSON
 // permanentlyRetiredPublicModels stay off the catalog. Startup used to publish
 // them again from Mito, Fotor, and the price enforcer after an earlier retire.
 var permanentlyRetiredPublicModels = []string{
+	"wan-3.0-480p",
 	"seedance-2.0-mini",
 	"wan-3.0-480p-c2",
 	"seedance-2.5",
