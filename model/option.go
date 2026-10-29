@@ -292,6 +292,8 @@ func ensureDopioRMBPricing() {
 		"seedance-2.0-mini-480p-c3":          1,
 		"seedance-2.0-fast-480p-c3":          1.4,
 		"minimax-h3":                         0.5,
+		"minimax-h3-2k":                      0.6,
+		"seedance-2.5-720p-c4":               4,
 		"minimax-h3-max":                     0.4,
 		"sora-2":                             1,
 		"seedance-2.5-720p":                  4,
@@ -437,6 +439,7 @@ func ensureDopioRMBPricing() {
 		},
 		"vip10": {
 			"seedance-2.0-fast-480p": 1.4,
+			"seedance-2.5-720p-c4":   1.5,
 		},
 		"vip11": {
 			"seedance-2.5-480p": 1,
@@ -856,6 +859,9 @@ func ensureDopioRMBPricing() {
 	}
 	if err := ensureMindvideo2apiRouting(); err != nil {
 		common.SysLog("failed to enforce Video 480p C3 gateway routing: " + err.Error())
+	}
+	if err := ensureScnetRouting(); err != nil {
+		common.SysLog("failed to enforce Video 2K C4 gateway routing: " + err.Error())
 	}
 	if err := ensureLLMVipOnEnabledChannels(); err != nil {
 		common.SysLog("failed to ensure llm-vip channel abilities: " + err.Error())

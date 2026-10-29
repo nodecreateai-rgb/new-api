@@ -142,7 +142,7 @@ func resolveTaskPricePatches(raw string) []string {
 		"seedance-2.0", "seedance-2.5", "seedance-2.0-480p", "seedance-2.0-fast-480p-c1", "seedance-2.5-480p", "seedance-2.5-720p", "seedance-2.5-1080p", "seedance-2.0-c1", "seedance-2.5-c1", "seedance-2.5-c2",
 		"seedance-2.0-c2", "seedance-2.0-480p-c2", "seedance-2.0-fast-c2", "seedance-2.0-fast-480p-c2", "seedance-2.0-mini-c2", "wan-3.0-c2", "wan-3.0-480p-c2",
 		"wan-3.0", "wan-3.0-c1", "wan-3.0-480p", "wan-3.0-prime",
-		"wan-3.0-480p-c3", "seedance-2.0-480p-c3", "seedance-2.0-mini-480p-c3", "seedance-2.0-fast-480p-c3", "minimax-h3", "minimax-h3-max",
+		"wan-3.0-480p-c3", "seedance-2.0-480p-c3", "seedance-2.0-mini-480p-c3", "seedance-2.0-fast-480p-c3", "minimax-h3", "minimax-h3-max", "minimax-h3-2k", "seedance-2.5-720p-c4",
 		"pay", "oauth2",
 	}
 	// Environment values extend the built-in fixed-price policy. They must not
