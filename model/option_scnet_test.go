@@ -14,7 +14,7 @@ func TestScnetModelsListedWithPrices(t *testing.T) {
 	body := string(option)
 	for _, want := range []string{
 		`ensureScnetRouting()`,
-		`"minimax-h3-2k":                      0.6,`,
+		`"minimax-h3-2k":                      1,`,
 		`"seedance-2.5-720p-c4":               4,`,
 		`"seedance-2.5-720p-c4":   1.5,`,
 	} {
@@ -31,7 +31,7 @@ func TestScnetModelsListedWithPrices(t *testing.T) {
 		`scnetChannelName = "Video 2K C4"`,
 		`"minimax-h3-2k":"minimax-h3"`,
 		`"seedance-2.5-720p-c4":"seedance-2.5"`,
-		`¥0.6/次，固定2K输出`,
+		`¥1/次，固定2K输出`,
 		`¥4/次，固定720P`,
 	} {
 		if !strings.Contains(s, want) {
