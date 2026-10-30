@@ -7,6 +7,8 @@ var privateModelUsers = map[string]map[int]struct{}{
 	// seedance-2.0-720p was reserved for user 1347314421 (id 27); now taken
 	// down for everyone: an empty allow-list hides it from all users.
 	"seedance-2.0-720p": {},
+	// seedance-2.0-fast-720p is temporarily taken down for everyone.
+	"seedance-2.0-fast-720p": {},
 }
 
 // IsModelVisibleToUser reports whether userId may list or call modelName.
