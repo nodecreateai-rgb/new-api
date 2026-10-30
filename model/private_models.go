@@ -4,8 +4,9 @@ package model
 // Everyone else gets "model not found" from the relay and never sees the
 // model in /v1/models, /api/user/self/models or /api/pricing.
 var privateModelUsers = map[string]map[int]struct{}{
-	// seedance-2.0-720p is reserved for user 1347314421.
-	"seedance-2.0-720p": {27: {}},
+	// seedance-2.0-720p was reserved for user 1347314421 (id 27); now taken
+	// down for everyone: an empty allow-list hides it from all users.
+	"seedance-2.0-720p": {},
 }
 
 // IsModelVisibleToUser reports whether userId may list or call modelName.
