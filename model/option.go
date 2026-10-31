@@ -291,6 +291,7 @@ func ensureDopioRMBPricing() {
 		"seedance-2.0-480p-c3":               1.8,
 		"seedance-2.0-mini-480p-c3":          1,
 		"seedance-2.0-fast-480p-c3":          1.4,
+		"seedance-2.5-c3":                    4,
 		"minimax-h3":                         0.5,
 		"minimax-h3-2k":                      1,
 		"seedance-2.5-720p-c4":               4,

@@ -11,13 +11,13 @@ import (
 	"gorm.io/gorm"
 )
 
-var mindvideoPublicModels = []string{"wan-3.0-480p-c3", "seedance-2.0-480p-c3", "seedance-2.0-mini-480p-c3", "seedance-2.0-fast-480p-c3"}
+var mindvideoPublicModels = []string{"wan-3.0-480p-c3", "seedance-2.0-480p-c3", "seedance-2.0-mini-480p-c3", "seedance-2.0-fast-480p-c3", "seedance-2.5-c3"}
 
 const mindvideoChannelName = "Video 480p C3"
 
 func ensureMindvideo2apiRouting() error {
-	const modelsCSV = "wan-3.0-480p-c3,seedance-2.0-480p-c3,seedance-2.0-mini-480p-c3,seedance-2.0-fast-480p-c3"
-	const mappingJSON = `{"wan-3.0-480p-c3":"wan-3.0-ref","seedance-2.0-480p-c3":"seedance-2.0-full","seedance-2.0-mini-480p-c3":"seedance-2.0-mini-full","seedance-2.0-fast-480p-c3":"seedance-2.0-fast-full"}`
+	const modelsCSV = "wan-3.0-480p-c3,seedance-2.0-480p-c3,seedance-2.0-mini-480p-c3,seedance-2.0-fast-480p-c3,seedance-2.5-c3"
+	const mappingJSON = `{"wan-3.0-480p-c3":"wan-3.0-ref","seedance-2.0-480p-c3":"seedance-2.0-full","seedance-2.0-mini-480p-c3":"seedance-2.0-mini-full","seedance-2.0-fast-480p-c3":"seedance-2.0-fast-full","seedance-2.5-c3":"seedance-2.5-ref"}`
 	const groupsCSV = "default,vip,svip,vip1,vip2,vip3,vip6,vip7,vip8,vip9,vip10,vip11,vip13,llm-vip"
 	baseURL := strings.TrimSpace(os.Getenv("MINDVIDEO2API_BASE_URL"))
 	if baseURL == "" {
@@ -50,6 +50,7 @@ func ensureMindvideo2apiRouting() error {
 		"seedance-2.0-480p-c3":      "Seedance 2.0 参考图生视频（异步，¥1.8/次，固定480P，有声，4-15秒，画幅 16:9/9:16/1:1/4:3/3:4/21:9，需参考图，最多9张图片、0段视频、3段音频；不支持真人人脸（参考图含真人脸会被拒绝））",
 		"seedance-2.0-mini-480p-c3": "Seedance 2.0 Mini 参考图生视频（异步，¥1/次，固定480P，有声，4-15秒，画幅 16:9/9:16/1:1/4:3/3:4/21:9，需参考图，最多9张图片、0段视频、3段音频；不支持真人人脸（参考图含真人脸会被拒绝））",
 		"seedance-2.0-fast-480p-c3": "Seedance 2.0 Fast 参考图生视频（异步，¥1.4/次，固定480P，有声，4-15秒，画幅 16:9/9:16/1:1/4:3/3:4/21:9，需参考图，最多9张图片、0段视频、3段音频；不支持真人人脸（参考图含真人脸会被拒绝））",
+		"seedance-2.5-c3":           "Seedance 2.5 参考图生视频（异步，¥4/次，固定480P，有声，4-28秒，画幅 16:9/9:16/1:1/4:3/3:4/21:9，需参考图，最多30张图片、0段视频、10段音频；不支持真人人脸（参考图含真人脸会被拒绝））",
 	}
 	endpoint := `{"openai-video":{"path":"/v1/videos","method":"POST"}}`
 
