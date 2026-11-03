@@ -16,7 +16,7 @@ func TestSeedance480ChannelStaysRetired(t *testing.T) {
 		`func ensureSeedance480Routing()`,
 		`disableChannelByName(seedance480ChannelName)`,
 		`retireMarketplaceModels(seedance480PublicModels)`,
-		`"seedance-2.0-480p", "seedance-2.5-480p", "wan-3.0-prime-720p"`,
+		`"seedance-2.5-480p", "wan-3.0-prime-720p"`,
 	} {
 		if !strings.Contains(s, want) {
 			t.Fatalf("missing %s", want)

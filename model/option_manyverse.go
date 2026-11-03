@@ -7,7 +7,8 @@ package model
 // nothing can re-publish them.
 const seedance480ChannelName = "Seedance 480p Video"
 
-var seedance480PublicModels = []string{"seedance-2.0-480p", "seedance-2.5-480p", "wan-3.0-prime-720p"}
+// seedance-2.0-480p is sold on Video Seedance C5. Only the old companions stay withdrawn.
+var seedance480PublicModels = []string{"seedance-2.5-480p", "wan-3.0-prime-720p"}
 
 func ensureSeedance480Routing() error {
 	if err := disableChannelByName(seedance480ChannelName); err != nil {

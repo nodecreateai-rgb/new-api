@@ -46,16 +46,15 @@ func InitEnv() {
 		os.Exit(0)
 	}
 
-	if os.Getenv("SESSION_SECRET") != "" {
-		ss := os.Getenv("SESSION_SECRET")
-		if ss == "random_string" {
-			log.Println("WARNING: SESSION_SECRET is set to the default value 'random_string', please change it to a random string.")
-			log.Println("警告：SESSION_SECRET被设置为默认值'random_string'，请修改为随机字符串。")
-			log.Fatal("Please set SESSION_SECRET to a random string.")
-		} else {
-			SessionSecret = ss
-		}
+	secretFile := strings.TrimSpace(os.Getenv("SESSION_SECRET_FILE"))
+	if secretFile == "" {
+		secretFile = "/data/session_secret"
 	}
+	ss := resolveSessionSecret(os.Getenv("SESSION_SECRET"), secretFile)
+	if ss == "random_string" {
+		log.Fatal("Please set SESSION_SECRET to a random string.")
+	}
+	SessionSecret = ss
 	if os.Getenv("CRYPTO_SECRET") != "" {
 		CryptoSecret = os.Getenv("CRYPTO_SECRET")
 	} else {

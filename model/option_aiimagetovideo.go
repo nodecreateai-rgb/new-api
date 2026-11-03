@@ -9,20 +9,15 @@ import (
 	"gorm.io/gorm"
 )
 
-var aivideoPublicModels = []string{"wan-3.0-480p"}
-
 const aivideoChannelName = "Spark Video"
 
-// ensureAiimagetovideo2apiRouting retires wan-3.0-480p: the Spark Video
-// channel is disabled and the model is withdrawn on every startup.
+// ensureAiimagetovideo2apiRouting keeps the old Spark and Vibbit channels off.
+// wan-3.0-480p is sold again on Video Seedance C5.
 func ensureAiimagetovideo2apiRouting() error {
 	if err := disableChannelByName("Vibbit Video"); err != nil {
 		return err
 	}
 	if err := disableChannelByName(aivideoChannelName); err != nil {
-		return err
-	}
-	if err := retireMarketplaceModels(aivideoPublicModels); err != nil {
 		return err
 	}
 	InitChannelCache()

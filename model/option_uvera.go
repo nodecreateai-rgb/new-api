@@ -9,12 +9,15 @@ import (
 	"gorm.io/gorm"
 )
 
-var uveraPublicModels = []string{"seedance-2.0-fast-480p-c1", "seedance-2.0-480p"}
+// seedance-2.0-480p and seedance-2.0-fast-480p-c1 are both sold on Video
+// Seedance C5. This step only keeps the old Lite channel disabled.
+var uveraPublicModels = []string{}
 
 const uveraChannelName = "Seedance 480p Lite"
 
-// ensureUvera2apiRouting retires the uvera listing: both public models are
-// withdrawn and the channel is disabled on every startup.
+// ensureUvera2apiRouting keeps the old Seedance 480p Lite channel disabled.
+// It must not retire seedance-2.0-fast-480p-c1; that name is published later
+// and a late ClickHouse update was hiding it from the model square.
 func ensureUvera2apiRouting() error {
 	if err := disableChannelByName(uveraChannelName); err != nil {
 		return err

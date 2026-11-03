@@ -8,13 +8,14 @@ var deadVideoModels = []string{
 	"sd2-c7", "sd2-c6", "sd2.5",
 	"seedance-2.0-mini-480p",
 	"wan-3.0", "wan-3.0-c1",
+	"seedance-2.0-fast-720p-c1",
 }
 
 // deadVideoChannels served only dead models, so they are switched off.
 var deadVideoChannels = []string{
 	"Dola2API Seedance Video", "Video Omni", "Roboneo Seedance Mini",
 	"Flova Video", "Flova Video 2", "Flova Video 3",
-	"Flick Video", "Newtake Video",
+	"Flick Video", "Newtake Video", "Playad Video",
 }
 
 // retireDeadVideoModels runs after every ensure step, because several of

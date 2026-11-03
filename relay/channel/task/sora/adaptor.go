@@ -300,6 +300,9 @@ func (a *TaskAdaptor) BuildRequestBody(c *gin.Context, info *relaycommon.RelayIn
 			// would leak that string to strict Go upstream DTOs and cause an
 			// immediate 400 before a task is persisted.
 			if parsed, reqErr := relaycommon.GetTaskRequest(c); reqErr == nil {
+				if err := originModelMediaLimit(info.OriginModelName, parsed); err != nil {
+					return nil, err
+				}
 				applyCanonicalVideoControls(bodyMap, parsed)
 				applyOriginModelDurationLimit(bodyMap, parsed, info.OriginModelName)
 				applyParsedReferences(bodyMap, parsed)
@@ -497,7 +500,7 @@ func applyOriginModelDurationLimit(body map[string]interface{}, req relaycommon.
 		applyCatalogDurationLimit(body, req, 15)
 	case "kling-o3-omni":
 		applyCatalogDurationBounds(body, req, 5, 3, 12)
-	case "seedance-2.0-480p", "seedance-2.0-fast-480p-c1", "seedance-2.0-fast-720p-c1":
+	case "seedance-2.0-480p", "seedance-2.0-fast-480p-c1", "seedance-2.0-fast-720p", "seedance-2.0-fast-720p-c1":
 		applyCatalogDurationBounds(body, req, 5, 4, 15)
 	case "seedance-2.5-480p":
 		applyCatalogDurationBounds(body, req, 5, 4, 30)
@@ -556,7 +559,7 @@ func applyOriginModelResolution(body map[string]interface{}, originModel string)
 	case "seedance-2.0-480p", "seedance-2.0-fast-480p-c1", "seedance-2.5-480p", "seedance-2.0-mini-480p-c2", "seedance-2.0-fast-480p", "seedance-2.0-480p-c2", "seedance-2.0-fast-480p-c2", "wan-3.0-480p-c2", "wan-3.0", "wan-3.0-c1", "wan-3.0-480p", "wan-3.0-480p-c3", "seedance-2.0-480p-c3", "seedance-2.0-mini-480p-c3", "seedance-2.0-fast-480p-c3", "seedance-2.5-c3":
 		body["resolution"] = "480p"
 		body["size"] = "480p"
-	case "seedance-2.0-720p", "seedance-2.5-720p", "seedance-2.5-720p-c4", "seedance-2.0-mini-720p", "seedance-2.0-mini-720p-c2", "seedance-2.0-mini-720P-c2", "grok-imagine-720p", "sora-2", "seedance-2.0-fast-720p-c1":
+	case "seedance-2.0-720p", "seedance-2.5-720p", "seedance-2.5-720p-c4", "seedance-2.0-mini-720p", "seedance-2.0-mini-720p-c2", "seedance-2.0-mini-720P-c2", "grok-imagine-720p", "sora-2", "seedance-2.0-fast-720p", "seedance-2.0-fast-720p-c1":
 		body["resolution"] = "720p"
 		body["size"] = "720p"
 	case "minimax-h3-2k":
@@ -945,6 +948,9 @@ func buildUpstreamVideoJSONFromMultipart(c *gin.Context, info *relaycommon.Relay
 			req.Images = append([]string(nil), images...)
 		}
 	}
+	if err := originModelMediaLimit(info.OriginModelName, req); err != nil {
+		return nil, err
+	}
 	bodyMap := taskSubmitReqToUpstreamVideoBody(req, info.UpstreamModelName)
 	applyOriginModelDurationLimit(bodyMap, req, info.OriginModelName)
 	normalizeOpenAIVideoAspectBody(bodyMap)
@@ -1035,6 +1041,34 @@ func collectUpstreamVideoImageRefs(req relaycommon.TaskSubmitReq) []string {
 		[]string{req.Image, req.InputReference, req.ImageURL, req.ReferenceImage},
 		req.ImageRefs, req.ImageURLs, req.Images, req.ReferenceImages, req.ExtraImages,
 	)
+}
+
+// originModelMediaLimit enforces the public Seedance C5 caps: 9 images, no
+// reference videos, 3 audios. Resolution and duration are applied separately.
+func originModelMediaLimit(origin string, req relaycommon.TaskSubmitReq) error {
+	switch strings.TrimSpace(origin) {
+	case "seedance-2.0-mini-720p", "seedance-2.0-fast-480p-c1", "seedance-2.0-fast-720p", "seedance-2.0-480p":
+		if len(collectUpstreamVideoVideoRefs(req)) > 0 {
+			return fmt.Errorf("this model accepts at most 0 reference videos")
+		}
+		if len(collectUpstreamVideoImageRefs(req)) > 9 {
+			return fmt.Errorf("this model accepts at most 9 reference images")
+		}
+		if len(collectUpstreamVideoAudioRefs(req)) > 3 {
+			return fmt.Errorf("this model accepts at most 3 reference audios")
+		}
+	case "wan-3.0-480p":
+		if len(collectUpstreamVideoVideoRefs(req)) > 0 {
+			return fmt.Errorf("this model accepts at most 0 reference videos")
+		}
+		if len(collectUpstreamVideoImageRefs(req)) > 10 {
+			return fmt.Errorf("this model accepts at most 10 reference images")
+		}
+		if len(collectUpstreamVideoAudioRefs(req)) > 5 {
+			return fmt.Errorf("this model accepts at most 5 reference audios")
+		}
+	}
+	return nil
 }
 
 func collectUpstreamVideoVideoRefs(req relaycommon.TaskSubmitReq) []string {

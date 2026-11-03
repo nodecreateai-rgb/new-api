@@ -248,7 +248,7 @@ func ensureDopioRMBPricing() {
 		"seedance-2.0-fast-480p":             1.5,
 		"seedance-2.0-720p":                  3,
 		"seedance-2.0-480p":                  1.6,
-		"seedance-2.0-fast-480p-c1":          1.2,
+		"seedance-2.0-fast-480p-c1":          1.5,
 		"seedance-2.5-480p":                  1.5,
 		"wan-3.0-prime-720p":                 1.5,
 		"grok-imagine-720p":                  0.5,
@@ -261,8 +261,7 @@ func ensureDopioRMBPricing() {
 		"sd2-c11":                            2.5,
 		"sd2-c12":                            3,
 		"seedance-720":                       higgsSeedancePrice,
-		"seedance-2.0-fast-720p":             2.5,
-		"seedance-2.0-fast-720p-c1":          1.8,
+		"seedance-2.0-fast-720p":             1.8,
 		"seedance-2.0-1080p":                 4,
 		"seedance-video-fast-per-second":     0.2,
 		"seedance-video-standard-per-second": 0.33,
@@ -287,10 +286,11 @@ func ensureDopioRMBPricing() {
 		"seedance-2.0":                       2,
 		"wan-3.0":                            1,
 		"wan-3.0-c1":                         0.8,
-		"wan-3.0-480p-c3":                    1,
-		"seedance-2.0-480p-c3":               1.8,
-		"seedance-2.0-mini-480p-c3":          1,
-		"seedance-2.0-fast-480p-c3":          1.4,
+		"wan-3.0-480p":                       1.5,
+		"wan-3.0-480p-c3":                    0.8,
+		"seedance-2.0-480p-c3":               1.5,
+		"seedance-2.0-mini-480p-c3":          0.8,
+		"seedance-2.0-fast-480p-c3":          1.2,
 		"seedance-2.5-c3":                    4,
 		"minimax-h3":                         0.5,
 		"minimax-h3-2k":                      1,
@@ -343,7 +343,7 @@ func ensureDopioRMBPricing() {
 		"default": {
 			"seedance-video-fast":                3,
 			"seedance-video-standard":            5,
-			"seedance-2.0-fast-720p":             2.5,
+			"seedance-2.0-fast-720p":             1.8,
 			"seedance-2.0-1080p":                 4,
 			"seedance-video-fast-per-second":     0.2,
 			"seedance-video-standard-per-second": 0.33,
@@ -358,7 +358,7 @@ func ensureDopioRMBPricing() {
 		"vip1": {
 			"seedance-video-fast":                3,
 			"seedance-video-standard":            5,
-			"seedance-2.0-fast-720p":             2.5,
+			"seedance-2.0-fast-720p":             1.8,
 			"seedance-2.0-1080p":                 4,
 			"seedance-video-fast-per-second":     0.2,
 			"seedance-video-standard-per-second": 0.33,
@@ -372,7 +372,7 @@ func ensureDopioRMBPricing() {
 		"vip": {
 			"seedance-video-fast":                3,
 			"seedance-video-standard":            5,
-			"seedance-2.0-fast-720p":             2.5,
+			"seedance-2.0-fast-720p":             1.8,
 			"seedance-2.0-1080p":                 4,
 			"seedance-video-fast-per-second":     0.2,
 			"seedance-video-standard-per-second": 0.33,
@@ -386,7 +386,7 @@ func ensureDopioRMBPricing() {
 		"svip": {
 			"seedance-video-fast":                3,
 			"seedance-video-standard":            5,
-			"seedance-2.0-fast-720p":             2.5,
+			"seedance-2.0-fast-720p":             1.8,
 			"seedance-2.0-1080p":                 4,
 			"seedance-video-fast-per-second":     0.2,
 			"seedance-video-standard-per-second": 0.33,
@@ -400,7 +400,7 @@ func ensureDopioRMBPricing() {
 		"vip2": {
 			"seedance-video-fast":                3,
 			"seedance-video-standard":            5,
-			"seedance-2.0-fast-720p":             2.5,
+			"seedance-2.0-fast-720p":             1.8,
 			"seedance-2.0-1080p":                 4,
 			"seedance-video-fast-per-second":     0.2,
 			"seedance-video-standard-per-second": 0.33,
@@ -417,13 +417,13 @@ func ensureDopioRMBPricing() {
 		"vip3": {
 			"seedance-video-fast":                3,
 			"seedance-video-standard":            5,
-			"seedance-2.0-fast-720p":             2.5,
+			"seedance-2.0-fast-720p":             1.8,
 			"seedance-2.0-1080p":                 4,
 			"seedance-video-fast-per-second":     0.2,
 			"seedance-video-standard-per-second": 0.33,
 		},
 		"vip6": {
-			"seedance-2.0-fast-720p": 2.5,
+			"seedance-2.0-fast-720p": 1.8,
 			"sd2.5":                  0.5,
 		},
 		"vip7": {
@@ -641,6 +641,10 @@ func ensureDopioRMBPricing() {
 			groupPrices["seedance-2.0-fast-480p"] = priceFast480
 			changed = true
 		}
+		if groupPrices["seedance-2.0-fast-480p-c1"] != priceFast480 {
+			groupPrices["seedance-2.0-fast-480p-c1"] = priceFast480
+			changed = true
+		}
 		price720 := 3.0
 		if group == "vip10" {
 			price720 = 2.5
@@ -854,7 +858,8 @@ func ensureDopioRMBPricing() {
 	if err := ensureSeedance480Routing(); err != nil {
 		common.SysLog("failed to enforce Seedance 480p gateway routing: " + err.Error())
 	}
-	// Retires seedance-2.0-480p / seedance-2.0-fast-480p-c1.
+	// Disables the old Seedance 480p Lite channel. seedance-2.0-fast-480p-c1
+	// stays on sale via ensureVideoSeedanceC5Routing.
 	if err := ensureUvera2apiRouting(); err != nil {
 		common.SysLog("failed to retire Seedance 480p Lite gateway routing: " + err.Error())
 	}
@@ -875,6 +880,9 @@ func ensureDopioRMBPricing() {
 	}
 	if err := retireDeadVideoModels(); err != nil {
 		common.SysLog("failed to retire dead video models: " + err.Error())
+	}
+	if err := ensureVideoSeedanceC5Routing(); err != nil {
+		common.SysLog("failed to enforce Video Seedance C5 gateway routing: " + err.Error())
 	}
 	common.SysLog("enforced Dopio RMB pricing incl sd2.5=0.5 per call, sd2-c7=0.5 per call, sd2-fast=1 per call, vip6 Seedance 720p fast=1/full=2, oauth2=0.3, pay=0.5, sd2-c6=0.5, seedance-2.0-mini-480p=0.4, seedance-2.0-mini-720p=1, sd2-c11=2.5, sd2-c12=3, anthropic/claude-opus-5-5=10000000, llm-vip opus free, Price=1, USDExchangeRate=1, quota_display_type=CNY")
 }
@@ -3197,7 +3205,7 @@ func ensureStoryhubSeedanceRoutingClickHouse(neutralName, modelsCSV, mappingJSON
 // permanentlyRetiredPublicModels stay off the catalog. Startup used to publish
 // them again from Mito, Fotor, and the price enforcer after an earlier retire.
 var permanentlyRetiredPublicModels = []string{
-	"wan-3.0-480p",
+	"seedance-2.0-fast-720p-c1",
 	"seedance-2.0-mini",
 	"wan-3.0-480p-c2",
 	"seedance-2.5",

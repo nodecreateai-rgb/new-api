@@ -206,6 +206,27 @@ func TestMaskUpstreamProviderInfoFlova(t *testing.T) {
 	}
 }
 
+func TestPublicErrorMessageHidesIqiyi(t *testing.T) {
+	got := PublicErrorMessage("nadouproapi.iqiyi.com 爱奇艺 纳逗 aqy2api failed")
+	if got != "request failed" {
+		t.Fatalf("got %q", got)
+	}
+	got = PublicErrorMessage(`Post "https://nadoupro.iqiyi.com/apis/task": dial tcp`)
+	if got != "request failed" {
+		t.Fatalf("link: %q", got)
+	}
+}
+
+func TestMaskUpstreamProviderInfoIqiyi(t *testing.T) {
+	got := MaskUpstreamProviderInfo("iQIYI nadoupro nadouproapi.iqiyi.com aqy2api 爱奇艺 纳逗Pro https://www.iqiyi.com/v.mp4")
+	lower := strings.ToLower(got)
+	for _, forbidden := range []string{"iqiyi", "nadou", "aqy2api", "爱奇艺", "纳逗"} {
+		if strings.Contains(got, forbidden) || strings.Contains(lower, forbidden) {
+			t.Fatalf("leaked %q in %q", forbidden, got)
+		}
+	}
+}
+
 func TestPublicErrorMessageHidesKsyun(t *testing.T) {
 	got := PublicErrorMessage("Ksyun2API kspmas.ksyun.com kingsoft 金山云 failed")
 	if got != "request failed" {
