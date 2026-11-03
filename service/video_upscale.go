@@ -42,97 +42,36 @@ func firstEnv(names ...string) string {
 	return ""
 }
 
-// ParseUpscalerOption reads the "upscaler" request field. Accepted forms:
-//
-//	true | "720p" | "1080p" | "2k" | "4k"
-//	"1080p-anime" / "4k portrait creative" (any order)
-//	{"quality":"1080p","model":"anime|portrait|general","style":"precise|creative"}
-//
-// It also looks in metadata.upscaler. Empty/false/"none" means no upscale.
+// ParseUpscalerOption reads the "upscaler" request field: the mode name
+// general / anime / portrait (true means general). Resolution is the
+// upscaler default (720P). Also read from metadata.upscaler or a form field.
 func ParseUpscalerOption(body []byte, form func(string) string) *model.TaskUpscaler {
-	var v gjson.Result
+	raw := ""
 	if len(body) > 0 && gjson.ValidBytes(body) {
-		for _, p := range []string{"upscaler", "upscale", "metadata.upscaler", "metadata.upscale"} {
+		for _, p := range []string{"upscaler", "metadata.upscaler"} {
 			if r := gjson.GetBytes(body, p); r.Exists() {
-				v = r
+				raw = r.String()
 				break
 			}
 		}
 	}
-	if !v.Exists() && form != nil {
-		for _, k := range []string{"upscaler", "upscale"} {
-			if s := strings.TrimSpace(form(k)); s != "" {
-				v = gjson.Parse(fmt.Sprintf("%q", s))
-				if gjson.Valid(s) && strings.HasPrefix(s, "{") {
-					v = gjson.Parse(s)
-				}
-				break
-			}
-		}
+	if raw == "" && form != nil {
+		raw = form("upscaler")
 	}
-	if !v.Exists() {
+	m := strings.ToLower(strings.TrimSpace(raw))
+	switch m {
+	case "", "0", "false", "no", "none", "off", "null":
 		return nil
-	}
-	out := &model.TaskUpscaler{}
-	switch v.Type {
-	case gjson.True:
-	case gjson.False, gjson.Null:
-		return nil
-	case gjson.JSON:
-		if !v.IsObject() {
-			return nil
-		}
-		if e := v.Get("enabled"); e.Exists() && !e.Bool() {
-			return nil
-		}
-		applyUpscalerWords(out, v.Get("quality").String()+" "+v.Get("resolution").String()+" "+v.Get("mode").String()+" "+v.Get("model").String()+" "+v.Get("style").String())
+	case "true", "1", "yes", "on", "general", "default", "standard":
+		m = "general"
+	case "anime", "cartoon":
+		m = "anime"
+	case "portrait", "face", "human":
+		m = "portrait"
 	default:
-		s := strings.ToLower(strings.TrimSpace(v.String()))
-		switch s {
-		case "", "0", "false", "no", "none", "off":
-			return nil
-		}
-		applyUpscalerWords(out, s)
+		return nil
 	}
-	if out.Quality == "" {
-		out.Quality = "720P"
-	}
-	if out.Model == "" {
-		out.Model = "general"
-	}
-	if out.Style == "" {
-		out.Style = "precise"
-	}
-	return out
-}
-
-func applyUpscalerWords(o *model.TaskUpscaler, s string) {
-	for _, w := range strings.FieldsFunc(strings.ToLower(s), func(r rune) bool {
-		return r == ' ' || r == '-' || r == '_' || r == ',' || r == '/' || r == '|'
-	}) {
-		switch w {
-		case "720", "720p", "hd", "true", "1", "on", "yes":
-			if o.Quality == "" {
-				o.Quality = "720P"
-			}
-		case "1080", "1080p", "fhd":
-			o.Quality = "1080P"
-		case "2k", "1440p":
-			o.Quality = "2K"
-		case "4k", "2160p", "uhd":
-			o.Quality = "4K"
-		case "general", "standard", "default":
-			o.Model = "general"
-		case "anime", "cartoon":
-			o.Model = "anime"
-		case "portrait", "face", "human":
-			o.Model = "portrait"
-		case "precise", "faithful":
-			o.Style = "precise"
-		case "creative", "enhance":
-			o.Style = "creative"
-		}
-	}
+	return &model.TaskUpscaler{Quality: "720P", Model: m, Style: "precise"}
 }
 
 func upscalerDo(ctx context.Context, method, path string, body []byte, timeout time.Duration) (*http.Response, error) {
