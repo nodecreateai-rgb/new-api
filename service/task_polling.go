@@ -612,6 +612,36 @@ func updateVideoSingleTask(ctx context.Context, adaptor TaskPollingAdaptor, ch *
 				break
 			}
 		}
+		if up := task.PrivateData.Upscaler; up != nil && !up.Done && task.Status == model.TaskStatusSuccess {
+			src := videoBytes
+			if len(src) == 0 && up.TaskID == "" {
+				if d, derr := decodeVideoDataURL(strings.TrimSpace(taskResult.Url)); derr == nil {
+					src = d
+				} else if passthrough {
+					if b, verr := validateCompletedVideo(ctx, ch, task, taskResult); verr == nil {
+						src = b
+					}
+				}
+			}
+			upVideo, wait := handleVideoUpscale(ctx, task, src)
+			if wait {
+				// Generation finished, upscale running: stay in progress.
+				task.Status = model.TaskStatusInProgress
+				task.Progress = "90%"
+				if task.StartTime == 0 {
+					task.StartTime = now
+				}
+				if err := task.UpdateProgress(snap.Status); err != nil {
+					logger.LogError(ctx, fmt.Sprintf("Failed to update upscaling task %s: %s", task.TaskID, err.Error()))
+				}
+				return nil
+			}
+			if len(upVideo) > 0 {
+				videoBytes = upVideo
+				passthrough = false
+				taskResult.Url = ""
+			}
+		}
 		task.Progress = taskcommon.ProgressComplete
 		if task.FinishTime == 0 {
 			task.FinishTime = now

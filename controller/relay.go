@@ -634,6 +634,20 @@ func RelayTask(c *gin.Context) {
 		task.Quota = result.Quota
 		task.Data = model.JSONRaw(result.TaskData)
 		task.Action = relayInfo.Action
+		if result.Platform != constant.TaskPlatformImage && result.Platform != constant.TaskPlatformPay {
+			var raw []byte
+			if bs, err := common.GetBodyStorage(c); err == nil {
+				raw, _ = bs.Bytes()
+			}
+			task.PrivateData.Upscaler = service.ParseUpscalerOption(raw, func(k string) string {
+				if c.Request.MultipartForm != nil {
+					if v := c.Request.MultipartForm.Value[k]; len(v) > 0 {
+						return v[0]
+					}
+				}
+				return ""
+			})
+		}
 		if insertErr := task.Insert(); insertErr != nil {
 			common.SysError("insert task error: " + insertErr.Error())
 		}

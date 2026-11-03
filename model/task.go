@@ -214,6 +214,20 @@ type TaskPrivateData struct {
 	SubscriptionId int                 `json:"subscription_id,omitempty"` // 订阅 ID，用于订阅退款
 	TokenId        int                 `json:"token_id,omitempty"`        // 令牌 ID，用于令牌额度退款
 	BillingContext *TaskBillingContext `json:"billing_context,omitempty"` // 计费参数快照（用于轮询阶段重新计算）
+	// Upscaler 请求了出片后超分（upscaler 参数）。为空表示不超分
+	Upscaler *TaskUpscaler `json:"upscaler,omitempty"`
+}
+
+// TaskUpscaler 超分参数与进度（upscaler2api）
+type TaskUpscaler struct {
+	Quality   string `json:"quality,omitempty"` // 720P / 1080P / 2K / 4K
+	Model     string `json:"model,omitempty"`   // general / anime / portrait
+	Style     string `json:"style,omitempty"`   // precise / creative
+	TaskID    string `json:"task_id,omitempty"`
+	StartedAt int64  `json:"started_at,omitempty"`
+	Attempts  int    `json:"attempts,omitempty"`
+	Done      bool   `json:"done,omitempty"`
+	Error     string `json:"error,omitempty"`
 }
 
 // TaskBillingContext 记录任务提交时的计费参数，以便轮询阶段可以重新计算额度。
