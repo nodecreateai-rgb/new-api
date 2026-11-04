@@ -528,7 +528,7 @@ func applyOriginModelDurationLimit(body map[string]interface{}, req relaycommon.
 		applyCatalogDurationLimit(body, req, 20)
 	case "minimax-h3":
 		applyCatalogDurationLimit(body, req, 15)
-	case "minimax-h3-2k":
+	case "minimax-h3-2k", "minimax-h3-c3":
 		applyCatalogDurationBounds(body, req, 5, 4, 15)
 	case "seedance-2.5-720p-c4":
 		applyCatalogDurationBounds(body, req, 5, 4, 30)
@@ -562,7 +562,7 @@ func applyOriginModelResolution(body map[string]interface{}, originModel string)
 	case "seedance-2.0-720p", "seedance-2.5-720p", "seedance-2.5-720p-c4", "seedance-2.0-mini-720p", "seedance-2.0-mini-720p-c2", "seedance-2.0-mini-720P-c2", "grok-imagine-720p", "sora-2", "seedance-2.0-fast-720p", "seedance-2.0-fast-720p-c1":
 		body["resolution"] = "720p"
 		body["size"] = "720p"
-	case "minimax-h3-2k":
+	case "minimax-h3-2k", "minimax-h3-c3":
 		body["resolution"] = "2K"
 		body["size"] = "2K"
 	case "minimax-h3", "minimax-h3-max":
