@@ -9,6 +9,12 @@ var deadVideoModels = []string{
 	"seedance-2.0-mini-480p",
 	"wan-3.0", "wan-3.0-c1",
 	"seedance-2.0-fast-720p-c1",
+	// mindvideo2api (Video 480p C3)
+	"wan-3.0-480p-c3", "seedance-2.0-480p-c3", "seedance-2.0-mini-480p-c3",
+	"seedance-2.0-fast-480p-c3", "seedance-2.5-c3", "minimax-h3-c3",
+	// aqy2api (Video Seedance C5)
+	"seedance-2.0-mini-720p", "seedance-2.0-fast-480p-c1", "wan-3.0-480p",
+	"seedance-2.0-fast-720p", "seedance-2.0-480p",
 }
 
 // deadVideoChannels served only dead models, so they are switched off.
@@ -16,6 +22,7 @@ var deadVideoChannels = []string{
 	"Dola2API Seedance Video", "Video Omni", "Roboneo Seedance Mini",
 	"Flova Video", "Flova Video 2", "Flova Video 3",
 	"Flick Video", "Newtake Video", "Playad Video",
+	"Video 480p C3", "Video Seedance C5",
 }
 
 // retireDeadVideoModels runs after every ensure step, because several of

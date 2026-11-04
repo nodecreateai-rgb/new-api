@@ -864,9 +864,9 @@ func ensureDopioRMBPricing() {
 	if err := ensureUvera2apiRouting(); err != nil {
 		common.SysLog("failed to retire Seedance 480p Lite gateway routing: " + err.Error())
 	}
-	if err := ensureMindvideo2apiRouting(); err != nil {
-		common.SysLog("failed to enforce Video 480p C3 gateway routing: " + err.Error())
-	}
+	// mindvideo2api (Video 480p C3) and aqy2api (Video Seedance C5) are
+	// retired for good: their routing is no longer enforced and
+	// retireDeadVideoModels strips their models and disables the channels.
 	if err := ensureScnetRouting(); err != nil {
 		common.SysLog("failed to enforce Video 2K C4 gateway routing: " + err.Error())
 	}
@@ -881,9 +881,6 @@ func ensureDopioRMBPricing() {
 	}
 	if err := retireDeadVideoModels(); err != nil {
 		common.SysLog("failed to retire dead video models: " + err.Error())
-	}
-	if err := ensureVideoSeedanceC5Routing(); err != nil {
-		common.SysLog("failed to enforce Video Seedance C5 gateway routing: " + err.Error())
 	}
 	common.SysLog("enforced Dopio RMB pricing incl sd2.5=0.5 per call, sd2-c7=0.5 per call, sd2-fast=1 per call, vip6 Seedance 720p fast=1/full=2, oauth2=0.3, pay=0.5, sd2-c6=0.5, seedance-2.0-mini-480p=0.4, seedance-2.0-mini-720p=1, sd2-c11=2.5, sd2-c12=3, anthropic/claude-opus-5-5=10000000, llm-vip opus free, Price=1, USDExchangeRate=1, quota_display_type=CNY")
 }
