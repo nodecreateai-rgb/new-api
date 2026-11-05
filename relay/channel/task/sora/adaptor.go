@@ -2,6 +2,7 @@ package sora
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"mime/multipart"
@@ -41,23 +42,49 @@ type ImageURL struct {
 	URL string `json:"url"`
 }
 
+// jsonString accepts JSON strings or numbers so upstreams that echo
+// `"seconds": 8` still parse into the Sora task DTO.
+type jsonString string
+
+func (s *jsonString) UnmarshalJSON(data []byte) error {
+	data = bytes.TrimSpace(data)
+	if len(data) == 0 || string(data) == "null" {
+		*s = ""
+		return nil
+	}
+	if data[0] == '"' {
+		var str string
+		if err := json.Unmarshal(data, &str); err != nil {
+			return err
+		}
+		*s = jsonString(str)
+		return nil
+	}
+	*s = jsonString(string(data))
+	return nil
+}
+
+func (s jsonString) MarshalJSON() ([]byte, error) {
+	return json.Marshal(string(s))
+}
+
 type responseTask struct {
-	ID                 string `json:"id"`
-	TaskID             string `json:"task_id,omitempty"` //兼容旧接口
-	Object             string `json:"object"`
-	Model              string `json:"model"`
-	Status             string `json:"status"`
-	Progress           int    `json:"progress"`
-	CreatedAt          int64  `json:"created_at"`
-	CompletedAt        int64  `json:"completed_at,omitempty"`
-	ExpiresAt          int64  `json:"expires_at,omitempty"`
-	Seconds            string `json:"seconds,omitempty"`
-	Size               string `json:"size,omitempty"`
-	RemixedFromVideoID string `json:"remixed_from_video_id,omitempty"`
-	URL                string `json:"url,omitempty"`
-	VideoURL           string `json:"video_url,omitempty"`
-	OutputURL          string `json:"output_url,omitempty"`
-	DownloadURL        string `json:"download_url,omitempty"`
+	ID                 string     `json:"id"`
+	TaskID             string     `json:"task_id,omitempty"` //兼容旧接口
+	Object             string     `json:"object"`
+	Model              string     `json:"model"`
+	Status             string     `json:"status"`
+	Progress           int        `json:"progress"`
+	CreatedAt          int64      `json:"created_at"`
+	CompletedAt        int64      `json:"completed_at,omitempty"`
+	ExpiresAt          int64      `json:"expires_at,omitempty"`
+	Seconds            jsonString `json:"seconds,omitempty"`
+	Size               string     `json:"size,omitempty"`
+	RemixedFromVideoID string     `json:"remixed_from_video_id,omitempty"`
+	URL                string     `json:"url,omitempty"`
+	VideoURL           string     `json:"video_url,omitempty"`
+	OutputURL          string     `json:"output_url,omitempty"`
+	DownloadURL        string     `json:"download_url,omitempty"`
 	Error              *struct {
 		Message string `json:"message"`
 		Code    string `json:"code"`
@@ -254,7 +281,7 @@ func (a *TaskAdaptor) ForceApplyBillingRatios(info *relaycommon.RelayInfo) bool 
 // IDs are fixed-price per generated video, independent of requested duration.
 func (a *TaskAdaptor) UseRequestBillingRatios(info *relaycommon.RelayInfo) bool {
 	switch strings.TrimSpace(info.OriginModelName) {
-	case "sd2.5", "sd2-mini", "sd2-fast", "sd2-c6", "sd2-c7", "seedance-720", "seedance-2.0-mini", "seedance-2.0-mini-480p", "seedance-2.0-mini-720p", "seedance-2.0-mini-480p-c2", "seedance-2.0-mini-720p-c2", "seedance-2.0-fast", "seedance-2.0-fast-480p", "seedance-2.0-fast-480p-c1", "grok-imagine-720p", "seedance-2.0-fast-720p", "seedance-2.0-fast-720p-c1", "seedance-2.0-720p", "seedance-2.0-1080p", "seedance-2.0", "seedance-2.5", "seedance-2.0-480p", "seedance-2.5-480p", "seedance-2.5-720p", "seedance-2.5-1080p", "seedance-2.0-c1", "seedance-2.5-c1", "seedance-2.5-c2", "seedance-2.0-c2", "seedance-2.0-480p-c2", "seedance-2.0-fast-c2", "seedance-2.0-fast-480p-c2", "seedance-2.0-mini-c2", "wan-3.0-c2", "wan-3.0-480p-c2", "wan-3.0", "wan-3.0-c1", "wan-3.0-480p", "wan-3.0-480p-c3", "seedance-2.0-480p-c3", "seedance-2.0-mini-480p-c3", "seedance-2.0-fast-480p-c3", "seedance-2.5-c3", "minimax-h3", "minimax-h3-max", "minimax-h3-2k", "minimax-h3-768p", "seedance-2.5-720p-c4", "seedance-2.0-720p-c1", "sora-2", "kling-o3", "kling-o3-omni", "wan3.0-video-prime":
+	case "sd2.5", "sd2-mini", "sd2-fast", "sd2-c6", "sd2-c7", "seedance-720", "seedance-2.0-mini", "seedance-2.0-mini-480p", "seedance-2.0-mini-720p", "seedance-2.0-mini-480p-c2", "seedance-2.0-mini-720p-c2", "seedance-2.0-fast", "seedance-2.0-fast-480p", "seedance-2.0-fast-480p-c1", "grok-imagine-720p", "seedance-2.0-fast-720p", "seedance-2.0-fast-720p-c1", "seedance-2.0-fast-720p-c2", "seedance-2.0-720p", "seedance-2.0-1080p", "seedance-2.0", "seedance-2.5", "seedance-2.0-480p", "seedance-2.5-480p", "seedance-2.5-720p", "seedance-2.5-1080p", "seedance-2.0-c1", "seedance-2.5-c1", "seedance-2.5-c2", "seedance-2.0-c2", "seedance-2.0-480p-c2", "seedance-2.0-fast-c2", "seedance-2.0-fast-480p-c2", "seedance-2.0-mini-c2", "wan-3.0-c2", "wan-3.0-480p-c2", "wan-3.0", "wan-3.0-c1", "wan-3.0-480p", "wan-3.0-480p-c3", "seedance-2.0-480p-c3", "seedance-2.0-mini-480p-c3", "seedance-2.0-fast-480p-c3", "seedance-2.5-c3", "minimax-h3", "minimax-h3-max", "minimax-h3-2k", "minimax-h3-768p", "seedance-2.5-720p-c4", "seedance-2.0-720p-c1", "sora-2", "kling-o3", "kling-o3-omni", "wan3.0-video-prime":
 		return false
 	default:
 		return true
@@ -507,6 +534,8 @@ func applyOriginModelDurationLimit(body map[string]interface{}, req relaycommon.
 		applyCatalogDurationBounds(body, req, 5, 4, 15)
 	case "seedance-2.0-fast-720p-c1":
 		applyCatalogDurationChoices(body, req, 15, 5, 10, 15)
+	case "seedance-2.0-fast-720p-c2":
+		applyCatalogDurationBounds(body, req, 4, 4, 15)
 	case "seedance-2.5-480p":
 		applyCatalogDurationBounds(body, req, 5, 4, 30)
 	case "seedance-2.0-mini-720p-c2", "seedance-2.0-mini-720P-c2":
@@ -557,7 +586,7 @@ func applyOriginModelAudio(body map[string]interface{}, originModel string) {
 		return
 	}
 	switch strings.TrimSpace(originModel) {
-	case "seedance-2.0-fast-720p-c1", "seedance-2.0-720p-c1":
+	case "seedance-2.0-fast-720p-c1", "seedance-2.0-fast-720p-c2", "seedance-2.0-720p-c1":
 		body["generate_audio"] = true
 		body["generateAudio"] = true
 	}
@@ -571,6 +600,8 @@ func sanitizeOriginModelUpstreamBody(body map[string]interface{}, req relaycommo
 		sanitizeWanfeng720pC1VideoBody(body, req)
 	case "seedance-2.0-fast-720p-c1":
 		sanitizeOpenaifitFast720pC1VideoBody(body, req)
+	case "seedance-2.0-fast-720p-c2":
+		sanitizeXxzFast720pC2VideoBody(body, req)
 	}
 }
 
@@ -693,6 +724,18 @@ func sanitizeOpenaifitFast720pC1VideoBody(body map[string]interface{}, req relay
 			"images", "image_refs", "image_urls", "reference_images", "extra_images",
 			"image", "image_url", "reference_image", "input_reference")
 	}
+	videos := collectUpstreamVideoVideoRefs(req)
+	if len(videos) == 0 {
+		videos = collectBodyMedia(body,
+			"videos", "video_refs", "video_urls", "reference_videos", "extra_videos",
+			"video", "video_url", "reference_video")
+	}
+	audios := collectUpstreamVideoAudioRefs(req)
+	if len(audios) == 0 {
+		audios = collectBodyMedia(body,
+			"audios", "audio_refs", "audio_urls", "reference_audios", "extra_audios",
+			"audio", "audio_url", "reference_audio")
+	}
 	ratio := ""
 	for _, key := range []string{"ratio", "aspect_ratio", "aspect"} {
 		if s, ok := body[key].(string); ok {
@@ -734,6 +777,83 @@ func sanitizeOpenaifitFast720pC1VideoBody(body map[string]interface{}, req relay
 	if len(images) > 0 {
 		body["image_urls"] = images
 		body["images"] = images
+	}
+	if len(videos) > 0 {
+		body["videos"] = videos
+		body["video_urls"] = videos
+	}
+	if len(audios) > 0 {
+		body["audios"] = audios
+		body["audio_urls"] = audios
+	}
+}
+
+// sanitizeXxzFast720pC2VideoBody keeps OpenAI-video fields this 720p Fast C2
+// route accepts. Do not send size (WxH) together with ratio, or duration
+// together with seconds. Videos are dropped: this public alias allows none.
+func sanitizeXxzFast720pC2VideoBody(body map[string]interface{}, req relaycommon.TaskSubmitReq) {
+	if body == nil {
+		return
+	}
+	images := collectUpstreamVideoImageRefs(req)
+	if len(images) == 0 {
+		images = collectBodyMedia(body,
+			"images", "image_refs", "image_urls", "reference_images", "extra_images",
+			"image", "image_url", "reference_image", "input_reference")
+	}
+	audios := collectUpstreamVideoAudioRefs(req)
+	if len(audios) == 0 {
+		audios = collectBodyMedia(body,
+			"audios", "audio_refs", "audio_urls", "reference_audios", "extra_audios",
+			"audio", "audio_url", "reference_audio")
+	}
+	ratio := ""
+	for _, key := range []string{"ratio", "aspect_ratio", "aspect"} {
+		if s, ok := body[key].(string); ok {
+			s = strings.TrimSpace(s)
+			if s != "" {
+				ratio = s
+				break
+			}
+		}
+	}
+	if ratio == "" {
+		ratio = strings.TrimSpace(req.AspectRatio)
+	}
+	switch ratio {
+	case "16:9", "9:16", "1:1", "4:3", "3:4", "21:9":
+	default:
+		ratio = "16:9"
+	}
+	model, _ := body["model"].(string)
+	prompt, _ := body["prompt"].(string)
+	if strings.TrimSpace(prompt) == "" {
+		prompt = strings.TrimSpace(req.Prompt)
+	}
+	seconds := body["seconds"]
+	for key := range body {
+		delete(body, key)
+	}
+	if strings.TrimSpace(model) != "" {
+		body["model"] = model
+	}
+	if strings.TrimSpace(prompt) != "" {
+		body["prompt"] = prompt
+	}
+	if seconds != nil {
+		body["seconds"] = seconds
+	}
+	body["resolution"] = "720p"
+	body["ratio"] = ratio
+	body["generate_audio"] = true
+	if len(images) > 0 {
+		body["images"] = images
+		body["image_urls"] = images
+		body["input_reference"] = images[0]
+	}
+	if len(audios) > 0 {
+		body["audios"] = audios
+		body["audio_urls"] = audios
 	}
 }
 
@@ -781,7 +901,7 @@ func applyOriginModelResolution(body map[string]interface{}, originModel string)
 	case "seedance-2.0-480p", "seedance-2.0-fast-480p-c1", "seedance-2.5-480p", "seedance-2.0-mini-480p-c2", "seedance-2.0-fast-480p", "seedance-2.0-480p-c2", "seedance-2.0-fast-480p-c2", "wan-3.0-480p-c2", "wan-3.0", "wan-3.0-c1", "wan-3.0-480p", "wan-3.0-480p-c3", "seedance-2.0-480p-c3", "seedance-2.0-mini-480p-c3", "seedance-2.0-fast-480p-c3", "seedance-2.5-c3", "seedance-2.5":
 		body["resolution"] = "480p"
 		body["size"] = "480p"
-	case "seedance-2.0-720p", "seedance-2.5-720p", "seedance-2.5-720p-c4", "seedance-2.0-mini-720p", "seedance-2.0-mini-720p-c2", "seedance-2.0-mini-720P-c2", "grok-imagine-720p", "sora-2", "seedance-2.0-fast-720p", "seedance-2.0-fast-720p-c1", "seedance-2.0-720p-c1", "wan3.0-video-prime":
+	case "seedance-2.0-720p", "seedance-2.5-720p", "seedance-2.5-720p-c4", "seedance-2.0-mini-720p", "seedance-2.0-mini-720p-c2", "seedance-2.0-mini-720P-c2", "grok-imagine-720p", "sora-2", "seedance-2.0-fast-720p", "seedance-2.0-fast-720p-c1", "seedance-2.0-fast-720p-c2", "seedance-2.0-720p-c1", "wan3.0-video-prime":
 		body["resolution"] = "720p"
 		body["size"] = "720p"
 	case "minimax-h3-2k", "minimax-h3-c3":
@@ -1351,14 +1471,29 @@ func originModelMediaLimit(origin string, req relaycommon.TaskSubmitReq) error {
 			return fmt.Errorf("this model accepts at most 3 reference audios")
 		}
 	case "seedance-2.0-fast-720p-c1":
-		if len(collectUpstreamVideoVideoRefs(req)) > 0 {
-			return fmt.Errorf("this model accepts at most 0 reference videos")
-		}
 		if len(collectUpstreamVideoImageRefs(req)) > 9 {
 			return fmt.Errorf("this model accepts at most 9 reference images")
 		}
-		if len(collectUpstreamVideoAudioRefs(req)) > 0 {
-			return fmt.Errorf("this model accepts at most 0 reference audios")
+		if len(collectUpstreamVideoVideoRefs(req)) > 3 {
+			return fmt.Errorf("this model accepts at most 3 reference videos")
+		}
+		if len(collectUpstreamVideoAudioRefs(req)) > 3 {
+			return fmt.Errorf("this model accepts at most 3 reference audios")
+		}
+	case "seedance-2.0-fast-720p-c2":
+		if len(collectUpstreamVideoVideoRefs(req)) > 0 {
+			return fmt.Errorf("this model accepts at most 0 reference videos")
+		}
+		images := collectUpstreamVideoImageRefs(req)
+		if len(images) > 9 {
+			return fmt.Errorf("this model accepts at most 9 reference images")
+		}
+		audios := collectUpstreamVideoAudioRefs(req)
+		if len(audios) > 3 {
+			return fmt.Errorf("this model accepts at most 3 reference audios")
+		}
+		if len(audios) > 0 && len(images) == 0 {
+			return fmt.Errorf("this model requires at least 1 reference image when using reference audio")
 		}
 	}
 	return nil

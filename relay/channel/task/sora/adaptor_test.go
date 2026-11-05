@@ -1,6 +1,7 @@
 package sora
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 
@@ -251,6 +252,8 @@ func TestSanitizeOpenaifitFast720pC1KeepsRatioAndImageURLs(t *testing.T) {
 		Duration:    5,
 		AspectRatio: "9:16",
 		ImageRefs:   []string{"https://cdn.example/a.png"},
+		VideoRefs:   []string{"https://cdn.example/clip.mp4"},
+		AudioRefs:   []string{"https://cdn.example/voice.mp3"},
 	}, "seedance-2.0-fast-720p-c1")
 
 	require.Equal(t, "seedance2.0 fast Deneb", body["model"])
@@ -259,13 +262,59 @@ func TestSanitizeOpenaifitFast720pC1KeepsRatioAndImageURLs(t *testing.T) {
 	require.Equal(t, "5", body["seconds"])
 	require.Equal(t, []string{"https://cdn.example/a.png"}, body["image_urls"])
 	require.Equal(t, []string{"https://cdn.example/a.png"}, body["images"])
+	require.Equal(t, []string{"https://cdn.example/clip.mp4"}, body["videos"])
+	require.Equal(t, []string{"https://cdn.example/voice.mp3"}, body["audios"])
 	for _, forbidden := range []string{
 		"image_refs", "duration", "aspect_ratio", "size",
 		"generate_audio", "generateAudio", "compliance_enabled",
-		"videos", "audios",
 	} {
 		require.NotContains(t, body, forbidden)
 	}
+}
+
+func TestSanitizeXxzFast720pC2DropsVideosKeepsAudio(t *testing.T) {
+	body := map[string]interface{}{
+		"model":          "521ai-SD-fast-720-xd",
+		"prompt":         "a cat walking",
+		"seconds":        "8",
+		"duration":       8,
+		"aspect_ratio":   "9:16",
+		"size":           "720x1280",
+		"generate_audio": true,
+		"image_refs":     []interface{}{"https://cdn.example/a.png"},
+		"video_refs":     []interface{}{"https://cdn.example/clip.mp4"},
+		"audio_refs":     []interface{}{"https://cdn.example/voice.mp3"},
+	}
+	sanitizeOriginModelUpstreamBody(body, relaycommon.TaskSubmitReq{
+		Prompt:      "a cat walking",
+		Seconds:     "8",
+		Duration:    8,
+		AspectRatio: "9:16",
+		ImageRefs:   []string{"https://cdn.example/a.png"},
+		VideoRefs:   []string{"https://cdn.example/clip.mp4"},
+		AudioRefs:   []string{"https://cdn.example/voice.mp3"},
+	}, "seedance-2.0-fast-720p-c2")
+
+	require.Equal(t, "521ai-SD-fast-720-xd", body["model"])
+	require.Equal(t, "9:16", body["ratio"])
+	require.Equal(t, "720p", body["resolution"])
+	require.Equal(t, "8", body["seconds"])
+	require.Equal(t, true, body["generate_audio"])
+	require.Equal(t, []string{"https://cdn.example/a.png"}, body["images"])
+	require.Equal(t, []string{"https://cdn.example/voice.mp3"}, body["audios"])
+	for _, forbidden := range []string{
+		"image_refs", "video_refs", "audio_refs", "duration", "aspect_ratio", "size", "videos",
+	} {
+		require.NotContains(t, body, forbidden)
+	}
+}
+
+func TestResponseTaskAcceptsNumericSeconds(t *testing.T) {
+	var task responseTask
+	require.NoError(t, json.Unmarshal([]byte(`{"id":"x","status":"queued","seconds":8}`), &task))
+	require.Equal(t, jsonString("8"), task.Seconds)
+	require.NoError(t, json.Unmarshal([]byte(`{"id":"x","status":"queued","seconds":"5"}`), &task))
+	require.Equal(t, jsonString("5"), task.Seconds)
 }
 
 func TestSanitizeMoyinH3VideoBodyLeavesOtherModelsUntouched(t *testing.T) {

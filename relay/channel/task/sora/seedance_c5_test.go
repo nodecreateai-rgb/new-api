@@ -106,16 +106,36 @@ func TestOriginModelMediaLimitSeedanceC5(t *testing.T) {
 	}
 	if err := originModelMediaLimit("seedance-2.0-fast-720p-c1", relaycommon.TaskSubmitReq{
 		Images: images[:9],
+		Videos: videos[:3],
+		Audios: h3Audios[:3],
 	}); err != nil {
 		t.Fatal(err)
 	}
 	if err := originModelMediaLimit("seedance-2.0-fast-720p-c1", relaycommon.TaskSubmitReq{Images: images}); err == nil {
 		t.Fatal("expected fast 720p c1 image cap")
 	}
-	if err := originModelMediaLimit("seedance-2.0-fast-720p-c1", relaycommon.TaskSubmitReq{Videos: videos[:1]}); err == nil {
+	if err := originModelMediaLimit("seedance-2.0-fast-720p-c1", relaycommon.TaskSubmitReq{Videos: videos}); err == nil {
 		t.Fatal("expected fast 720p c1 video cap")
 	}
-	if err := originModelMediaLimit("seedance-2.0-fast-720p-c1", relaycommon.TaskSubmitReq{Audios: h3Audios[:1]}); err == nil {
+	if err := originModelMediaLimit("seedance-2.0-fast-720p-c1", relaycommon.TaskSubmitReq{Audios: h3Audios}); err == nil {
 		t.Fatal("expected fast 720p c1 audio cap")
+	}
+	if err := originModelMediaLimit("seedance-2.0-fast-720p-c2", relaycommon.TaskSubmitReq{
+		Images: images[:9],
+		Audios: h3Audios[:3],
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := originModelMediaLimit("seedance-2.0-fast-720p-c2", relaycommon.TaskSubmitReq{Images: images}); err == nil {
+		t.Fatal("expected fast 720p c2 image cap")
+	}
+	if err := originModelMediaLimit("seedance-2.0-fast-720p-c2", relaycommon.TaskSubmitReq{Videos: videos[:1]}); err == nil {
+		t.Fatal("expected fast 720p c2 video cap")
+	}
+	if err := originModelMediaLimit("seedance-2.0-fast-720p-c2", relaycommon.TaskSubmitReq{Audios: h3Audios}); err == nil {
+		t.Fatal("expected fast 720p c2 audio cap")
+	}
+	if err := originModelMediaLimit("seedance-2.0-fast-720p-c2", relaycommon.TaskSubmitReq{Audios: h3Audios[:1]}); err == nil {
+		t.Fatal("expected fast 720p c2 audio to require an image")
 	}
 }

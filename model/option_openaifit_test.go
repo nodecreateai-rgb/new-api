@@ -30,7 +30,7 @@ func TestOpenaifitModelsListedWithPrices(t *testing.T) {
 		`"seedance-2.0-fast-720p-c1":"seedance2.0 fast Deneb"`,
 		`https://openai.fit`,
 		`¥1.8/次，固定720P，5/10/15秒`,
-		`最多9张图片，不支持参考视频和参考音频`,
+		`最多9张图片、3段视频、3段音频，原生过人脸`,
 	} {
 		if !strings.Contains(s, want) {
 			t.Fatalf("missing %s", want)
