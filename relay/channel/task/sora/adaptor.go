@@ -534,8 +534,10 @@ func applyOriginModelDurationLimit(body map[string]interface{}, req relaycommon.
 		applyCatalogDurationBounds(body, req, 5, 4, 15)
 	case "seedance-2.0-fast-720p-c1":
 		applyCatalogDurationChoices(body, req, 15, 5, 10, 15)
-	case "seedance-2.0-fast-720p-c2", "seedance-2.0-720p-c2", "seedance-2.0-720p-c3", "seedance-2.5-720p-c5":
+	case "seedance-2.0-fast-720p-c2", "seedance-2.0-720p-c2", "seedance-2.0-720p-c3":
 		applyCatalogDurationBounds(body, req, 4, 4, 15)
+	case "seedance-2.5-720p-c5":
+		applyCatalogDurationBounds(body, req, 5, 5, 15)
 	case "seedance-2.5-480p":
 		applyCatalogDurationBounds(body, req, 5, 4, 30)
 	case "seedance-2.0-mini-720p-c2", "seedance-2.0-mini-720P-c2":
@@ -963,8 +965,12 @@ func sanitizeXingapi720pVideoBody(body map[string]interface{}, req relaycommon.T
 			secs, _ = strconv.Atoi(strings.TrimSpace(v))
 		}
 	}
-	if secs < 4 {
-		secs = 4
+	minSecs := 4
+	if originModel == "seedance-2.5-720p-c5" {
+		minSecs = 5
+	}
+	if secs < minSecs {
+		secs = minSecs
 	} else if secs > 15 {
 		secs = 15
 	}
@@ -977,10 +983,9 @@ func sanitizeXingapi720pVideoBody(body map[string]interface{}, req relaycommon.T
 	if strings.TrimSpace(prompt) != "" {
 		body["prompt"] = prompt
 	}
-	// seedance2.5-V rejects string seconds ("must be an integer") and
-	// mismatched duration aliases. Send both as the same JSON number.
+	// This route's 2.5 model rejects string seconds and a sibling duration
+	// field. Send a JSON number only. 2.5 also floors at 5s.
 	body["seconds"] = secs
-	body["duration"] = secs
 	body["resolution"] = "720p"
 	body["ratio"] = ratio
 	body["generate_audio"] = true

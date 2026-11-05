@@ -37,7 +37,7 @@ func TestXingapiModelsListedWithPrices(t *testing.T) {
 		`最多9张图片、3段音频，不支持参考视频，原生过人脸`,
 		`¥1.5/次，固定720P，仅9:16`,
 		`最多9张图片、3段视频、3段音频，原生过人脸`,
-		`¥4.5/次，固定720P，4-15秒`,
+		`¥4.5/次，固定720P，5-15秒`,
 	} {
 		if !strings.Contains(s, want) {
 			t.Fatalf("missing %s", want)
