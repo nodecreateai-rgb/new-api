@@ -155,6 +155,9 @@ func redactLogChannelInfo(logs []*Log) {
 			delete(otherMap, "channel_name")
 			delete(otherMap, "use_channel")
 			delete(otherMap, "stream_status")
+			// the mapped upstream model name reveals which upstream serves a model
+			delete(otherMap, "is_model_mapped")
+			delete(otherMap, "upstream_model_name")
 			if text, ok := otherMap["reject_reason"].(string); ok {
 				otherMap["reject_reason"] = common.PublicErrorMessage(text)
 			}

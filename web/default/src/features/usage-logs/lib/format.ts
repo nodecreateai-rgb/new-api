@@ -158,11 +158,8 @@ export function formatModelName(log: UsageLog): {
   actualModel?: string
 } {
   const other = parseLogOther(log.other)
-  const isMapped = !!(
-    other?.is_model_mapped &&
-    other?.upstream_model_name &&
-    other.upstream_model_name !== ''
-  )
+  // Never surface the mapped upstream model: it reveals the upstream channel.
+  const isMapped = false
 
   return {
     name: log.model_name,
