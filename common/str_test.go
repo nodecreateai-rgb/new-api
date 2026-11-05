@@ -196,6 +196,52 @@ func TestPublicErrorMessageHidesFlova(t *testing.T) {
 	}
 }
 
+func TestPublicErrorMessageHidesWanfeng(t *testing.T) {
+	got := PublicErrorMessage("晚风 API api.pro666.top sd2-933-720p-9:16 failed")
+	if got != "request failed" {
+		t.Fatalf("got %q", got)
+	}
+	got = PublicErrorMessage(`Post "https://api.pro666.top/v1/videos": dial tcp: connection refused`)
+	if got != "request failed" {
+		t.Fatalf("got %q", got)
+	}
+	got = PublicErrorMessage("No available channel for model sd2-933-720p-9:16 under group svip: the model is claimed by a task plugin")
+	if got != "request failed" {
+		t.Fatalf("plugin: %q", got)
+	}
+}
+
+func TestMaskUpstreamProviderInfoWanfeng(t *testing.T) {
+	got := MaskUpstreamProviderInfo("晚风 API Wanfeng api.pro666.top www.pro666.top sd2-933-720p-9:16")
+	lower := strings.ToLower(got)
+	for _, forbidden := range []string{"pro666", "晚风", "wanfeng", "sd2-933"} {
+		if strings.Contains(got, forbidden) || strings.Contains(lower, forbidden) {
+			t.Fatalf("leaked %q in %q", forbidden, got)
+		}
+	}
+}
+
+func TestPublicErrorMessageHidesBramble(t *testing.T) {
+	got := PublicErrorMessage("bramble finished without a video")
+	if got != "request failed" {
+		t.Fatalf("got %q", got)
+	}
+	got = PublicErrorMessage(`Post "http://bramble2api:38710/v1/videos": dial tcp: connection refused`)
+	if got != "request failed" {
+		t.Fatalf("got %q", got)
+	}
+}
+
+func TestMaskUpstreamProviderInfoBramble(t *testing.T) {
+	got := MaskUpstreamProviderInfo("Bramble Video Bramble bramble2api bramble-generation-upstream api.bramble.video")
+	lower := strings.ToLower(got)
+	for _, forbidden := range []string{"bramble", "bramble2api"} {
+		if strings.Contains(lower, forbidden) {
+			t.Fatalf("leaked %q in %q", forbidden, got)
+		}
+	}
+}
+
 func TestMaskUpstreamProviderInfoFlova(t *testing.T) {
 	got := MaskUpstreamProviderInfo("Flova Video Flova flova2api flova-generation-upstream service.flova.tv")
 	lower := strings.ToLower(got)

@@ -28,9 +28,13 @@ func TestSD2MiniUsesFixedPerRequestBilling(t *testing.T) {
 	require.False(t, a.UseRequestBillingRatios(&relaycommon.RelayInfo{OriginModelName: "wan-3.0-480p"}))
 	require.False(t, a.UseRequestBillingRatios(&relaycommon.RelayInfo{OriginModelName: "minimax-h3"}))
 	require.False(t, a.UseRequestBillingRatios(&relaycommon.RelayInfo{OriginModelName: "minimax-h3-max"}))
+	require.False(t, a.UseRequestBillingRatios(&relaycommon.RelayInfo{OriginModelName: "minimax-h3-768p"}))
 	require.False(t, a.UseRequestBillingRatios(&relaycommon.RelayInfo{OriginModelName: "seedance-2.0-fast"}))
 	require.False(t, a.UseRequestBillingRatios(&relaycommon.RelayInfo{OriginModelName: "seedance-2.0-fast-720p-c1"}))
 	require.False(t, a.UseRequestBillingRatios(&relaycommon.RelayInfo{OriginModelName: "sora-2"}))
+	require.False(t, a.UseRequestBillingRatios(&relaycommon.RelayInfo{OriginModelName: "wan3.0-video-prime"}))
+	require.False(t, a.UseRequestBillingRatios(&relaycommon.RelayInfo{OriginModelName: "seedance-2.5"}))
+	require.False(t, a.UseRequestBillingRatios(&relaycommon.RelayInfo{OriginModelName: "seedance-2.0-720p-c1"}))
 }
 
 func TestFlovaUsesFixedPerRequestBilling(t *testing.T) {
@@ -164,6 +168,20 @@ func TestLaihuaSeedanceLocksResolutionFromModel(t *testing.T) {
 	require.Equal(t, "768p", body["resolution"])
 	require.Equal(t, "768p", body["size"])
 
+	body = map[string]interface{}{"duration": 20, "seconds": "20", "size": "1080x1920"}
+	applyOriginModelDurationLimit(body, relaycommon.TaskSubmitReq{Duration: 20}, "minimax-h3-768p")
+	applyOriginModelResolution(body, "minimax-h3-768p")
+	require.Equal(t, 15, body["duration"])
+	require.Equal(t, "15", body["seconds"])
+	require.Equal(t, "768p", body["resolution"])
+	require.Equal(t, "768p", body["size"])
+	body = map[string]interface{}{}
+	applyOriginModelDurationLimit(body, relaycommon.TaskSubmitReq{Duration: 2}, "minimax-h3-768p")
+	require.Equal(t, 4, body["duration"])
+	body = map[string]interface{}{}
+	applyOriginModelDurationLimit(body, relaycommon.TaskSubmitReq{}, "minimax-h3-768p")
+	require.Equal(t, 5, body["duration"])
+
 	body = map[string]interface{}{"duration": 20, "seconds": "20", "resolution": "2k"}
 	applyOriginModelDurationLimit(body, relaycommon.TaskSubmitReq{Duration: 20}, "minimax-h3-max")
 	applyOriginModelResolution(body, "minimax-h3-max")
@@ -179,6 +197,39 @@ func TestLaihuaSeedanceLocksResolutionFromModel(t *testing.T) {
 	applyOriginModelResolution(body, "sora-2")
 	require.Equal(t, "720p", body["resolution"])
 	require.Equal(t, "720p", body["size"])
+
+	body = map[string]interface{}{"size": "1080x1920", "duration": 8, "seconds": "8"}
+	applyOriginModelDurationLimit(body, relaycommon.TaskSubmitReq{Duration: 8}, "seedance-2.5")
+	applyOriginModelResolution(body, "seedance-2.5")
+	require.Equal(t, 8, body["duration"])
+	require.Equal(t, "480p", body["resolution"])
+	require.Equal(t, "480p", body["size"])
+	body = map[string]interface{}{}
+	applyOriginModelDurationLimit(body, relaycommon.TaskSubmitReq{Duration: 40}, "seedance-2.5")
+	require.Equal(t, 30, body["duration"])
+
+	body = map[string]interface{}{"size": "1080x1920", "duration": 6, "seconds": "6"}
+	applyOriginModelDurationLimit(body, relaycommon.TaskSubmitReq{Duration: 6}, "wan3.0-video-prime")
+	applyOriginModelResolution(body, "wan3.0-video-prime")
+	require.Equal(t, 6, body["duration"])
+	require.Equal(t, "720p", body["resolution"])
+	require.Equal(t, "720p", body["size"])
+
+	body = map[string]interface{}{"duration": 20, "seconds": "20", "size": "1080x1920", "aspect_ratio": "16:9"}
+	applyOriginModelDurationLimit(body, relaycommon.TaskSubmitReq{Duration: 20}, "seedance-2.0-720p-c1")
+	applyOriginModelResolution(body, "seedance-2.0-720p-c1")
+	applyOriginModelAudio(body, "seedance-2.0-720p-c1")
+	require.Equal(t, 15, body["duration"])
+	require.Equal(t, "15", body["seconds"])
+	require.Equal(t, "720p", body["resolution"])
+	require.Equal(t, "720p", body["size"])
+	require.Equal(t, true, body["generateAudio"])
+	body = map[string]interface{}{}
+	applyOriginModelDurationLimit(body, relaycommon.TaskSubmitReq{Duration: 2}, "seedance-2.0-720p-c1")
+	require.Equal(t, 5, body["duration"])
+	body = map[string]interface{}{}
+	applyOriginModelDurationLimit(body, relaycommon.TaskSubmitReq{}, "seedance-2.0-720p-c1")
+	require.Equal(t, 5, body["duration"])
 }
 
 func TestMinimaxH3MaxRequiresReferenceImage(t *testing.T) {
@@ -223,4 +274,42 @@ func TestSD2MiniCanonicalBodyMatchesSeedanceMediaShape(t *testing.T) {
 	require.Equal(t, []string{"https://example.com/image.png"}, body["image_refs"])
 	require.Equal(t, []string{"https://example.com/video.mp4"}, body["videos"])
 	require.Equal(t, []string{"https://example.com/audio.mp3"}, body["audios"])
+}
+
+func TestBrambleOriginModelMediaLimit(t *testing.T) {
+	images10 := make([]string, 10)
+	for i := range images10 {
+		images10[i] = "https://example.com/i" + string(rune('a'+i)) + ".jpg"
+	}
+	audios5 := make([]string, 5)
+	for i := range audios5 {
+		audios5[i] = "https://example.com/a" + string(rune('a'+i)) + ".mp3"
+	}
+	require.NoError(t, originModelMediaLimit("wan3.0-video-prime", relaycommon.TaskSubmitReq{
+		Images: images10, Audios: audios5,
+	}))
+	require.Error(t, originModelMediaLimit("wan3.0-video-prime", relaycommon.TaskSubmitReq{
+		VideoURL: "https://example.com/v.mp4",
+	}))
+	require.Error(t, originModelMediaLimit("wan3.0-video-prime", relaycommon.TaskSubmitReq{
+		Images: append(append([]string{}, images10...), "https://example.com/extra.jpg"),
+	}))
+
+	images30 := make([]string, 30)
+	for i := range images30 {
+		images30[i] = "https://example.com/s" + string(rune('a'+i%26)) + string(rune('0'+i/26)) + ".jpg"
+	}
+	audios10 := make([]string, 10)
+	for i := range audios10 {
+		audios10[i] = "https://example.com/s" + string(rune('a'+i)) + ".mp3"
+	}
+	require.NoError(t, originModelMediaLimit("seedance-2.5", relaycommon.TaskSubmitReq{
+		Images: images30, Audios: audios10,
+	}))
+	require.Error(t, originModelMediaLimit("seedance-2.5", relaycommon.TaskSubmitReq{
+		VideoURL: "https://example.com/v.mp4",
+	}))
+	require.Error(t, originModelMediaLimit("seedance-2.5", relaycommon.TaskSubmitReq{
+		Images: append(append([]string{}, images30...), "https://example.com/extra.jpg"),
+	}))
 }

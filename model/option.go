@@ -297,6 +297,7 @@ func ensureDopioRMBPricing() {
 		"minimax-h3-c3":                      1,
 		"seedance-2.5-720p-c4":               4,
 		"minimax-h3-max":                     0.4,
+		"minimax-h3-768p":                    0.5,
 		"sora-2":                             1,
 		"seedance-2.5-720p":                  4,
 		"seedance-2.5-1080p":                 5,
@@ -309,6 +310,9 @@ func ensureDopioRMBPricing() {
 		"seedance-2.0-fast-480p-c2":          1,
 		"seedance-2.0-mini-c2":               0.8,
 		"wan-3.0-c2":                         2,
+		"wan3.0-video-prime":                 2,
+		"seedance-2.5":                       4,
+		"seedance-2.0-720p-c1":               1.6,
 		"anthropic/claude-opus-5-5":          10000000,
 	}
 	targetGroupRatios := map[string]float64{
@@ -870,6 +874,9 @@ func ensureDopioRMBPricing() {
 	if err := ensureScnetRouting(); err != nil {
 		common.SysLog("failed to enforce Video 2K C4 gateway routing: " + err.Error())
 	}
+	if err := ensureMoyinRouting(); err != nil {
+		common.SysLog("failed to enforce Video H3 768p gateway routing: " + err.Error())
+	}
 	if err := ensureLLMVipOnEnabledChannels(); err != nil {
 		common.SysLog("failed to ensure llm-vip channel abilities: " + err.Error())
 	}
@@ -881,6 +888,12 @@ func ensureDopioRMBPricing() {
 	}
 	if err := retireDeadVideoModels(); err != nil {
 		common.SysLog("failed to retire dead video models: " + err.Error())
+	}
+	if err := ensureBramble2apiRouting(); err != nil {
+		common.SysLog("failed to enforce Bramble video gateway routing: " + err.Error())
+	}
+	if err := ensureWanfengRouting(); err != nil {
+		common.SysLog("failed to enforce Video 720p C1 gateway routing: " + err.Error())
 	}
 	common.SysLog("enforced Dopio RMB pricing incl sd2.5=0.5 per call, sd2-c7=0.5 per call, sd2-fast=1 per call, vip6 Seedance 720p fast=1/full=2, oauth2=0.3, pay=0.5, sd2-c6=0.5, seedance-2.0-mini-480p=0.4, seedance-2.0-mini-720p=1, sd2-c11=2.5, sd2-c12=3, anthropic/claude-opus-5-5=10000000, llm-vip opus free, Price=1, USDExchangeRate=1, quota_display_type=CNY")
 }
@@ -3206,7 +3219,6 @@ var permanentlyRetiredPublicModels = []string{
 	"seedance-2.0-fast-720p-c1",
 	"seedance-2.0-mini",
 	"wan-3.0-480p-c2",
-	"seedance-2.5",
 	"gpt-image-2",
 	"gpt-image-2.5-flare",
 	"gpt-image-2.5-sunburst",

@@ -133,6 +133,116 @@ func TestApplyParsedReferencesFillsImagesWhenOnlyAliasPresent(t *testing.T) {
 	require.Equal(t, []string{"https://cdn.example/voice.mp3"}, body["audios"])
 }
 
+func TestSanitizeMoyinH3VideoBodyStripsAliasesThatMoyinRejects(t *testing.T) {
+	body := map[string]interface{}{
+		"model":                     "minimax-h3-syt",
+		"prompt":                    "a cat walking",
+		"seconds":                   "4",
+		"duration":                  4,
+		"aspect_ratio":              "16:9",
+		"ratio":                     "16:9",
+		"size":                      "768p",
+		"resolution":                "768p",
+		"images":                    []interface{}{"https://cdn.example/a.png"},
+		"image_refs":                []interface{}{"https://cdn.example/a.png"},
+		"image_url":                 "https://cdn.example/a.png",
+		"image_urls":                []interface{}{"https://cdn.example/a.png"},
+		"reference_images":          []interface{}{"https://cdn.example/a.png"},
+		"audio_refs":                []interface{}{"https://cdn.example/voice.mp3"},
+		"compliance_enabled":        true,
+		"prompt_compliance_enabled": true,
+		"generate_audio":            true,
+		"video_refs":                []interface{}{"https://cdn.example/clip.mp4"},
+	}
+	sanitizeOriginModelUpstreamBody(body, relaycommon.TaskSubmitReq{
+		Prompt:      "a cat walking",
+		Seconds:     "4",
+		Duration:    4,
+		AspectRatio: "16:9",
+		Images:      []string{"https://cdn.example/a.png"},
+		ImageRefs:   []string{"https://cdn.example/a.png"},
+		AudioRefs:   []string{"https://cdn.example/voice.mp3"},
+	}, "minimax-h3-768p")
+
+	require.Equal(t, "minimax-h3-syt", body["model"])
+	require.Equal(t, "a cat walking", body["prompt"])
+	require.Equal(t, "4", body["seconds"])
+	require.Equal(t, 4, body["duration"])
+	require.Equal(t, "16:9", body["aspect_ratio"])
+	require.Equal(t, "768p", body["size"])
+	require.Equal(t, "768p", body["resolution"])
+	require.Equal(t, []string{"https://cdn.example/a.png"}, body["images"])
+	require.Equal(t, []string{"https://cdn.example/voice.mp3"}, body["audios"])
+	for _, forbidden := range []string{
+		"image_refs", "image_url", "image_urls", "reference_images",
+		"audio_refs", "video_refs", "ratio",
+		"compliance_enabled", "prompt_compliance_enabled", "generate_audio",
+	} {
+		require.NotContains(t, body, forbidden)
+	}
+}
+
+func TestSanitizeMoyinH3VideoBodyCopiesImageRefsWhenImagesMissing(t *testing.T) {
+	body := map[string]interface{}{
+		"model":      "minimax-h3-syt",
+		"prompt":     "x",
+		"image_refs": []interface{}{"https://cdn.example/a.png"},
+	}
+	sanitizeOriginModelUpstreamBody(body, relaycommon.TaskSubmitReq{
+		ImageRefs: []string{"https://cdn.example/a.png"},
+	}, "minimax-h3-768p")
+	require.Equal(t, []string{"https://cdn.example/a.png"}, body["images"])
+	require.NotContains(t, body, "image_refs")
+}
+
+func TestSanitizeWanfeng720pC1ForcesPortraitAndKeepsVideoRefs(t *testing.T) {
+	body := map[string]interface{}{
+		"model":              "sd2-933-720p-9:16",
+		"prompt":             "a cat walking",
+		"seconds":            "4",
+		"duration":           4,
+		"aspect_ratio":       "16:9",
+		"ratio":              "16:9",
+		"size":               "1280x720",
+		"image_refs":         []interface{}{"https://cdn.example/a.png"},
+		"video_refs":         []interface{}{"https://cdn.example/clip.mp4"},
+		"audio_refs":         []interface{}{"https://cdn.example/voice.mp3"},
+		"compliance_enabled": true,
+	}
+	sanitizeOriginModelUpstreamBody(body, relaycommon.TaskSubmitReq{
+		Prompt:      "a cat walking",
+		Seconds:     "4",
+		Duration:    4,
+		AspectRatio: "16:9",
+		ImageRefs:   []string{"https://cdn.example/a.png"},
+		VideoRefs:   []string{"https://cdn.example/clip.mp4"},
+		AudioRefs:   []string{"https://cdn.example/voice.mp3"},
+	}, "seedance-2.0-720p-c1")
+
+	require.Equal(t, "sd2-933-720p-9:16", body["model"])
+	require.Equal(t, "9:16", body["aspect_ratio"])
+	require.Equal(t, "720p", body["resolution"])
+	require.Equal(t, []string{"https://cdn.example/a.png"}, body["images"])
+	require.Equal(t, []string{"https://cdn.example/clip.mp4"}, body["videos"])
+	require.Equal(t, []string{"https://cdn.example/voice.mp3"}, body["audios"])
+	require.Equal(t, true, body["generateAudio"])
+	for _, forbidden := range []string{"image_refs", "video_refs", "audio_refs", "ratio", "compliance_enabled"} {
+		require.NotContains(t, body, forbidden)
+	}
+}
+
+func TestSanitizeMoyinH3VideoBodyLeavesOtherModelsUntouched(t *testing.T) {
+	body := map[string]interface{}{
+		"image_refs":         []string{"https://cdn.example/a.png"},
+		"compliance_enabled": true,
+	}
+	sanitizeOriginModelUpstreamBody(body, relaycommon.TaskSubmitReq{
+		ImageRefs: []string{"https://cdn.example/a.png"},
+	}, "minimax-h3")
+	require.Equal(t, []string{"https://cdn.example/a.png"}, body["image_refs"])
+	require.Equal(t, true, body["compliance_enabled"])
+}
+
 func TestApplyCanonicalVideoControlsConvertsStringBooleanBeforeUpstream(t *testing.T) {
 	enabled := true
 	promptCompliance := true
@@ -247,6 +357,28 @@ func TestConvertToOpenAIVideoHidesNewtakeError(t *testing.T) {
 	require.NoError(t, err)
 	lower := strings.ToLower(string(body))
 	for _, forbidden := range []string{"newtake", "api2.", "remote_url", "nt-secret"} {
+		require.NotContains(t, lower, forbidden)
+	}
+	require.Equal(t, "request failed", gjson.GetBytes(body, "error.message").String())
+}
+
+func TestConvertToOpenAIVideoHidesBrambleError(t *testing.T) {
+	task := &model.Task{
+		TaskID:   "task_public",
+		Status:   model.TaskStatusFailure,
+		Progress: "100%",
+		Data: []byte(`{
+			"id":"upstream",
+			"status":"failed",
+			"error":{"message":"Get \"https://api.bramble.video/v1/media/jobs/abc\": timeout"},
+			"remote_url":"https://api.bramble.video/v1/media/assets/xyz",
+			"upstream_task_id":"brk-secret"
+		}`),
+	}
+	body, err := (&TaskAdaptor{}).ConvertToOpenAIVideo(task)
+	require.NoError(t, err)
+	lower := strings.ToLower(string(body))
+	for _, forbidden := range []string{"bramble", "api.bramble", "remote_url", "brk-secret"} {
 		require.NotContains(t, lower, forbidden)
 	}
 	require.Equal(t, "request failed", gjson.GetBytes(body, "error.message").String())

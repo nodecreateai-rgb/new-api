@@ -20,7 +20,6 @@ func TestSeedance25AndImageModelsStayRetired(t *testing.T) {
 		t.Fatal("startup must not republish image models")
 	}
 	for _, want := range []string{
-		`"seedance-2.5",`,
 		`"gpt-image-2",`,
 		`"gpt-image-2.5-flare",`,
 		`"gpt-image-2.5-sunburst",`,

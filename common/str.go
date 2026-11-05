@@ -22,6 +22,27 @@ var (
 )
 
 var upstreamBrandReplacers = strings.NewReplacer(
+	"api.pro666.top", "video-upstream",
+	"www.pro666.top", "video-upstream",
+	"pro666.top", "video-upstream",
+	"pro666", "video-upstream",
+	"晚风 API", "视频服务",
+	"晚风API", "视频服务",
+	"晚风", "视频服务",
+	"Wanfeng", "Video service",
+	"wanfeng", "video service",
+	"sd2-933-720p-9:16", "video-model",
+	"sd2-933", "video-model",
+	"domiex-bramble-8o8ppj-bramble2api-1", "video-upstream",
+	"bramble-generation-upstream", "video-upstream",
+	"bramble2api", "video service",
+	"Bramble2API", "Video service",
+	"BRAMBLE2API", "VIDEO_SERVICE",
+	"api.bramble.video", "video-upstream",
+	"bramble.video", "video-upstream",
+	"Bramble Video", "Video service",
+	"Bramble", "Video service",
+	"bramble", "video service",
 	"mindvideo2api", "video service",
 	"Mindvideo2API", "Video service",
 	"MINDVIDEO2API", "VIDEO_SERVICE",
@@ -539,7 +560,7 @@ func MaskUpstreamProviderInfo(str string) string {
 }
 
 var publicErrorNeedles = []string{
-	"playad", "vibbit", "flova", "flick", "uvera", "apiverse", "newtake", "manyverse", "ribbi", "roboneo", "dola2", "storyhub", "laihua", "workbuddy", "unikey",
+	"playad", "vibbit", "flova", "flick", "bramble", "uvera", "apiverse", "newtake", "manyverse", "ribbi", "roboneo", "dola2", "storyhub", "laihua", "workbuddy", "unikey",
 	"aiimagetovideo", "mindvideo",
 	"remainingseconds", "blockduration", "120000042", `"blocked"`,
 	"vobile", "aiveed", "scnet", "ksai", "grizzly", "sms-activate", "oreate", "myedit", "cyberlink", "mediaio", "pixverse",
@@ -547,6 +568,7 @@ var publicErrorNeedles = []string{
 	"runbios", "rb2api", "api.runbios.ai",
 	"updream", "smsbower", "biliapi", "aniforge", "sed2-fast",
 	"iqiyi", "nadou", "aqy2api", "qcaptcha", "爱奇艺", "纳逗",
+	"pro666", "晚风", "wanfeng", "sd2-933", "claimed by a task plugin",
 	"generation-upstream", "dial tcp", "connection refused", "no such host",
 	"http://", "https://", "status=", "status ",
 }
