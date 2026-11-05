@@ -14,7 +14,7 @@ func TestWanfengModelsListedWithPrices(t *testing.T) {
 	body := string(option)
 	for _, want := range []string{
 		`ensureWanfengRouting()`,
-		`"seedance-2.0-720p-c1":               1.6,`,
+		`"seedance-2.0-720p-c1":               1.5,`,
 	} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("missing %s", want)
@@ -29,7 +29,7 @@ func TestWanfengModelsListedWithPrices(t *testing.T) {
 		`wanfengChannelName = "Video 720p C1"`,
 		`"seedance-2.0-720p-c1":"sd2-933-720p-9:16"`,
 		`https://api.pro666.top`,
-		`¥1.6/次，固定720P，仅9:16`,
+		`¥1.5/次，固定720P，仅9:16`,
 		`最多9张图片、3段视频、3段音频`,
 	} {
 		if !strings.Contains(s, want) {

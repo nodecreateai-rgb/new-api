@@ -312,7 +312,7 @@ func ensureDopioRMBPricing() {
 		"wan-3.0-c2":                         2,
 		"wan3.0-video-prime":                 2,
 		"seedance-2.5":                       4,
-		"seedance-2.0-720p-c1":               1.6,
+		"seedance-2.0-720p-c1":               1.5,
 		"seedance-2.0-fast-720p-c1":          1.8,
 		"seedance-2.0-fast-720p-c2":          1.8,
 		"seedance-2.0-720p-c2":               2.2,
@@ -701,6 +701,10 @@ func ensureDopioRMBPricing() {
 		}
 		if groupPrices["seedance-2.0-720p-c2"] != 2.2 {
 			groupPrices["seedance-2.0-720p-c2"] = 2.2
+			changed = true
+		}
+		if groupPrices["seedance-2.0-720p-c1"] != 1.5 {
+			groupPrices["seedance-2.0-720p-c1"] = 1.5
 			changed = true
 		}
 		if groupPrices["seedance-2.0-720p-c3"] != 1.5 {

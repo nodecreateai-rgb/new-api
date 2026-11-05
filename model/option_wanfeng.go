@@ -45,7 +45,7 @@ func ensureWanfengRouting() error {
 
 	groups := []string{"default", "vip", "svip", "vip1", "vip2", "vip3", "vip6", "vip7", "vip8", "vip9", "vip10", "vip11", "vip13", "llm-vip"}
 	modelDescriptions := map[string]string{
-		"seedance-2.0-720p-c1": "Seedance 2.0 文生/图生/参考生视频（异步，¥1.6/次，固定720P，仅9:16，5-15秒，最多9张图片、3段视频、3段音频）",
+		"seedance-2.0-720p-c1": "Seedance 2.0 文生/图生/参考生视频（异步，¥1.5/次，固定720P，仅9:16，5-15秒，最多9张图片、3段视频、3段音频）",
 	}
 	endpoint := `{"openai-video":{"path":"/v1/videos","method":"POST"}}`
 
