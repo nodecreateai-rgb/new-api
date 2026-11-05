@@ -154,7 +154,32 @@ func TestOriginModelMediaLimitSeedanceC5(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if err := originModelMediaLimit("seedance-2.5-720p-c5", relaycommon.TaskSubmitReq{Videos: videos}); err == nil {
+	c5Images := make([]string, 31)
+	for i := range c5Images {
+		c5Images[i] = "https://example.com/c5i" + strings.Repeat("x", i+1) + ".jpg"
+	}
+	c5Videos := make([]string, 11)
+	for i := range c5Videos {
+		c5Videos[i] = "https://example.com/c5v" + strings.Repeat("x", i+1) + ".mp4"
+	}
+	c5Audios := make([]string, 11)
+	for i := range c5Audios {
+		c5Audios[i] = "https://example.com/c5a" + strings.Repeat("x", i+1) + ".mp3"
+	}
+	if err := originModelMediaLimit("seedance-2.5-720p-c5", relaycommon.TaskSubmitReq{
+		Images: c5Images[:30],
+		Videos: c5Videos[:10],
+		Audios: c5Audios[:10],
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := originModelMediaLimit("seedance-2.5-720p-c5", relaycommon.TaskSubmitReq{Images: c5Images}); err == nil {
+		t.Fatal("expected 2.5 720p c5 image cap")
+	}
+	if err := originModelMediaLimit("seedance-2.5-720p-c5", relaycommon.TaskSubmitReq{Videos: c5Videos}); err == nil {
 		t.Fatal("expected 2.5 720p c5 video cap")
+	}
+	if err := originModelMediaLimit("seedance-2.5-720p-c5", relaycommon.TaskSubmitReq{Audios: c5Audios}); err == nil {
+		t.Fatal("expected 2.5 720p c5 audio cap")
 	}
 }

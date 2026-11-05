@@ -1562,8 +1562,8 @@ func collectUpstreamVideoImageRefs(req relaycommon.TaskSubmitReq) []string {
 	)
 }
 
-// originModelMediaLimit enforces the public Seedance C5 caps: 9 images, no
-// reference videos, 3 audios. Resolution and duration are applied separately.
+// originModelMediaLimit enforces per-model reference caps.
+// Resolution and duration are applied separately.
 func originModelMediaLimit(origin string, req relaycommon.TaskSubmitReq) error {
 	switch strings.TrimSpace(origin) {
 	case "seedance-2.0-mini-720p", "seedance-2.0-fast-480p-c1", "seedance-2.0-fast-720p", "seedance-2.0-480p":
@@ -1651,7 +1651,7 @@ func originModelMediaLimit(origin string, req relaycommon.TaskSubmitReq) error {
 		if len(collectUpstreamVideoAudioRefs(req)) > 3 {
 			return fmt.Errorf("this model accepts at most 3 reference audios")
 		}
-	case "seedance-2.0-720p-c3", "seedance-2.5-720p-c5":
+	case "seedance-2.0-720p-c3":
 		if len(collectUpstreamVideoImageRefs(req)) > 9 {
 			return fmt.Errorf("this model accepts at most 9 reference images")
 		}
@@ -1660,6 +1660,16 @@ func originModelMediaLimit(origin string, req relaycommon.TaskSubmitReq) error {
 		}
 		if len(collectUpstreamVideoAudioRefs(req)) > 3 {
 			return fmt.Errorf("this model accepts at most 3 reference audios")
+		}
+	case "seedance-2.5-720p-c5":
+		if len(collectUpstreamVideoImageRefs(req)) > 30 {
+			return fmt.Errorf("this model accepts at most 30 reference images")
+		}
+		if len(collectUpstreamVideoVideoRefs(req)) > 10 {
+			return fmt.Errorf("this model accepts at most 10 reference videos")
+		}
+		if len(collectUpstreamVideoAudioRefs(req)) > 10 {
+			return fmt.Errorf("this model accepts at most 10 reference audios")
 		}
 	}
 	return nil
