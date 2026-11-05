@@ -942,7 +942,32 @@ func sanitizeXingapi720pVideoBody(body map[string]interface{}, req relaycommon.T
 	if strings.TrimSpace(prompt) == "" {
 		prompt = strings.TrimSpace(req.Prompt)
 	}
-	seconds := body["seconds"]
+	secs := taskSubmitDuration(req)
+	if secs <= 0 {
+		switch v := body["seconds"].(type) {
+		case string:
+			secs, _ = strconv.Atoi(strings.TrimSpace(v))
+		case float64:
+			secs = int(v)
+		case int:
+			secs = v
+		}
+	}
+	if secs <= 0 {
+		switch v := body["duration"].(type) {
+		case float64:
+			secs = int(v)
+		case int:
+			secs = v
+		case string:
+			secs, _ = strconv.Atoi(strings.TrimSpace(v))
+		}
+	}
+	if secs < 4 {
+		secs = 4
+	} else if secs > 15 {
+		secs = 15
+	}
 	for key := range body {
 		delete(body, key)
 	}
@@ -952,9 +977,10 @@ func sanitizeXingapi720pVideoBody(body map[string]interface{}, req relaycommon.T
 	if strings.TrimSpace(prompt) != "" {
 		body["prompt"] = prompt
 	}
-	if seconds != nil {
-		body["seconds"] = seconds
-	}
+	// seedance2.5-V rejects string seconds ("must be an integer") and
+	// mismatched duration aliases. Send both as the same JSON number.
+	body["seconds"] = secs
+	body["duration"] = secs
 	body["resolution"] = "720p"
 	body["ratio"] = ratio
 	body["generate_audio"] = true

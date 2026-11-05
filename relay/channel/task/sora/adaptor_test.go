@@ -340,12 +340,13 @@ func TestSanitizeXingapi720pC2DropsVideosMapsImageRefs(t *testing.T) {
 	require.Equal(t, "seedance-933", body["model"])
 	require.Equal(t, "9:16", body["ratio"])
 	require.Equal(t, "720p", body["resolution"])
-	require.Equal(t, "5", body["seconds"])
+	require.Equal(t, 5, body["seconds"])
+	require.Equal(t, 5, body["duration"])
 	require.Equal(t, true, body["generate_audio"])
 	require.Equal(t, []string{"https://cdn.example/a.png"}, body["images"])
 	require.Equal(t, []string{"https://cdn.example/voice.mp3"}, body["audios"])
 	for _, forbidden := range []string{
-		"image_refs", "video_refs", "audio_refs", "duration", "aspect_ratio", "size", "videos",
+		"image_refs", "video_refs", "audio_refs", "aspect_ratio", "size", "videos",
 	} {
 		require.NotContains(t, body, forbidden)
 	}
@@ -371,10 +372,34 @@ func TestSanitizeXingapi720pC3ForcesPortraitKeepsVideoRefs(t *testing.T) {
 	}, "seedance-2.0-720p-c3")
 
 	require.Equal(t, "9:16", body["ratio"])
+	require.Equal(t, 8, body["seconds"])
+	require.Equal(t, 8, body["duration"])
 	require.Equal(t, []string{"https://cdn.example/clip.mp4"}, body["videos"])
 	require.Equal(t, []string{"https://cdn.example/a.png"}, body["images"])
 	require.NotContains(t, body, "image_refs")
 	require.NotContains(t, body, "video_refs")
+}
+
+func TestSanitizeXingapi720pC5SendsIntegerSecondsAndDuration(t *testing.T) {
+	body := map[string]interface{}{
+		"model":    "seedance2.5-V",
+		"prompt":   "a meadow in sunlight",
+		"seconds":  "4",
+		"duration": 5,
+		"size":     "1280x720",
+	}
+	sanitizeOriginModelUpstreamBody(body, relaycommon.TaskSubmitReq{
+		Prompt:   "a meadow in sunlight",
+		Seconds:  "4",
+		Duration: 4,
+	}, "seedance-2.5-720p-c5")
+
+	require.Equal(t, "seedance2.5-V", body["model"])
+	require.Equal(t, 4, body["seconds"])
+	require.Equal(t, 4, body["duration"])
+	require.Equal(t, "720p", body["resolution"])
+	require.Equal(t, "16:9", body["ratio"])
+	require.NotContains(t, body, "size")
 }
 
 func TestParseTaskResultMapsRunningStatus(t *testing.T) {
