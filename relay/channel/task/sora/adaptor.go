@@ -830,31 +830,59 @@ func sanitizeXxzFast720pC2VideoBody(body map[string]interface{}, req relaycommon
 	if strings.TrimSpace(prompt) == "" {
 		prompt = strings.TrimSpace(req.Prompt)
 	}
-	seconds := body["seconds"]
+	secs := req.Duration
+	if secs <= 0 {
+		switch v := body["seconds"].(type) {
+		case string:
+			secs, _ = strconv.Atoi(strings.TrimSpace(v))
+		case float64:
+			secs = int(v)
+		case int:
+			secs = v
+		}
+	}
+	if secs <= 0 {
+		if v, ok := body["duration"].(float64); ok {
+			secs = int(v)
+		}
+	}
+	if secs < 4 {
+		secs = 5
+	} else if secs > 15 {
+		secs = 15
+	}
 	for key := range body {
 		delete(body, key)
+	}
+	// 521xxz wants the Ark-style content array: one text part, then
+	// image_url/audio_url parts tagged reference_image/reference_audio.
+	content := []map[string]interface{}{}
+	if strings.TrimSpace(prompt) != "" {
+		content = append(content, map[string]interface{}{"type": "text", "text": prompt})
+	}
+	for _, u := range images {
+		content = append(content, map[string]interface{}{
+			"type": "image_url", "role": "reference_image",
+			"image_url": map[string]interface{}{"url": u},
+		})
+	}
+	for _, u := range audios {
+		content = append(content, map[string]interface{}{
+			"type": "audio_url", "role": "reference_audio",
+			"audio_url": map[string]interface{}{"url": u},
+		})
 	}
 	if strings.TrimSpace(model) != "" {
 		body["model"] = model
 	}
+	body["content"] = content
 	if strings.TrimSpace(prompt) != "" {
 		body["prompt"] = prompt
 	}
-	if seconds != nil {
-		body["seconds"] = seconds
-	}
-	body["resolution"] = "720p"
+	body["duration"] = secs
+	body["seconds"] = secs
 	body["ratio"] = ratio
-	body["generate_audio"] = true
-	if len(images) > 0 {
-		body["images"] = images
-		body["image_urls"] = images
-		body["input_reference"] = images[0]
-	}
-	if len(audios) > 0 {
-		body["audios"] = audios
-		body["audio_urls"] = audios
-	}
+	body["resolution"] = "720p"
 }
 
 func collectBodyMedia(body map[string]interface{}, keys ...string) []string {
