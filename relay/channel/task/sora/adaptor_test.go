@@ -231,6 +231,43 @@ func TestSanitizeWanfeng720pC1ForcesPortraitAndKeepsVideoRefs(t *testing.T) {
 	}
 }
 
+func TestSanitizeOpenaifitFast720pC1KeepsRatioAndImageURLs(t *testing.T) {
+	body := map[string]interface{}{
+		"model":              "seedance2.0 fast Deneb",
+		"prompt":             "a cat walking",
+		"seconds":            "5",
+		"duration":           5,
+		"aspect_ratio":       "9:16",
+		"ratio":              "9:16",
+		"size":               "720x1280",
+		"generate_audio":     true,
+		"generateAudio":      true,
+		"image_refs":         []interface{}{"https://cdn.example/a.png"},
+		"compliance_enabled": true,
+	}
+	sanitizeOriginModelUpstreamBody(body, relaycommon.TaskSubmitReq{
+		Prompt:      "a cat walking",
+		Seconds:     "5",
+		Duration:    5,
+		AspectRatio: "9:16",
+		ImageRefs:   []string{"https://cdn.example/a.png"},
+	}, "seedance-2.0-fast-720p-c1")
+
+	require.Equal(t, "seedance2.0 fast Deneb", body["model"])
+	require.Equal(t, "9:16", body["ratio"])
+	require.Equal(t, "720p", body["resolution"])
+	require.Equal(t, "5", body["seconds"])
+	require.Equal(t, []string{"https://cdn.example/a.png"}, body["image_urls"])
+	require.Equal(t, []string{"https://cdn.example/a.png"}, body["images"])
+	for _, forbidden := range []string{
+		"image_refs", "duration", "aspect_ratio", "size",
+		"generate_audio", "generateAudio", "compliance_enabled",
+		"videos", "audios",
+	} {
+		require.NotContains(t, body, forbidden)
+	}
+}
+
 func TestSanitizeMoyinH3VideoBodyLeavesOtherModelsUntouched(t *testing.T) {
 	body := map[string]interface{}{
 		"image_refs":         []string{"https://cdn.example/a.png"},

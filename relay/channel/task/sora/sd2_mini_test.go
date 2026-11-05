@@ -141,7 +141,13 @@ func TestLaihuaSeedanceLocksResolutionFromModel(t *testing.T) {
 	require.Equal(t, true, body["generate_audio"])
 	body = map[string]interface{}{}
 	applyOriginModelDurationLimit(body, relaycommon.TaskSubmitReq{Duration: 2}, "seedance-2.0-fast-720p-c1")
-	require.Equal(t, 4, body["duration"])
+	require.Equal(t, 5, body["duration"])
+	body = map[string]interface{}{}
+	applyOriginModelDurationLimit(body, relaycommon.TaskSubmitReq{Duration: 8}, "seedance-2.0-fast-720p-c1")
+	require.Equal(t, 10, body["duration"])
+	body = map[string]interface{}{}
+	applyOriginModelDurationLimit(body, relaycommon.TaskSubmitReq{}, "seedance-2.0-fast-720p-c1")
+	require.Equal(t, 15, body["duration"])
 
 	body = map[string]interface{}{"size": "1080x1920"}
 	applyOriginModelResolution(body, "wan-3.0")

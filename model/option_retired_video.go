@@ -8,7 +8,6 @@ var deadVideoModels = []string{
 	"sd2-c7", "sd2-c6", "sd2.5",
 	"seedance-2.0-mini-480p",
 	"wan-3.0", "wan-3.0-c1",
-	"seedance-2.0-fast-720p-c1",
 	// mindvideo2api (Video 480p C3)
 	"wan-3.0-480p-c3", "seedance-2.0-480p-c3", "seedance-2.0-mini-480p-c3",
 	"seedance-2.0-fast-480p-c3", "seedance-2.5-c3", "minimax-h3-c3",

@@ -196,6 +196,31 @@ func TestPublicErrorMessageHidesFlova(t *testing.T) {
 	}
 }
 
+func TestPublicErrorMessageHidesOpenaifit(t *testing.T) {
+	got := PublicErrorMessage("openai.fit seedance2.0 fast Deneb failed")
+	if got != "request failed" {
+		t.Fatalf("got %q", got)
+	}
+	got = PublicErrorMessage(`Post "https://openai.fit/v1/videos": dial tcp: connection refused`)
+	if got != "request failed" {
+		t.Fatalf("got %q", got)
+	}
+	got = PublicErrorMessage("No available channel for model seedance2.0 fast Deneb under group default")
+	if got != "request failed" {
+		t.Fatalf("model: %q", got)
+	}
+}
+
+func TestMaskUpstreamProviderInfoOpenaifit(t *testing.T) {
+	got := MaskUpstreamProviderInfo("seedance2.0 fast Deneb openai.fit Openaifit Deneb")
+	lower := strings.ToLower(got)
+	for _, forbidden := range []string{"openai.fit", "openaifit", "deneb"} {
+		if strings.Contains(lower, forbidden) {
+			t.Fatalf("leaked %q in %q", forbidden, got)
+		}
+	}
+}
+
 func TestPublicErrorMessageHidesWanfeng(t *testing.T) {
 	got := PublicErrorMessage("晚风 API api.pro666.top sd2-933-720p-9:16 failed")
 	if got != "request failed" {

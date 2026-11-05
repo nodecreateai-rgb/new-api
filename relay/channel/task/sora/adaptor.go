@@ -503,8 +503,10 @@ func applyOriginModelDurationLimit(body map[string]interface{}, req relaycommon.
 		applyCatalogDurationLimit(body, req, 15)
 	case "kling-o3-omni":
 		applyCatalogDurationBounds(body, req, 5, 3, 12)
-	case "seedance-2.0-480p", "seedance-2.0-fast-480p-c1", "seedance-2.0-fast-720p", "seedance-2.0-fast-720p-c1":
+	case "seedance-2.0-480p", "seedance-2.0-fast-480p-c1", "seedance-2.0-fast-720p":
 		applyCatalogDurationBounds(body, req, 5, 4, 15)
+	case "seedance-2.0-fast-720p-c1":
+		applyCatalogDurationChoices(body, req, 15, 5, 10, 15)
 	case "seedance-2.5-480p":
 		applyCatalogDurationBounds(body, req, 5, 4, 30)
 	case "seedance-2.0-mini-720p-c2", "seedance-2.0-mini-720P-c2":
@@ -567,6 +569,8 @@ func sanitizeOriginModelUpstreamBody(body map[string]interface{}, req relaycommo
 		sanitizeMoyinH3VideoBody(body, req)
 	case "seedance-2.0-720p-c1":
 		sanitizeWanfeng720pC1VideoBody(body, req)
+	case "seedance-2.0-fast-720p-c1":
+		sanitizeOpenaifitFast720pC1VideoBody(body, req)
 	}
 }
 
@@ -673,6 +677,63 @@ func sanitizeWanfeng720pC1VideoBody(body map[string]interface{}, req relaycommon
 		body["audios"] = audios
 	} else {
 		delete(body, "audios")
+	}
+}
+
+// sanitizeOpenaifitFast720pC1VideoBody keeps only fields this 720p Fast C1
+// route accepts. The upstream rejects unknown keys and duration/aspect aliases
+// sent together (seconds+duration, ratio+aspect_ratio+size).
+func sanitizeOpenaifitFast720pC1VideoBody(body map[string]interface{}, req relaycommon.TaskSubmitReq) {
+	if body == nil {
+		return
+	}
+	images := collectUpstreamVideoImageRefs(req)
+	if len(images) == 0 {
+		images = collectBodyMedia(body,
+			"images", "image_refs", "image_urls", "reference_images", "extra_images",
+			"image", "image_url", "reference_image", "input_reference")
+	}
+	ratio := ""
+	for _, key := range []string{"ratio", "aspect_ratio", "aspect"} {
+		if s, ok := body[key].(string); ok {
+			s = strings.TrimSpace(s)
+			if s != "" {
+				ratio = s
+				break
+			}
+		}
+	}
+	if ratio == "" {
+		ratio = strings.TrimSpace(req.AspectRatio)
+	}
+	switch ratio {
+	case "16:9", "9:16", "1:1", "4:3", "3:4":
+	default:
+		ratio = "16:9"
+	}
+	model, _ := body["model"].(string)
+	prompt, _ := body["prompt"].(string)
+	if strings.TrimSpace(prompt) == "" {
+		prompt = strings.TrimSpace(req.Prompt)
+	}
+	seconds := body["seconds"]
+	for key := range body {
+		delete(body, key)
+	}
+	if strings.TrimSpace(model) != "" {
+		body["model"] = model
+	}
+	if strings.TrimSpace(prompt) != "" {
+		body["prompt"] = prompt
+	}
+	if seconds != nil {
+		body["seconds"] = seconds
+	}
+	body["resolution"] = "720p"
+	body["ratio"] = ratio
+	if len(images) > 0 {
+		body["image_urls"] = images
+		body["images"] = images
 	}
 }
 
@@ -801,6 +862,36 @@ func applyCatalogDurationRange(body map[string]interface{}, req relaycommon.Task
 
 func applyCatalogDurationLimit(body map[string]interface{}, req relaycommon.TaskSubmitReq, max int) {
 	applyCatalogDurationRange(body, req, max, max)
+}
+
+func applyCatalogDurationChoices(body map[string]interface{}, req relaycommon.TaskSubmitReq, fallback int, choices ...int) {
+	if body == nil || len(choices) == 0 {
+		return
+	}
+	duration := taskSubmitDuration(req)
+	if duration <= 0 {
+		duration = fallback
+	}
+	best := choices[0]
+	bestDist := duration - best
+	if bestDist < 0 {
+		bestDist = -bestDist
+	}
+	for _, choice := range choices[1:] {
+		dist := duration - choice
+		if dist < 0 {
+			dist = -dist
+		}
+		if dist < bestDist || (dist == bestDist && choice > best) {
+			best = choice
+			bestDist = dist
+		}
+	}
+	if best <= 0 {
+		return
+	}
+	body["duration"] = best
+	body["seconds"] = strconv.Itoa(best)
 }
 
 func normalizeSoraVideoStatus(status string) string {
@@ -1258,6 +1349,16 @@ func originModelMediaLimit(origin string, req relaycommon.TaskSubmitReq) error {
 		}
 		if len(collectUpstreamVideoAudioRefs(req)) > 3 {
 			return fmt.Errorf("this model accepts at most 3 reference audios")
+		}
+	case "seedance-2.0-fast-720p-c1":
+		if len(collectUpstreamVideoVideoRefs(req)) > 0 {
+			return fmt.Errorf("this model accepts at most 0 reference videos")
+		}
+		if len(collectUpstreamVideoImageRefs(req)) > 9 {
+			return fmt.Errorf("this model accepts at most 9 reference images")
+		}
+		if len(collectUpstreamVideoAudioRefs(req)) > 0 {
+			return fmt.Errorf("this model accepts at most 0 reference audios")
 		}
 	}
 	return nil

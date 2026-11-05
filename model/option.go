@@ -313,6 +313,7 @@ func ensureDopioRMBPricing() {
 		"wan3.0-video-prime":                 2,
 		"seedance-2.5":                       4,
 		"seedance-2.0-720p-c1":               1.6,
+		"seedance-2.0-fast-720p-c1":          1.8,
 		"anthropic/claude-opus-5-5":          10000000,
 	}
 	targetGroupRatios := map[string]float64{
@@ -894,6 +895,9 @@ func ensureDopioRMBPricing() {
 	}
 	if err := ensureWanfengRouting(); err != nil {
 		common.SysLog("failed to enforce Video 720p C1 gateway routing: " + err.Error())
+	}
+	if err := ensureOpenaifitRouting(); err != nil {
+		common.SysLog("failed to enforce Video Fast 720p C1 gateway routing: " + err.Error())
 	}
 	common.SysLog("enforced Dopio RMB pricing incl sd2.5=0.5 per call, sd2-c7=0.5 per call, sd2-fast=1 per call, vip6 Seedance 720p fast=1/full=2, oauth2=0.3, pay=0.5, sd2-c6=0.5, seedance-2.0-mini-480p=0.4, seedance-2.0-mini-720p=1, sd2-c11=2.5, sd2-c12=3, anthropic/claude-opus-5-5=10000000, llm-vip opus free, Price=1, USDExchangeRate=1, quota_display_type=CNY")
 }
@@ -3216,7 +3220,6 @@ func ensureStoryhubSeedanceRoutingClickHouse(neutralName, modelsCSV, mappingJSON
 // permanentlyRetiredPublicModels stay off the catalog. Startup used to publish
 // them again from Mito, Fotor, and the price enforcer after an earlier retire.
 var permanentlyRetiredPublicModels = []string{
-	"seedance-2.0-fast-720p-c1",
 	"seedance-2.0-mini",
 	"wan-3.0-480p-c2",
 	"gpt-image-2",
