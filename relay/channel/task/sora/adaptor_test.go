@@ -353,7 +353,7 @@ func TestSanitizeXingapi720pC2DropsVideosMapsImageRefs(t *testing.T) {
 
 func TestSanitizeXingapi720pC3ForcesPortraitKeepsVideoRefs(t *testing.T) {
 	body := map[string]interface{}{
-		"model":        "seedance2.0-933-Q",
+		"model":        "seedance-933",
 		"prompt":       "a cat walking",
 		"seconds":      "8",
 		"aspect_ratio": "16:9",
@@ -370,6 +370,7 @@ func TestSanitizeXingapi720pC3ForcesPortraitKeepsVideoRefs(t *testing.T) {
 		AudioRefs:   []string{"https://cdn.example/voice.mp3"},
 	}, "seedance-2.0-720p-c3")
 
+	require.Equal(t, "seedance-933", body["model"])
 	require.Equal(t, "9:16", body["ratio"])
 	require.Equal(t, 8, body["seconds"])
 	require.Equal(t, []string{"https://cdn.example/clip.mp4"}, body["videos"])

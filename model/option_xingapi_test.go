@@ -30,7 +30,7 @@ func TestXingapiModelsListedWithPrices(t *testing.T) {
 	for _, want := range []string{
 		`xingapiChannelName = "Video 720p C2"`,
 		`"seedance-2.0-720p-c2":"seedance-933"`,
-		`"seedance-2.0-720p-c3":"seedance2.0-933-Q"`,
+		`"seedance-2.0-720p-c3":"seedance-933"`,
 		`"seedance-2.5-720p-c5":"seedance2.5-V"`,
 		`https://xingapi.top`,
 		`¥2.2/次，固定720P，4-15秒`,
@@ -42,6 +42,12 @@ func TestXingapiModelsListedWithPrices(t *testing.T) {
 		if !strings.Contains(s, want) {
 			t.Fatalf("missing %s", want)
 		}
+	}
+	if strings.Contains(s, "seedance2.0-933-Q") {
+		t.Fatal("720p c3 must use the discounted 933 upstream, not 933-Q")
+	}
+	if strings.Contains(s, "sk-") {
+		t.Fatal("channel key must come from env, not a hardcoded secret")
 	}
 	descStart := strings.Index(s, "modelDescriptions")
 	descEnd := strings.Index(s, "endpoint :=")

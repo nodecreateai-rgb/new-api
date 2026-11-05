@@ -21,7 +21,7 @@ const xingapiChannelName = "Video 720p C2"
 
 func ensureXingapiRouting() error {
 	const modelsCSV = "seedance-2.0-720p-c2,seedance-2.0-720p-c3,seedance-2.5-720p-c5"
-	const mappingJSON = `{"seedance-2.0-720p-c2":"seedance-933","seedance-2.0-720p-c3":"seedance2.0-933-Q","seedance-2.5-720p-c5":"seedance2.5-V"}`
+	const mappingJSON = `{"seedance-2.0-720p-c2":"seedance-933","seedance-2.0-720p-c3":"seedance-933","seedance-2.5-720p-c5":"seedance2.5-V"}`
 	const groupsCSV = "default,vip,svip,vip1,vip2,vip3,vip6,vip7,vip8,vip9,vip10,vip11,vip13,llm-vip"
 	baseURL := strings.TrimSpace(os.Getenv("XINGAPI_BASE_URL"))
 	if baseURL == "" {
@@ -42,9 +42,10 @@ func ensureXingapiRouting() error {
 		var existing Channel
 		if err := DB.Where("name = ?", xingapiChannelName).First(&existing).Error; err == nil && strings.TrimSpace(existing.Key) != "" {
 			key = existing.Key
-		} else {
-			key = "sk-6ecc701044d06437ca79ecd5f4036cd0f139fff4fd8d9468709a530e71f4be16"
 		}
+	}
+	if key == "" {
+		return errors.New("XINGAPI_GATEWAY_KEY or XINGAPI_API_KEY is required")
 	}
 
 	groups := []string{"default", "vip", "svip", "vip1", "vip2", "vip3", "vip6", "vip7", "vip8", "vip9", "vip10", "vip11", "vip13", "llm-vip"}
