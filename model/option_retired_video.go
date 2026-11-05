@@ -16,6 +16,8 @@ var deadVideoModels = []string{
 	"seedance-2.0-fast-720p", "seedance-2.0-480p",
 	// bramble2api
 	"wan3.0-video-prime", "seedance-2.5",
+	// openai.fit (Video Fast 720p C1)
+	"seedance-2.0-fast-720p-c1",
 }
 
 // deadVideoChannels served only dead models, so they are switched off.
@@ -25,6 +27,7 @@ var deadVideoChannels = []string{
 	"Flick Video", "Newtake Video", "Playad Video",
 	"Video 480p C3", "Video Seedance C5",
 	"Bramble Video",
+	"Video Fast 720p C1",
 }
 
 // retireDeadVideoModels runs after every ensure step, because several of

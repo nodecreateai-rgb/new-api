@@ -1,7 +1,6 @@
 package model
 
-// Playad Video stays disabled. Its former public id is listed again by
-// ensureOpenaifitRouting, so this seeder must not strip that model.
+// Playad Video stays disabled. Its former public id is retired separately.
 var playadPublicModels = []string{}
 
 const playadChannelName = "Playad Video"
