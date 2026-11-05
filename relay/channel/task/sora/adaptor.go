@@ -281,7 +281,7 @@ func (a *TaskAdaptor) ForceApplyBillingRatios(info *relaycommon.RelayInfo) bool 
 // IDs are fixed-price per generated video, independent of requested duration.
 func (a *TaskAdaptor) UseRequestBillingRatios(info *relaycommon.RelayInfo) bool {
 	switch strings.TrimSpace(info.OriginModelName) {
-	case "sd2.5", "sd2-mini", "sd2-fast", "sd2-c6", "sd2-c7", "seedance-720", "seedance-2.0-mini", "seedance-2.0-mini-480p", "seedance-2.0-mini-720p", "seedance-2.0-mini-480p-c2", "seedance-2.0-mini-720p-c2", "seedance-2.0-fast", "seedance-2.0-fast-480p", "seedance-2.0-fast-480p-c1", "grok-imagine-720p", "seedance-2.0-fast-720p", "seedance-2.0-fast-720p-c1", "seedance-2.0-fast-720p-c2", "seedance-2.0-720p", "seedance-2.0-1080p", "seedance-2.0", "seedance-2.5", "seedance-2.0-480p", "seedance-2.5-480p", "seedance-2.5-720p", "seedance-2.5-1080p", "seedance-2.0-c1", "seedance-2.5-c1", "seedance-2.5-c2", "seedance-2.0-c2", "seedance-2.0-480p-c2", "seedance-2.0-fast-c2", "seedance-2.0-fast-480p-c2", "seedance-2.0-mini-c2", "wan-3.0-c2", "wan-3.0-480p-c2", "wan-3.0", "wan-3.0-c1", "wan-3.0-480p", "wan-3.0-480p-c3", "seedance-2.0-480p-c3", "seedance-2.0-mini-480p-c3", "seedance-2.0-fast-480p-c3", "seedance-2.5-c3", "minimax-h3", "minimax-h3-max", "minimax-h3-2k", "minimax-h3-768p", "seedance-2.5-720p-c4", "seedance-2.0-720p-c1", "sora-2", "kling-o3", "kling-o3-omni", "wan3.0-video-prime":
+	case "sd2.5", "sd2-mini", "sd2-fast", "sd2-c6", "sd2-c7", "seedance-720", "seedance-2.0-mini", "seedance-2.0-mini-480p", "seedance-2.0-mini-720p", "seedance-2.0-mini-480p-c2", "seedance-2.0-mini-720p-c2", "seedance-2.0-fast", "seedance-2.0-fast-480p", "seedance-2.0-fast-480p-c1", "grok-imagine-720p", "seedance-2.0-fast-720p", "seedance-2.0-fast-720p-c1", "seedance-2.0-fast-720p-c2", "seedance-2.0-720p", "seedance-2.0-1080p", "seedance-2.0", "seedance-2.5", "seedance-2.0-480p", "seedance-2.5-480p", "seedance-2.5-720p", "seedance-2.5-1080p", "seedance-2.0-c1", "seedance-2.5-c1", "seedance-2.5-c2", "seedance-2.0-c2", "seedance-2.0-480p-c2", "seedance-2.0-fast-c2", "seedance-2.0-fast-480p-c2", "seedance-2.0-mini-c2", "wan-3.0-c2", "wan-3.0-480p-c2", "wan-3.0", "wan-3.0-c1", "wan-3.0-480p", "wan-3.0-480p-c3", "seedance-2.0-480p-c3", "seedance-2.0-mini-480p-c3", "seedance-2.0-fast-480p-c3", "seedance-2.5-c3", "minimax-h3", "minimax-h3-max", "minimax-h3-2k", "minimax-h3-768p", "seedance-2.5-720p-c4", "seedance-2.0-720p-c1", "seedance-2.0-720p-c2", "seedance-2.0-720p-c3", "seedance-2.5-720p-c5", "sora-2", "kling-o3", "kling-o3-omni", "wan3.0-video-prime":
 		return false
 	default:
 		return true
@@ -534,7 +534,7 @@ func applyOriginModelDurationLimit(body map[string]interface{}, req relaycommon.
 		applyCatalogDurationBounds(body, req, 5, 4, 15)
 	case "seedance-2.0-fast-720p-c1":
 		applyCatalogDurationChoices(body, req, 15, 5, 10, 15)
-	case "seedance-2.0-fast-720p-c2":
+	case "seedance-2.0-fast-720p-c2", "seedance-2.0-720p-c2", "seedance-2.0-720p-c3", "seedance-2.5-720p-c5":
 		applyCatalogDurationBounds(body, req, 4, 4, 15)
 	case "seedance-2.5-480p":
 		applyCatalogDurationBounds(body, req, 5, 4, 30)
@@ -586,7 +586,7 @@ func applyOriginModelAudio(body map[string]interface{}, originModel string) {
 		return
 	}
 	switch strings.TrimSpace(originModel) {
-	case "seedance-2.0-fast-720p-c1", "seedance-2.0-fast-720p-c2", "seedance-2.0-720p-c1":
+	case "seedance-2.0-fast-720p-c1", "seedance-2.0-fast-720p-c2", "seedance-2.0-720p-c1", "seedance-2.0-720p-c2", "seedance-2.0-720p-c3", "seedance-2.5-720p-c5":
 		body["generate_audio"] = true
 		body["generateAudio"] = true
 	}
@@ -602,6 +602,8 @@ func sanitizeOriginModelUpstreamBody(body map[string]interface{}, req relaycommo
 		sanitizeOpenaifitFast720pC1VideoBody(body, req)
 	case "seedance-2.0-fast-720p-c2":
 		sanitizeXxzFast720pC2VideoBody(body, req)
+	case "seedance-2.0-720p-c2", "seedance-2.0-720p-c3", "seedance-2.5-720p-c5":
+		sanitizeXingapi720pVideoBody(body, req, originModel)
 	}
 }
 
@@ -885,6 +887,91 @@ func sanitizeXxzFast720pC2VideoBody(body map[string]interface{}, req relaycommon
 	body["resolution"] = "720p"
 }
 
+// sanitizeXingapi720pVideoBody maps public image_refs/audio_refs/video_refs
+// onto the OpenAI-video fields this 720p C2 route's upstream accepts.
+func sanitizeXingapi720pVideoBody(body map[string]interface{}, req relaycommon.TaskSubmitReq, originModel string) {
+	if body == nil {
+		return
+	}
+	originModel = strings.TrimSpace(originModel)
+	images := collectUpstreamVideoImageRefs(req)
+	if len(images) == 0 {
+		images = collectBodyMedia(body,
+			"images", "image_refs", "image_urls", "reference_images", "extra_images",
+			"image", "image_url", "reference_image", "input_reference")
+	}
+	videos := collectUpstreamVideoVideoRefs(req)
+	if len(videos) == 0 {
+		videos = collectBodyMedia(body,
+			"videos", "video_refs", "video_urls", "reference_videos", "extra_videos",
+			"video", "video_url", "reference_video")
+	}
+	audios := collectUpstreamVideoAudioRefs(req)
+	if len(audios) == 0 {
+		audios = collectBodyMedia(body,
+			"audios", "audio_refs", "audio_urls", "reference_audios", "extra_audios",
+			"audio", "audio_url", "reference_audio")
+	}
+	if originModel == "seedance-2.0-720p-c2" {
+		videos = nil
+	}
+	ratio := ""
+	for _, key := range []string{"ratio", "aspect_ratio", "aspect"} {
+		if s, ok := body[key].(string); ok {
+			s = strings.TrimSpace(s)
+			if s != "" {
+				ratio = s
+				break
+			}
+		}
+	}
+	if ratio == "" {
+		ratio = strings.TrimSpace(req.AspectRatio)
+	}
+	if originModel == "seedance-2.0-720p-c3" {
+		ratio = "9:16"
+	} else {
+		switch ratio {
+		case "16:9", "9:16", "1:1", "4:3", "3:4", "21:9":
+		default:
+			ratio = "16:9"
+		}
+	}
+	model, _ := body["model"].(string)
+	prompt, _ := body["prompt"].(string)
+	if strings.TrimSpace(prompt) == "" {
+		prompt = strings.TrimSpace(req.Prompt)
+	}
+	seconds := body["seconds"]
+	for key := range body {
+		delete(body, key)
+	}
+	if strings.TrimSpace(model) != "" {
+		body["model"] = model
+	}
+	if strings.TrimSpace(prompt) != "" {
+		body["prompt"] = prompt
+	}
+	if seconds != nil {
+		body["seconds"] = seconds
+	}
+	body["resolution"] = "720p"
+	body["ratio"] = ratio
+	body["generate_audio"] = true
+	if len(images) > 0 {
+		body["images"] = images
+		body["image_urls"] = images
+	}
+	if len(videos) > 0 {
+		body["videos"] = videos
+		body["video_urls"] = videos
+	}
+	if len(audios) > 0 {
+		body["audios"] = audios
+		body["audio_urls"] = audios
+	}
+}
+
 func collectBodyMedia(body map[string]interface{}, keys ...string) []string {
 	if body == nil {
 		return nil
@@ -929,7 +1016,7 @@ func applyOriginModelResolution(body map[string]interface{}, originModel string)
 	case "seedance-2.0-480p", "seedance-2.0-fast-480p-c1", "seedance-2.5-480p", "seedance-2.0-mini-480p-c2", "seedance-2.0-fast-480p", "seedance-2.0-480p-c2", "seedance-2.0-fast-480p-c2", "wan-3.0-480p-c2", "wan-3.0", "wan-3.0-c1", "wan-3.0-480p", "wan-3.0-480p-c3", "seedance-2.0-480p-c3", "seedance-2.0-mini-480p-c3", "seedance-2.0-fast-480p-c3", "seedance-2.5-c3", "seedance-2.5":
 		body["resolution"] = "480p"
 		body["size"] = "480p"
-	case "seedance-2.0-720p", "seedance-2.5-720p", "seedance-2.5-720p-c4", "seedance-2.0-mini-720p", "seedance-2.0-mini-720p-c2", "seedance-2.0-mini-720P-c2", "grok-imagine-720p", "sora-2", "seedance-2.0-fast-720p", "seedance-2.0-fast-720p-c1", "seedance-2.0-fast-720p-c2", "seedance-2.0-720p-c1", "wan3.0-video-prime":
+	case "seedance-2.0-720p", "seedance-2.5-720p", "seedance-2.5-720p-c4", "seedance-2.5-720p-c5", "seedance-2.0-mini-720p", "seedance-2.0-mini-720p-c2", "seedance-2.0-mini-720P-c2", "grok-imagine-720p", "sora-2", "seedance-2.0-fast-720p", "seedance-2.0-fast-720p-c1", "seedance-2.0-fast-720p-c2", "seedance-2.0-720p-c1", "seedance-2.0-720p-c2", "seedance-2.0-720p-c3", "wan3.0-video-prime":
 		body["resolution"] = "720p"
 		body["size"] = "720p"
 	case "minimax-h3-2k", "minimax-h3-c3":
@@ -1163,15 +1250,15 @@ func (a *TaskAdaptor) ParseTaskResult(respBody []byte) (*relaycommon.TaskInfo, e
 		Code: 0,
 	}
 
-	switch resTask.Status {
-	case "queued", "pending":
+	switch normalizeSoraVideoStatus(resTask.Status) {
+	case dto.VideoStatusQueued:
 		taskResult.Status = model.TaskStatusQueued
-	case "processing", "in_progress":
+	case dto.VideoStatusInProgress:
 		taskResult.Status = model.TaskStatusInProgress
-	case "completed":
+	case dto.VideoStatusCompleted:
 		taskResult.Status = model.TaskStatusSuccess
 		taskResult.Url = firstNonEmptyVideoURL(resTask.VideoURL, resTask.URL, resTask.OutputURL, resTask.DownloadURL)
-	case "failed", "cancelled":
+	case dto.VideoStatusFailed:
 		taskResult.Status = model.TaskStatusFailure
 		if resTask.Error != nil {
 			taskResult.Reason = resTask.Error.Message
@@ -1522,6 +1609,26 @@ func originModelMediaLimit(origin string, req relaycommon.TaskSubmitReq) error {
 		}
 		if len(audios) > 0 && len(images) == 0 {
 			return fmt.Errorf("this model requires at least 1 reference image when using reference audio")
+		}
+	case "seedance-2.0-720p-c2":
+		if len(collectUpstreamVideoVideoRefs(req)) > 0 {
+			return fmt.Errorf("this model accepts at most 0 reference videos")
+		}
+		if len(collectUpstreamVideoImageRefs(req)) > 9 {
+			return fmt.Errorf("this model accepts at most 9 reference images")
+		}
+		if len(collectUpstreamVideoAudioRefs(req)) > 3 {
+			return fmt.Errorf("this model accepts at most 3 reference audios")
+		}
+	case "seedance-2.0-720p-c3", "seedance-2.5-720p-c5":
+		if len(collectUpstreamVideoImageRefs(req)) > 9 {
+			return fmt.Errorf("this model accepts at most 9 reference images")
+		}
+		if len(collectUpstreamVideoVideoRefs(req)) > 3 {
+			return fmt.Errorf("this model accepts at most 3 reference videos")
+		}
+		if len(collectUpstreamVideoAudioRefs(req)) > 3 {
+			return fmt.Errorf("this model accepts at most 3 reference audios")
 		}
 	}
 	return nil

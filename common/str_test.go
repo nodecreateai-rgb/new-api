@@ -242,6 +242,31 @@ func TestMaskUpstreamProviderInfoOpenaifit(t *testing.T) {
 	}
 }
 
+func TestPublicErrorMessageHidesXingapi(t *testing.T) {
+	got := PublicErrorMessage("xingapi seedance-933 failed")
+	if got != "request failed" {
+		t.Fatalf("got %q", got)
+	}
+	got = PublicErrorMessage(`Post "https://xingapi.top/v1/videos": dial tcp: connection refused`)
+	if got != "request failed" {
+		t.Fatalf("got %q", got)
+	}
+	got = PublicErrorMessage("No available channel for model seedance2.5-V under group default")
+	if got != "request failed" {
+		t.Fatalf("model: %q", got)
+	}
+}
+
+func TestMaskUpstreamProviderInfoXingapi(t *testing.T) {
+	got := MaskUpstreamProviderInfo("seedance-933 seedance2.0-933-Q seedance2.5-V xingapi.top 星光API")
+	lower := strings.ToLower(got)
+	for _, forbidden := range []string{"xingapi", "星光", "seedance-933", "933-q", "seedance2.5"} {
+		if strings.Contains(got, forbidden) || strings.Contains(lower, forbidden) {
+			t.Fatalf("leaked %q in %q", forbidden, got)
+		}
+	}
+}
+
 func TestPublicErrorMessageHidesWanfeng(t *testing.T) {
 	got := PublicErrorMessage("晚风 API api.pro666.top sd2-933-720p-9:16 failed")
 	if got != "request failed" {

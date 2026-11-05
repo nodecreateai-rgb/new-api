@@ -22,6 +22,15 @@ var (
 )
 
 var upstreamBrandReplacers = strings.NewReplacer(
+	"xingapi.top", "video-upstream",
+	"XingAPI", "Video service",
+	"xingapi", "video service",
+	"星光API", "视频服务",
+	"星光", "视频服务",
+	"seedance2.0-933-Q", "video-model",
+	"seedance2.0-933-C", "video-model",
+	"seedance2.5-V", "video-model",
+	"seedance-933", "video-model",
 	"api.pro666.top", "video-upstream",
 	"www.pro666.top", "video-upstream",
 	"pro666.top", "video-upstream",
@@ -585,7 +594,7 @@ var publicErrorNeedles = []string{
 	"runbios", "rb2api", "api.runbios.ai",
 	"updream", "smsbower", "biliapi", "aniforge", "sed2-fast",
 	"iqiyi", "nadou", "aqy2api", "qcaptcha", "爱奇艺", "纳逗",
-	"pro666", "晚风", "wanfeng", "sd2-933", "openai.fit", "openaifit", "deneb", "521xxz", "521ai", "claimed by a task plugin",
+	"pro666", "晚风", "wanfeng", "sd2-933", "openai.fit", "openaifit", "deneb", "521xxz", "521ai", "xingapi", "星光", "seedance-933", "seedance2.0-933", "seedance2.5-v", "claimed by a task plugin",
 	"generation-upstream", "dial tcp", "connection refused", "no such host",
 	"http://", "https://", "status=", "status ",
 }

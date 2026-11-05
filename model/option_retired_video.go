@@ -14,6 +14,8 @@ var deadVideoModels = []string{
 	// aqy2api (Video Seedance C5)
 	"seedance-2.0-mini-720p", "seedance-2.0-fast-480p-c1", "wan-3.0-480p",
 	"seedance-2.0-fast-720p", "seedance-2.0-480p",
+	// bramble2api
+	"wan3.0-video-prime", "seedance-2.5",
 }
 
 // deadVideoChannels served only dead models, so they are switched off.
@@ -22,6 +24,7 @@ var deadVideoChannels = []string{
 	"Flova Video", "Flova Video 2", "Flova Video 3",
 	"Flick Video", "Newtake Video", "Playad Video",
 	"Video 480p C3", "Video Seedance C5",
+	"Bramble Video",
 }
 
 // retireDeadVideoModels runs after every ensure step, because several of

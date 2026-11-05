@@ -315,6 +315,78 @@ func TestSanitizeXxzFast720pC2DropsVideosKeepsAudio(t *testing.T) {
 	}
 }
 
+func TestSanitizeXingapi720pC2DropsVideosMapsImageRefs(t *testing.T) {
+	body := map[string]interface{}{
+		"model":        "seedance-933",
+		"prompt":       "a cat walking",
+		"seconds":      "5",
+		"duration":     5,
+		"aspect_ratio": "9:16",
+		"size":         "720x1280",
+		"image_refs":   []interface{}{"https://cdn.example/a.png"},
+		"video_refs":   []interface{}{"https://cdn.example/clip.mp4"},
+		"audio_refs":   []interface{}{"https://cdn.example/voice.mp3"},
+	}
+	sanitizeOriginModelUpstreamBody(body, relaycommon.TaskSubmitReq{
+		Prompt:      "a cat walking",
+		Seconds:     "5",
+		Duration:    5,
+		AspectRatio: "9:16",
+		ImageRefs:   []string{"https://cdn.example/a.png"},
+		VideoRefs:   []string{"https://cdn.example/clip.mp4"},
+		AudioRefs:   []string{"https://cdn.example/voice.mp3"},
+	}, "seedance-2.0-720p-c2")
+
+	require.Equal(t, "seedance-933", body["model"])
+	require.Equal(t, "9:16", body["ratio"])
+	require.Equal(t, "720p", body["resolution"])
+	require.Equal(t, "5", body["seconds"])
+	require.Equal(t, true, body["generate_audio"])
+	require.Equal(t, []string{"https://cdn.example/a.png"}, body["images"])
+	require.Equal(t, []string{"https://cdn.example/voice.mp3"}, body["audios"])
+	for _, forbidden := range []string{
+		"image_refs", "video_refs", "audio_refs", "duration", "aspect_ratio", "size", "videos",
+	} {
+		require.NotContains(t, body, forbidden)
+	}
+}
+
+func TestSanitizeXingapi720pC3ForcesPortraitKeepsVideoRefs(t *testing.T) {
+	body := map[string]interface{}{
+		"model":        "seedance2.0-933-Q",
+		"prompt":       "a cat walking",
+		"seconds":      "8",
+		"aspect_ratio": "16:9",
+		"image_refs":   []interface{}{"https://cdn.example/a.png"},
+		"video_refs":   []interface{}{"https://cdn.example/clip.mp4"},
+		"audio_refs":   []interface{}{"https://cdn.example/voice.mp3"},
+	}
+	sanitizeOriginModelUpstreamBody(body, relaycommon.TaskSubmitReq{
+		Prompt:      "a cat walking",
+		Seconds:     "8",
+		AspectRatio: "16:9",
+		ImageRefs:   []string{"https://cdn.example/a.png"},
+		VideoRefs:   []string{"https://cdn.example/clip.mp4"},
+		AudioRefs:   []string{"https://cdn.example/voice.mp3"},
+	}, "seedance-2.0-720p-c3")
+
+	require.Equal(t, "9:16", body["ratio"])
+	require.Equal(t, []string{"https://cdn.example/clip.mp4"}, body["videos"])
+	require.Equal(t, []string{"https://cdn.example/a.png"}, body["images"])
+	require.NotContains(t, body, "image_refs")
+	require.NotContains(t, body, "video_refs")
+}
+
+func TestParseTaskResultMapsRunningStatus(t *testing.T) {
+	a := &TaskAdaptor{}
+	info, err := a.ParseTaskResult([]byte(`{"id":"videoprep_x","status":"running"}`))
+	require.NoError(t, err)
+	require.Equal(t, string(model.TaskStatusInProgress), info.Status)
+	info, err = a.ParseTaskResult([]byte(`{"id":"videoprep_x","status":"success"}`))
+	require.NoError(t, err)
+	require.Equal(t, string(model.TaskStatusSuccess), info.Status)
+}
+
 func TestResponseTaskAcceptsNumericSeconds(t *testing.T) {
 	var task responseTask
 	require.NoError(t, json.Unmarshal([]byte(`{"id":"x","status":"queued","seconds":8}`), &task))
