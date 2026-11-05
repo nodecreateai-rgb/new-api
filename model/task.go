@@ -1031,3 +1031,20 @@ func (t *Task) ToOpenAIVideo() *dto.OpenAIVideo {
 	openAIVideo.SetMetadata("url", t.PublicResultURL())
 	return openAIVideo
 }
+
+// GetTimedOutUnfinishedTasksByModel is GetTimedOutUnfinishedTasks narrowed to
+// one public model, so per-model timeouts are not starved by older tasks.
+func GetTimedOutUnfinishedTasksByModel(modelName string, cutoffUnix int64, limit int) []*Task {
+	var tasks []*Task
+	err := DB.Where("status NOT IN ?", []string{TaskStatusFailure, TaskStatusSuccess}).
+		Where("submit_time < ?", cutoffUnix).
+		Where("submit_time > ?", cutoffUnix-2*86400).
+		Where("properties LIKE ?", `%"origin_model_name":"`+modelName+`"%`).
+		Order("submit_time").
+		Limit(limit).
+		Find(&tasks).Error
+	if err != nil {
+		return nil
+	}
+	return tasks
+}

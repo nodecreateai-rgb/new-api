@@ -47,7 +47,15 @@ var GetTaskAdaptorFunc func(platform constant.TaskPlatform) TaskPollingAdaptor
 // sweepTimedOutTasks 在主轮询之前独立清理超时任务。
 // 每次最多处理 100 条，剩余的下个周期继续处理。
 // 使用 per-task CAS (UpdateWithStatus) 防止覆盖被正常轮询已推进的任务。
+// fastTaskTimeoutMinutes caps models whose upstream normally finishes in
+// minutes: a task still unfinished past this is stuck upstream, so it is
+// failed and refunded instead of hanging for the global 600-minute timeout.
+var fastTaskTimeoutMinutes = map[string]int{
+	"seedance-2.0-fast-720p-c2": 45,
+}
+
 func sweepTimedOutTasks(ctx context.Context) {
+	sweepFastModelTimeouts(ctx)
 	if constant.TaskTimeoutMinutes <= 0 {
 		return
 	}
@@ -93,6 +101,32 @@ func sweepTimedOutTasks(ctx context.Context) {
 
 	if timedOutCount > 0 {
 		logger.LogInfo(ctx, fmt.Sprintf("sweepTimedOutTasks: timed out %d tasks", timedOutCount))
+	}
+}
+
+func sweepFastModelTimeouts(ctx context.Context) {
+	now := time.Now().Unix()
+	for modelName, minutes := range fastTaskTimeoutMinutes {
+		cutoff := now - int64(minutes)*60
+		reason := fmt.Sprintf("上游生成超时（%d分钟未完成），已自动退款，请重新提交", minutes)
+		for _, task := range model.GetTimedOutUnfinishedTasksByModel(modelName, cutoff, 200) {
+			if task.Properties.OriginModelName != modelName {
+				continue
+			}
+			oldStatus := task.Status
+			task.Status = model.TaskStatusFailure
+			task.Progress = "100%"
+			task.FinishTime = now
+			task.FailReason = reason
+			won, err := task.UpdateWithStatus(oldStatus)
+			if err != nil || !won {
+				continue
+			}
+			logger.LogInfo(ctx, fmt.Sprintf("sweepFastModelTimeouts: %s (%s) failed after %d min", task.TaskID, modelName, minutes))
+			if task.Quota != 0 {
+				RefundTaskQuota(ctx, task, reason)
+			}
+		}
 	}
 }
 
