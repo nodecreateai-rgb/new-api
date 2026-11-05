@@ -298,12 +298,18 @@ func TestSanitizeXxzFast720pC2DropsVideosKeepsAudio(t *testing.T) {
 	require.Equal(t, "521ai-SD-fast-720-xd", body["model"])
 	require.Equal(t, "9:16", body["ratio"])
 	require.Equal(t, "720p", body["resolution"])
-	require.Equal(t, "8", body["seconds"])
-	require.Equal(t, true, body["generate_audio"])
-	require.Equal(t, []string{"https://cdn.example/a.png"}, body["images"])
-	require.Equal(t, []string{"https://cdn.example/voice.mp3"}, body["audios"])
+	require.Equal(t, 8, body["seconds"])
+	require.Equal(t, 8, body["duration"])
+	require.Equal(t, "a cat walking", body["prompt"])
+	content := body["content"].([]map[string]interface{})
+	require.Len(t, content, 3)
+	require.Equal(t, map[string]interface{}{"type": "text", "text": "a cat walking"}, content[0])
+	require.Equal(t, "reference_image", content[1]["role"])
+	require.Equal(t, map[string]interface{}{"url": "https://cdn.example/a.png"}, content[1]["image_url"])
+	require.Equal(t, "reference_audio", content[2]["role"])
 	for _, forbidden := range []string{
-		"image_refs", "video_refs", "audio_refs", "duration", "aspect_ratio", "size", "videos",
+		"image_refs", "video_refs", "audio_refs", "aspect_ratio", "size", "videos",
+		"images", "image_urls", "input_reference", "audios", "audio_urls", "generate_audio",
 	} {
 		require.NotContains(t, body, forbidden)
 	}
