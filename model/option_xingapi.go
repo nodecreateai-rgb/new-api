@@ -14,54 +14,89 @@ import (
 var xingapiPublicModels = []string{
 	"seedance-2.0-720p-c2",
 	"seedance-2.0-720p-c3",
+}
+
+var xingapi25PublicModels = []string{
 	"seedance-2.5-720p-c5",
 }
 
 const xingapiChannelName = "Video 720p C2"
+const xingapi25ChannelName = "Video 720p C5"
+
+const xingapiGroupsCSV = "default,vip,svip,vip1,vip2,vip3,vip6,vip7,vip8,vip9,vip10,vip11,vip13,llm-vip"
+
+func xingapiGroups() []string {
+	return []string{"default", "vip", "svip", "vip1", "vip2", "vip3", "vip6", "vip7", "vip8", "vip9", "vip10", "vip11", "vip13", "llm-vip"}
+}
 
 func ensureXingapiRouting() error {
-	const modelsCSV = "seedance-2.0-720p-c2,seedance-2.0-720p-c3,seedance-2.5-720p-c5"
-	const mappingJSON = `{"seedance-2.0-720p-c2":"seedance-933","seedance-2.0-720p-c3":"seedance-933","seedance-2.5-720p-c5":"seedance2.5-V"}`
-	const groupsCSV = "default,vip,svip,vip1,vip2,vip3,vip6,vip7,vip8,vip9,vip10,vip11,vip13,llm-vip"
+	const modelsCSV = "seedance-2.0-720p-c2,seedance-2.0-720p-c3"
+	const mappingJSON = `{"seedance-2.0-720p-c2":"seedance-933","seedance-2.0-720p-c3":"seedance-933"}`
 	baseURL := strings.TrimSpace(os.Getenv("XINGAPI_BASE_URL"))
 	if baseURL == "" {
 		baseURL = "https://xingapi.top"
 	}
-	key := strings.TrimSpace(os.Getenv("XINGAPI_GATEWAY_KEY"))
+	key, err := xingapiResolveKey("XINGAPI_GATEWAY_KEY", "XINGAPI_GATEWAY_KEY_FILE", "XINGAPI_API_KEY", xingapiChannelName, "XINGAPI_GATEWAY_KEY or XINGAPI_API_KEY is required")
+	if err != nil {
+		return err
+	}
+	modelDescriptions := map[string]string{
+		"seedance-2.0-720p-c2": "Seedance 2.0 文生/图生视频（异步，¥2.2/次，固定720P，4-15秒，画幅16:9、9:16、1:1、4:3、3:4、21:9，最多9张图片、3段音频，不支持参考视频，原生过人脸）",
+		"seedance-2.0-720p-c3": "Seedance 2.0 文生/图生/参考生视频（异步，¥1.5/次，固定720P，仅9:16，4-15秒，最多9张图片、3段视频、3段音频，原生过人脸）",
+	}
+	return ensureXingapiNamedChannel(xingapiChannelName, modelsCSV, mappingJSON, baseURL, key, xingapiPublicModels, modelDescriptions)
+}
+
+func ensureXingapi25Routing() error {
+	const modelsCSV = "seedance-2.5-720p-c5"
+	const mappingJSON = `{"seedance-2.5-720p-c5":"seedance2.5-V"}`
+	baseURL := strings.TrimSpace(os.Getenv("XINGAPI_BASE_URL"))
+	if baseURL == "" {
+		baseURL = "https://xingapi.top"
+	}
+	key, err := xingapiResolveKey("XINGAPI_V_GATEWAY_KEY", "XINGAPI_V_GATEWAY_KEY_FILE", "XINGAPI_V_API_KEY", xingapi25ChannelName, "XINGAPI_V_GATEWAY_KEY or XINGAPI_V_API_KEY is required")
+	if err != nil {
+		return err
+	}
+	modelDescriptions := map[string]string{
+		"seedance-2.5-720p-c5": "Seedance 2.5 文生/图生/参考生视频（异步，¥4.5/次，固定720P，5-15秒，画幅16:9、9:16、1:1、4:3、3:4、21:9，最多30张图片、10段视频、10段音频，原生过人脸）",
+	}
+	return ensureXingapiNamedChannel(xingapi25ChannelName, modelsCSV, mappingJSON, baseURL, key, xingapi25PublicModels, modelDescriptions)
+}
+
+func xingapiResolveKey(gatewayEnv, gatewayFileEnv, apiKeyEnv, channelName, requiredMsg string) (string, error) {
+	key := strings.TrimSpace(os.Getenv(gatewayEnv))
 	if key == "" {
-		if keyFile := strings.TrimSpace(os.Getenv("XINGAPI_GATEWAY_KEY_FILE")); keyFile != "" {
+		if keyFile := strings.TrimSpace(os.Getenv(gatewayFileEnv)); keyFile != "" {
 			if raw, err := os.ReadFile(keyFile); err == nil {
 				key = strings.TrimSpace(string(raw))
 			}
 		}
 	}
 	if key == "" {
-		key = strings.TrimSpace(os.Getenv("XINGAPI_API_KEY"))
+		key = strings.TrimSpace(os.Getenv(apiKeyEnv))
 	}
 	if key == "" {
 		var existing Channel
-		if err := DB.Where("name = ?", xingapiChannelName).First(&existing).Error; err == nil && strings.TrimSpace(existing.Key) != "" {
+		if err := DB.Where("name = ?", channelName).First(&existing).Error; err == nil && strings.TrimSpace(existing.Key) != "" {
 			key = existing.Key
 		}
 	}
 	if key == "" {
-		return errors.New("XINGAPI_GATEWAY_KEY or XINGAPI_API_KEY is required")
+		return "", errors.New(requiredMsg)
 	}
+	return key, nil
+}
 
-	groups := []string{"default", "vip", "svip", "vip1", "vip2", "vip3", "vip6", "vip7", "vip8", "vip9", "vip10", "vip11", "vip13", "llm-vip"}
-	modelDescriptions := map[string]string{
-		"seedance-2.0-720p-c2": "Seedance 2.0 文生/图生视频（异步，¥2.2/次，固定720P，4-15秒，画幅16:9、9:16、1:1、4:3、3:4、21:9，最多9张图片、3段音频，不支持参考视频，原生过人脸）",
-		"seedance-2.0-720p-c3": "Seedance 2.0 文生/图生/参考生视频（异步，¥1.5/次，固定720P，仅9:16，4-15秒，最多9张图片、3段视频、3段音频，原生过人脸）",
-		"seedance-2.5-720p-c5": "Seedance 2.5 文生/图生/参考生视频（异步，¥4.5/次，固定720P，5-15秒，画幅16:9、9:16、1:1、4:3、3:4、21:9，最多30张图片、10段视频、10段音频，原生过人脸）",
-	}
+func ensureXingapiNamedChannel(neutralName, modelsCSV, mappingJSON, baseURL, key string, publicModels []string, modelDescriptions map[string]string) error {
+	groups := xingapiGroups()
 	endpoint := `{"openai-video":{"path":"/v1/videos","method":"POST"}}`
-
 	if common.UsingClickHouse {
-		return ensureXingapiRoutingClickHouse(xingapiChannelName, modelsCSV, mappingJSON, groupsCSV, baseURL, key, xingapiPublicModels, groups, modelDescriptions, endpoint)
+		return ensureXingapiRoutingClickHouse(neutralName, modelsCSV, mappingJSON, xingapiGroupsCSV, baseURL, key, publicModels, groups, modelDescriptions, endpoint)
 	}
 
 	var channel Channel
-	err := DB.Where("name = ?", xingapiChannelName).First(&channel).Error
+	err := DB.Where("name = ?", neutralName).First(&channel).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		weight := uint64(100)
 		priority := int64(10)
@@ -69,8 +104,8 @@ func ensureXingapiRouting() error {
 		mapping := mappingJSON
 		channel = Channel{
 			Type: constant.ChannelTypeSora, Key: key, Status: common.ChannelStatusEnabled,
-			Name: xingapiChannelName, Weight: &weight, CreatedTime: common.GetTimestamp(),
-			BaseURL: stringPtr(baseURL), Models: modelsCSV, Group: groupsCSV,
+			Name: neutralName, Weight: &weight, CreatedTime: common.GetTimestamp(),
+			BaseURL: stringPtr(baseURL), Models: modelsCSV, Group: xingapiGroupsCSV,
 			ModelMapping: &mapping, Priority: &priority, AutoBan: &autoBan,
 		}
 		if err := DB.Create(&channel).Error; err != nil {
@@ -80,18 +115,19 @@ func ensureXingapiRouting() error {
 		return err
 	} else if err := DB.Model(&Channel{}).Where("id = ?", channel.Id).Updates(map[string]any{
 		"type": constant.ChannelTypeSora, "key": key, "status": common.ChannelStatusEnabled,
-		"name": xingapiChannelName, "base_url": baseURL, "models": modelsCSV, "group": groupsCSV,
+		"name": neutralName, "base_url": baseURL, "models": modelsCSV, "group": xingapiGroupsCSV,
 		"model_mapping": mappingJSON, "priority": 10, "weight": 100, "auto_ban": 0,
 	}).Error; err != nil {
 		return err
 	}
 
-	if err := DB.Model(&Ability{}).Where("channel_id = ? AND model NOT IN ?", channel.Id, xingapiPublicModels).
+	if err := DB.Model(&Ability{}).Where("channel_id = ? AND model NOT IN ?", channel.Id, publicModels).
 		Update("enabled", false).Error; err != nil {
 		return err
 	}
-	for _, modelName := range xingapiPublicModels {
-		if err := DB.Model(&Ability{}).Where("model = ? AND channel_id NOT IN ?", modelName, xingapiChannelIDs(channel.Id)).
+	ownedIDs := xingapiNamedChannelIDs(neutralName, channel.Id)
+	for _, modelName := range publicModels {
+		if err := DB.Model(&Ability{}).Where("model = ? AND channel_id NOT IN ?", modelName, ownedIDs).
 			Update("enabled", false).Error; err != nil {
 			return err
 		}
@@ -123,7 +159,7 @@ func ensureXingapiRouting() error {
 		}
 	}
 
-	for _, publicModel := range xingapiPublicModels {
+	for _, publicModel := range publicModels {
 		desc := modelDescriptions[publicModel]
 		var meta Model
 		err = DB.Unscoped().Where("model_name = ?", publicModel).First(&meta).Error
@@ -184,8 +220,9 @@ func ensureXingapiRoutingClickHouse(neutralName, modelsCSV, mappingJSON, groupsC
 		return err
 	}
 
+	ownedIDs := xingapiNamedChannelIDs(neutralName, channel.Id)
 	for _, modelName := range publicModels {
-		if err := DB.Model(&Ability{}).Where("model = ? AND channel_id NOT IN ?", modelName, xingapiChannelIDs(channel.Id)).
+		if err := DB.Model(&Ability{}).Where("model = ? AND channel_id NOT IN ?", modelName, ownedIDs).
 			Update("enabled", false).Error; err != nil {
 			return err
 		}
@@ -242,10 +279,10 @@ func ensureXingapiRoutingClickHouse(neutralName, modelsCSV, mappingJSON, groupsC
 	return nil
 }
 
-func xingapiChannelIDs(primary int) []int {
+func xingapiNamedChannelIDs(name string, primary int) []int {
 	ids := []int{primary}
 	var extra []int
-	if err := DB.Model(&Channel{}).Where("name LIKE ?", xingapiChannelName+"%").Pluck("id", &extra).Error; err == nil {
+	if err := DB.Model(&Channel{}).Where("name LIKE ?", name+"%").Pluck("id", &extra).Error; err == nil {
 		for _, id := range extra {
 			if id != primary {
 				ids = append(ids, id)

@@ -14,6 +14,7 @@ func TestXingapiModelsListedWithPrices(t *testing.T) {
 	body := string(option)
 	for _, want := range []string{
 		`ensureXingapiRouting()`,
+		`ensureXingapi25Routing()`,
 		`"seedance-2.0-720p-c2":               2.2,`,
 		`"seedance-2.0-720p-c3":               1.5,`,
 		`"seedance-2.5-720p-c5":               4.5,`,
@@ -29,9 +30,12 @@ func TestXingapiModelsListedWithPrices(t *testing.T) {
 	s := string(data)
 	for _, want := range []string{
 		`xingapiChannelName = "Video 720p C2"`,
+		`xingapi25ChannelName = "Video 720p C5"`,
 		`"seedance-2.0-720p-c2":"seedance-933"`,
 		`"seedance-2.0-720p-c3":"seedance-933"`,
 		`"seedance-2.5-720p-c5":"seedance2.5-V"`,
+		`XINGAPI_V_GATEWAY_KEY`,
+		`XINGAPI_V_API_KEY`,
 		`https://xingapi.top`,
 		`¥2.2/次，固定720P，4-15秒`,
 		`最多9张图片、3段音频，不支持参考视频，原生过人脸`,
@@ -43,6 +47,9 @@ func TestXingapiModelsListedWithPrices(t *testing.T) {
 		if !strings.Contains(s, want) {
 			t.Fatalf("missing %s", want)
 		}
+	}
+	if strings.Contains(s, `"seedance-2.0-720p-c2,seedance-2.0-720p-c3,seedance-2.5-720p-c5"`) {
+		t.Fatal("2.5-V must not share the 933 channel key")
 	}
 	if strings.Contains(s, "seedance2.0-933-Q") {
 		t.Fatal("720p c3 must use the discounted 933 upstream, not 933-Q")
@@ -70,9 +77,10 @@ func TestXingapiModelsSurviveRestartCleanup(t *testing.T) {
 	}
 	body := string(option)
 	ensureAt := strings.Index(body, "ensureXingapiRouting()")
+	ensure25At := strings.Index(body, "ensureXingapi25Routing()")
 	retireAt := strings.Index(body, "retireDeadVideoModels()")
-	if ensureAt < 0 || retireAt < 0 || ensureAt < retireAt {
-		t.Fatal("ensureXingapiRouting must run on every start, after retireDeadVideoModels")
+	if ensureAt < 0 || ensure25At < 0 || retireAt < 0 || ensureAt < retireAt || ensure25At < ensureAt {
+		t.Fatal("xingapi ensure must run on every start, after retireDeadVideoModels, with 2.5-V after 933")
 	}
 	for _, model := range []string{"seedance-2.0-720p-c2", "seedance-2.0-720p-c3", "seedance-2.5-720p-c5"} {
 		if strings.Contains(body, `"`+model+`"`) && strings.Contains(body, "permanentlyRetiredPublicModels") {
@@ -94,6 +102,7 @@ func TestXingapiModelsSurviveRestartCleanup(t *testing.T) {
 		`"seedance-2.0-720p-c3"`,
 		`"seedance-2.5-720p-c5"`,
 		`"Video 720p C2"`,
+		`"Video 720p C5"`,
 	} {
 		if strings.Contains(dead, needle) {
 			t.Fatalf("%s must not be in the dead video catalog", needle)
