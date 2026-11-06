@@ -589,7 +589,9 @@ func (user *User) Update(updatePassword bool) error {
 	}
 	newUser := *user
 	DB.First(&user, user.Id)
-	if err = DB.Model(user).Updates(newUser).Error; err != nil {
+	// Omit the primary key: ClickHouse rejects ALTER UPDATE on key columns
+	// ("Cannot UPDATE key column `id`"), which broke disable/enable/role changes.
+	if err = DB.Model(user).Omit("id").Updates(newUser).Error; err != nil {
 		return err
 	}
 
