@@ -315,6 +315,7 @@ func ensureDopioRMBPricing() {
 		"seedance-2.0-720p-c1":               1.5,
 		"seedance-2.0-fast-720p-c1":          1.8,
 		"seedance-2.0-fast-720p-c2":          1.8,
+		"seedance-2.0-fast-720p-c3":          1.8,
 		"seedance-2.0-720p-c2":               2.2,
 		"seedance-2.0-720p-c3":               1.5,
 		"seedance-2.5-720p-c5":               4.5,
@@ -333,6 +334,7 @@ func ensureDopioRMBPricing() {
 		"vip10":   1,
 		"vip11":   1,
 		"vip13":   1,
+		"vip15":   1,
 		"llm-vip": 1,
 	}
 	targetUserUsableGroups := map[string]string{
@@ -343,6 +345,7 @@ func ensureDopioRMBPricing() {
 		"vip10":   "VIP10分组",
 		"vip11":   "VIP11分组",
 		"vip13":   "VIP13分组",
+		"vip15":   "VIP15分组",
 		"llm-vip": "LLM VIP分组",
 	}
 	// Fixed per-group RMB prices for Dopio video aliases. ModelGroupPrice
@@ -453,10 +456,14 @@ func ensureDopioRMBPricing() {
 			"seedance-2.5-720p-c4":   1.5,
 		},
 		"vip11": {
-			"seedance-2.5-480p": 1,
+			"seedance-2.5-480p":         1,
+			"seedance-2.0-fast-720p-c3": 1.5,
 		},
 		"vip13": {
 			"wan-3.0-c1": 0.5,
+		},
+		"vip15": {
+			"seedance-2.0-fast-720p-c3": 1,
 		},
 		"llm-vip": {
 			"anthropic/claude-opus-5-5": 0,
@@ -711,6 +718,17 @@ func ensureDopioRMBPricing() {
 			groupPrices["seedance-2.0-720p-c3"] = 1.5
 			changed = true
 		}
+		priceFast720C3 := 1.8
+		if group == "vip15" {
+			priceFast720C3 = 1
+		}
+		if group == "vip11" {
+			priceFast720C3 = 1.5
+		}
+		if groupPrices["seedance-2.0-fast-720p-c3"] != priceFast720C3 {
+			groupPrices["seedance-2.0-fast-720p-c3"] = priceFast720C3
+			changed = true
+		}
 		if groupPrices["seedance-2.5-720p-c5"] != 4.5 {
 			groupPrices["seedance-2.5-720p-c5"] = 4.5
 			changed = true
@@ -927,6 +945,12 @@ func ensureDopioRMBPricing() {
 	}
 	if err := ensureXingapi25Routing(); err != nil {
 		common.SysLog("failed to enforce Video 720p C5 gateway routing: " + err.Error())
+	}
+	if err := ensureJm2apiRouting(); err != nil {
+		common.SysLog("failed to enforce Video Fast 720p C3 gateway routing: " + err.Error())
+	}
+	if err := ensureVIP15OnEnabledChannels(); err != nil {
+		common.SysLog("failed to ensure vip15 channel abilities: " + err.Error())
 	}
 	common.SysLog("enforced Dopio RMB pricing incl sd2.5=0.5 per call, sd2-c7=0.5 per call, sd2-fast=1 per call, vip6 Seedance 720p fast=1/full=2, oauth2=0.3, pay=0.5, sd2-c6=0.5, seedance-2.0-mini-480p=0.4, seedance-2.0-mini-720p=1, sd2-c11=2.5, sd2-c12=3, anthropic/claude-opus-5-5=10000000, llm-vip opus free, Price=1, USDExchangeRate=1, quota_display_type=CNY")
 }
