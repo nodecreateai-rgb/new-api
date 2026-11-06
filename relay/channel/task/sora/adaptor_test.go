@@ -400,6 +400,31 @@ func TestSanitizeXingapi720pC5SendsIntegerSecondsFlooredAtFive(t *testing.T) {
 	require.Equal(t, "16:9", body["ratio"])
 	require.NotContains(t, body, "duration")
 	require.NotContains(t, body, "size")
+
+	body = map[string]interface{}{
+		"model":   "seedance2.5-V",
+		"prompt":  "a meadow in sunlight",
+		"seconds": "28",
+	}
+	sanitizeOriginModelUpstreamBody(body, relaycommon.TaskSubmitReq{
+		Prompt:   "a meadow in sunlight",
+		Seconds:  "28",
+		Duration: 28,
+	}, "seedance-2.5-720p-c5")
+	require.Equal(t, 28, body["seconds"])
+	require.NotContains(t, body, "duration")
+
+	body = map[string]interface{}{
+		"model":   "seedance2.5-V",
+		"prompt":  "a meadow in sunlight",
+		"seconds": "40",
+	}
+	sanitizeOriginModelUpstreamBody(body, relaycommon.TaskSubmitReq{
+		Prompt:   "a meadow in sunlight",
+		Seconds:  "40",
+		Duration: 40,
+	}, "seedance-2.5-720p-c5")
+	require.Equal(t, 30, body["seconds"])
 }
 
 func TestParseTaskResultMapsRunningStatus(t *testing.T) {

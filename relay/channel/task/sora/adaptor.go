@@ -537,7 +537,7 @@ func applyOriginModelDurationLimit(body map[string]interface{}, req relaycommon.
 	case "seedance-2.0-fast-720p-c2", "seedance-2.0-720p-c2", "seedance-2.0-720p-c3":
 		applyCatalogDurationBounds(body, req, 4, 4, 15)
 	case "seedance-2.5-720p-c5":
-		applyCatalogDurationBounds(body, req, 5, 5, 15)
+		applyCatalogDurationBounds(body, req, 5, 5, 30)
 	case "seedance-2.5-480p":
 		applyCatalogDurationBounds(body, req, 5, 4, 30)
 	case "seedance-2.0-mini-720p-c2", "seedance-2.0-mini-720P-c2":
@@ -966,13 +966,15 @@ func sanitizeXingapi720pVideoBody(body map[string]interface{}, req relaycommon.T
 		}
 	}
 	minSecs := 4
+	maxSecs := 15
 	if originModel == "seedance-2.5-720p-c5" {
 		minSecs = 5
+		maxSecs = 30
 	}
 	if secs < minSecs {
 		secs = minSecs
-	} else if secs > 15 {
-		secs = 15
+	} else if secs > maxSecs {
+		secs = maxSecs
 	}
 	for key := range body {
 		delete(body, key)
