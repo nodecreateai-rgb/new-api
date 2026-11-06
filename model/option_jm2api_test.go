@@ -34,7 +34,7 @@ func TestJm2apiModelsListedWithPrices(t *testing.T) {
 		`"seedance-2.0-fast-720p-c3":"seedance-2.0-fast"`,
 		`http://jimeng2api:38695`,
 		`JM2API_BASE_URL`,
-		`¥1.8/次，VIP15 ¥1/次，固定720P，4-15秒`,
+		`¥1.8/次，固定720P，4-15秒`,
 		`最多9张图片、3段视频、3段音频，原生过人脸`,
 		`vip15`,
 	} {
