@@ -1834,7 +1834,7 @@ func defaultOpenAIVideoSizeForAspect(aspect string) string {
 // into the same flat shape seedance-2.0-fast-480p returns.
 func usesFast480pStyleResponse(model string) bool {
 	switch model {
-	case "seedance-2.0-fast-720p-c2", "seedance-2.0-720p-c2", "seedance-2.0-720p-c3":
+	case "seedance-2.0-fast-720p-c2", "seedance-2.0-720p-c2", "seedance-2.0-720p-c3", "seedance-2.5-720p-c5":
 		return true
 	}
 	return false
