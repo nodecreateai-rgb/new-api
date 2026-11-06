@@ -778,7 +778,8 @@ func updateVideoSingleTask(ctx context.Context, adaptor TaskPollingAdaptor, ch *
 	return nil
 }
 
-const maxVideoValidationBytes int64 = 64 << 20
+// 30s 720p/1080p outputs routinely exceed 64MB; keep a generous ceiling.
+const maxVideoValidationBytes int64 = 1 << 30
 
 var errVideoValidationInconclusive = errors.New("video validation inconclusive")
 
@@ -878,7 +879,7 @@ func validateCompletedVideo(ctx context.Context, ch *model.Channel, task *model.
 	if err != nil {
 		return nil, fmt.Errorf("%w: create client: %v", errVideoValidationInconclusive, err)
 	}
-	requestCtx, cancel := context.WithTimeout(ctx, 60*time.Second)
+	requestCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
 	defer cancel()
 	req, err := http.NewRequestWithContext(requestCtx, http.MethodGet, videoURL, nil)
 	if err != nil {
@@ -902,14 +903,14 @@ func validateCompletedVideo(ctx context.Context, ch *model.Channel, task *model.
 		return nil, fmt.Errorf("%w: HTTP %d", errVideoValidationInconclusive, resp.StatusCode)
 	}
 	if resp.ContentLength > maxVideoValidationBytes {
-		return nil, fmt.Errorf("video exceeds validation limit: %d bytes", resp.ContentLength)
+		return nil, fmt.Errorf("%w: video exceeds validation limit: %d bytes", errVideoValidationInconclusive, resp.ContentLength)
 	}
 	body, err := io.ReadAll(io.LimitReader(resp.Body, maxVideoValidationBytes+1))
 	if err != nil {
-		return nil, fmt.Errorf("read video for validation: %w", err)
+		return nil, fmt.Errorf("%w: read video for validation: %v", errVideoValidationInconclusive, err)
 	}
 	if int64(len(body)) > maxVideoValidationBytes {
-		return nil, fmt.Errorf("video exceeds validation limit")
+		return nil, fmt.Errorf("%w: video exceeds validation limit", errVideoValidationInconclusive)
 	}
 	if !hasTopLevelMP4Box(body, "moov") {
 		return nil, errors.New("MP4 metadata box moov is missing")
