@@ -1353,6 +1353,9 @@ func (a *TaskAdaptor) ConvertToOpenAIVideo(task *model.Task) ([]byte, error) {
 	if data, err = sanitizeOpenAIVideoTaskData(data); err != nil {
 		return nil, err
 	}
+	if usesFast480pStyleResponse(task.Properties.OriginModelName) {
+		data = buildFast480pStyleVideo(task, status, data)
+	}
 	if status == dto.VideoStatusCompleted {
 		if data, err = ensureOpenAIVideoContentURL(data, task); err != nil {
 			return nil, err
@@ -1824,4 +1827,77 @@ func defaultOpenAIVideoSizeForAspect(aspect string) string {
 	default:
 		return ""
 	}
+}
+
+// usesFast480pStyleResponse lists third-party C2/C3 models whose upstream query
+// payload (nested data.*, videoprep_ ids, upstream stage text) must be rebuilt
+// into the same flat shape seedance-2.0-fast-480p returns.
+func usesFast480pStyleResponse(model string) bool {
+	switch model {
+	case "seedance-2.0-fast-720p-c2", "seedance-2.0-720p-c2", "seedance-2.0-720p-c3":
+		return true
+	}
+	return false
+}
+
+func buildFast480pStyleVideo(task *model.Task, status string, raw []byte) []byte {
+	resolution := "720p"
+	if strings.Contains(task.Properties.OriginModelName, "480p") {
+		resolution = "480p"
+	}
+	duration := int64(0)
+	if bc := task.PrivateData.BillingContext; bc != nil && bc.OtherRatios != nil {
+		duration = int64(bc.OtherRatios["seconds"])
+	}
+	for _, k := range []string{"seconds", "duration", "data.seconds", "data.duration"} {
+		if duration > 0 {
+			break
+		}
+		duration = gjson.GetBytes(raw, k).Int()
+	}
+	aspect := ""
+	for _, k := range []string{"aspect_ratio", "ratio", "data.aspect_ratio", "data.ratio"} {
+		if v := gjson.GetBytes(raw, k).String(); v != "" {
+			aspect = v
+			break
+		}
+	}
+	created := task.SubmitTime
+	if created == 0 {
+		created = task.CreatedAt
+	}
+	progress := 0
+	if n, err := strconv.Atoi(strings.TrimSuffix(task.Progress, "%")); err == nil {
+		progress = n
+	}
+	out := map[string]any{
+		"id":           task.TaskID,
+		"task_id":      task.TaskID,
+		"object":       "task",
+		"type":         "video",
+		"model":        task.Properties.OriginModelName,
+		"status":       status,
+		"progress":     progress,
+		"resolution":   resolution,
+		"created_at":   created,
+		"submitted_at": created,
+		"updated_at":   task.UpdatedAt,
+	}
+	if duration > 0 {
+		out["duration"] = duration
+	}
+	if aspect != "" {
+		out["aspect_ratio"] = aspect
+	}
+	if task.FinishTime > 0 {
+		out["finished_at"] = task.FinishTime
+	}
+	if status == dto.VideoStatusFailed {
+		out["error"] = map[string]any{"message": common.PublicErrorMessage(task.FailReason)}
+	}
+	b, err := common.Marshal(out)
+	if err != nil {
+		return raw
+	}
+	return b
 }
