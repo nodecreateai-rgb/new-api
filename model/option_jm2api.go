@@ -11,13 +11,13 @@ import (
 	"gorm.io/gorm"
 )
 
-var jm2apiPublicModels = []string{"seedance-2.0-fast-720p-c3"}
+var jm2apiPublicModels = []string{"seedance-2.0-fast-720p-c2", "seedance-2.0-fast-720p-c3"}
 
 const jm2apiChannelName = "Video Fast 720p C3"
 
 func ensureJm2apiRouting() error {
-	const modelsCSV = "seedance-2.0-fast-720p-c3"
-	const mappingJSON = `{"seedance-2.0-fast-720p-c3":"seedance-2.0-fast"}`
+	const modelsCSV = "seedance-2.0-fast-720p-c2,seedance-2.0-fast-720p-c3"
+	const mappingJSON = `{"seedance-2.0-fast-720p-c2":"seedance-2.0-fast","seedance-2.0-fast-720p-c3":"seedance-2.0-fast"}`
 	const groupsCSV = "default,vip,svip,vip1,vip2,vip3,vip6,vip7,vip8,vip9,vip10,vip11,vip13,vip15,llm-vip"
 	baseURL := strings.TrimSpace(os.Getenv("JM2API_BASE_URL"))
 	if baseURL == "" {
@@ -45,6 +45,7 @@ func ensureJm2apiRouting() error {
 
 	groups := []string{"default", "vip", "svip", "vip1", "vip2", "vip3", "vip6", "vip7", "vip8", "vip9", "vip10", "vip11", "vip13", "vip15", "llm-vip"}
 	modelDescriptions := map[string]string{
+		"seedance-2.0-fast-720p-c2": "Seedance 2.0 Fast 文生/图生视频（异步，¥1.8/次，固定720P，4-15秒，画幅16:9、9:16、1:1、4:3、3:4、21:9，最多9张图片、3段音频，不支持参考视频，原生过人脸）",
 		"seedance-2.0-fast-720p-c3": "Seedance 2.0 Fast 文生/图生/参考生视频（异步，¥1.8/次，固定720P，4-15秒，画幅16:9、9:16、1:1、4:3、3:4、21:9，最多9张图片、3段视频、3段音频，原生过人脸）",
 	}
 	endpoint := `{"openai-video":{"path":"/v1/videos","method":"POST"}}`

@@ -272,9 +272,55 @@ func TestSanitizeOpenaifitFast720pC1KeepsRatioAndImageURLs(t *testing.T) {
 	}
 }
 
-func TestSanitizeXxzFast720pC2DropsVideosKeepsAudio(t *testing.T) {
+func TestSanitizeJm2apiFast720pC3KeepsVideoAndAudioRefs(t *testing.T) {
 	body := map[string]interface{}{
-		"model":          "521ai-SD-fast-720-xd",
+		"model":              "seedance-2.0-fast",
+		"prompt":             "a cat walking",
+		"seconds":            "8",
+		"duration":           8,
+		"aspect_ratio":       "9:16",
+		"size":               "720x1280",
+		"image_refs":         []interface{}{"https://cdn.example/a.png"},
+		"video_refs":         []interface{}{"https://cdn.example/clip.mp4"},
+		"audio_refs":         []interface{}{"https://cdn.example/voice.mp3"},
+		"compliance_enabled": true,
+	}
+	sanitizeOriginModelUpstreamBody(body, relaycommon.TaskSubmitReq{
+		Prompt:      "a cat walking",
+		Seconds:     "8",
+		Duration:    8,
+		AspectRatio: "9:16",
+		ImageRefs:   []string{"https://cdn.example/a.png"},
+		VideoRefs:   []string{"https://cdn.example/clip.mp4"},
+		AudioRefs:   []string{"https://cdn.example/voice.mp3"},
+	}, "seedance-2.0-fast-720p-c3")
+
+	require.Equal(t, "seedance-2.0-fast", body["model"])
+	require.Equal(t, "9:16", body["ratio"])
+	require.Equal(t, "9:16", body["aspect_ratio"])
+	require.Equal(t, "720p", body["resolution"])
+	require.Equal(t, 10, body["seconds"])
+	require.Equal(t, 10, body["duration"])
+	require.Equal(t, true, body["generate_audio"])
+	require.Equal(t, []string{"https://cdn.example/a.png"}, body["images"])
+	require.Equal(t, []string{"https://cdn.example/a.png"}, body["image_urls"])
+	require.Equal(t, []string{"https://cdn.example/a.png"}, body["image_refs"])
+	require.Equal(t, []string{"https://cdn.example/clip.mp4"}, body["videos"])
+	require.Equal(t, []string{"https://cdn.example/clip.mp4"}, body["video_urls"])
+	require.Equal(t, []string{"https://cdn.example/clip.mp4"}, body["video_refs"])
+	require.Equal(t, []string{"https://cdn.example/voice.mp3"}, body["audios"])
+	require.Equal(t, []string{"https://cdn.example/voice.mp3"}, body["audio_urls"])
+	require.Equal(t, []string{"https://cdn.example/voice.mp3"}, body["audio_refs"])
+	for _, forbidden := range []string{
+		"size", "compliance_enabled",
+	} {
+		require.NotContains(t, body, forbidden)
+	}
+}
+
+func TestSanitizeJm2apiFast720pC2DropsVideosKeepsAudio(t *testing.T) {
+	body := map[string]interface{}{
+		"model":          "seedance-2.0-fast",
 		"prompt":         "a cat walking",
 		"seconds":        "8",
 		"duration":       8,
@@ -295,21 +341,21 @@ func TestSanitizeXxzFast720pC2DropsVideosKeepsAudio(t *testing.T) {
 		AudioRefs:   []string{"https://cdn.example/voice.mp3"},
 	}, "seedance-2.0-fast-720p-c2")
 
-	require.Equal(t, "521ai-SD-fast-720-xd", body["model"])
+	require.Equal(t, "seedance-2.0-fast", body["model"])
 	require.Equal(t, "9:16", body["ratio"])
+	require.Equal(t, "9:16", body["aspect_ratio"])
 	require.Equal(t, "720p", body["resolution"])
-	require.Equal(t, 8, body["seconds"])
-	require.Equal(t, 8, body["duration"])
-	require.Equal(t, "a cat walking", body["prompt"])
-	content := body["content"].([]map[string]interface{})
-	require.Len(t, content, 3)
-	require.Equal(t, map[string]interface{}{"type": "text", "text": "a cat walking"}, content[0])
-	require.Equal(t, "reference_image", content[1]["role"])
-	require.Equal(t, map[string]interface{}{"url": "https://cdn.example/a.png"}, content[1]["image_url"])
-	require.Equal(t, "reference_audio", content[2]["role"])
+	require.Equal(t, 10, body["seconds"])
+	require.Equal(t, 10, body["duration"])
+	require.Equal(t, true, body["generate_audio"])
+	require.Equal(t, []string{"https://cdn.example/a.png"}, body["images"])
+	require.Equal(t, []string{"https://cdn.example/a.png"}, body["image_urls"])
+	require.Equal(t, []string{"https://cdn.example/a.png"}, body["image_refs"])
+	require.Equal(t, []string{"https://cdn.example/voice.mp3"}, body["audios"])
+	require.Equal(t, []string{"https://cdn.example/voice.mp3"}, body["audio_urls"])
+	require.Equal(t, []string{"https://cdn.example/voice.mp3"}, body["audio_refs"])
 	for _, forbidden := range []string{
-		"image_refs", "video_refs", "audio_refs", "aspect_ratio", "size", "videos",
-		"images", "image_urls", "input_reference", "audios", "audio_urls", "generate_audio",
+		"size", "content", "videos", "video_urls", "video_refs", "reference_videos",
 	} {
 		require.NotContains(t, body, forbidden)
 	}

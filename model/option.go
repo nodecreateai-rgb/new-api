@@ -938,7 +938,7 @@ func ensureDopioRMBPricing() {
 		common.SysLog("failed to enforce Video Fast 720p C1 gateway routing: " + err.Error())
 	}
 	if err := ensureXxzRouting(); err != nil {
-		common.SysLog("failed to enforce Video Fast 720p C2 gateway routing: " + err.Error())
+		common.SysLog("failed to keep Video Fast 720p C2 channel disabled: " + err.Error())
 	}
 	if err := ensureXingapiRouting(); err != nil {
 		common.SysLog("failed to enforce Video 720p C2 gateway routing: " + err.Error())

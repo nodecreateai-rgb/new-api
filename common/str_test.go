@@ -323,6 +323,31 @@ func TestMaskUpstreamProviderInfoFlova(t *testing.T) {
 	}
 }
 
+func TestPublicErrorMessageHidesJimeng(t *testing.T) {
+	got := PublicErrorMessage("jimeng /mweb/v1/aigc: ret=1015")
+	if got != "request failed" {
+		t.Fatalf("got %q", got)
+	}
+	got = PublicErrorMessage(`Get "https://jimeng.jianying.com/mweb/v1/x?sign=abc": timeout`)
+	if got != "request failed" {
+		t.Fatalf("link: %q", got)
+	}
+	got = PublicErrorMessage("即梦 剪映 dreamina_video_novel_video_generate_fast jimeng2api failed")
+	if got != "request failed" {
+		t.Fatalf("brand: %q", got)
+	}
+}
+
+func TestMaskUpstreamProviderInfoJimeng(t *testing.T) {
+	got := MaskUpstreamProviderInfo("Jimeng jimeng2api jimeng.jianying.com 即梦 剪映 dreamina capcut.com https://lf3-static.bytednsdoc.com/x.mp4")
+	lower := strings.ToLower(got)
+	for _, forbidden := range []string{"jimeng", "jianying", "即梦", "剪映", "dreamina", "capcut", "bytednsdoc", "jm2api"} {
+		if strings.Contains(got, forbidden) || strings.Contains(lower, forbidden) {
+			t.Fatalf("leaked %q in %q", forbidden, got)
+		}
+	}
+}
+
 func TestPublicErrorMessageHidesIqiyi(t *testing.T) {
 	got := PublicErrorMessage("nadouproapi.iqiyi.com 爱奇艺 纳逗 aqy2api failed")
 	if got != "request failed" {
