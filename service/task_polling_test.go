@@ -4,6 +4,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/QuantumNous/new-api/model"
 )
 
 func TestRetryableVideoPollKeepsASlowLookupInProgress(t *testing.T) {
@@ -83,5 +85,28 @@ func TestTaskPollingJobsAreUnlimitedAndDeduplicatedByKey(t *testing.T) {
 			t.Fatal("task-a key was not released after completion")
 		}
 		time.Sleep(time.Millisecond)
+	}
+}
+
+func TestPendingUpstreamSubmitIsSkippedUntilTimeout(t *testing.T) {
+	task := &model.Task{
+		TaskID:     "task_local",
+		SubmitTime: time.Now().Unix() - 60,
+		PrivateData: model.TaskPrivateData{
+			PendingUpstream: true,
+		},
+	}
+	if !isPendingUpstreamSubmit(task) {
+		t.Fatal("pending upstream rows must be skipped by the poller")
+	}
+	if pendingUpstreamSubmitExpired(task, time.Now().Unix()) {
+		t.Fatal("a one-minute pending submit is not expired")
+	}
+	if !pendingUpstreamSubmitExpired(task, time.Now().Unix()+int64(pendingUpstreamSubmitTimeoutMinutes)*60) {
+		t.Fatal("a pending submit older than the timeout must expire")
+	}
+	ready := &model.Task{TaskID: "task_local", PrivateData: model.TaskPrivateData{UpstreamTaskID: "videoprep_1"}}
+	if isPendingUpstreamSubmit(ready) {
+		t.Fatal("rows with an upstream id must be polled")
 	}
 }

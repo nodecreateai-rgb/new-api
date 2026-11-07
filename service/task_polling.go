@@ -52,7 +52,12 @@ var GetTaskAdaptorFunc func(platform constant.TaskPlatform) TaskPollingAdaptor
 // failed and refunded instead of hanging for the global 600-minute timeout.
 var fastTaskTimeoutMinutes = map[string]int{
 	"seedance-2.0-fast-720p-c2": 45,
+	"seedance-2.0-fast-720p-c3": 45,
 }
+
+// pendingUpstreamSubmitTimeoutMinutes fails local-only video rows whose
+// upstream create call never returned an id.
+const pendingUpstreamSubmitTimeoutMinutes = 20
 
 func sweepTimedOutTasks(ctx context.Context) {
 	sweepFastModelTimeouts(ctx)
@@ -101,6 +106,34 @@ func sweepTimedOutTasks(ctx context.Context) {
 
 	if timedOutCount > 0 {
 		logger.LogInfo(ctx, fmt.Sprintf("sweepTimedOutTasks: timed out %d tasks", timedOutCount))
+	}
+}
+
+func isPendingUpstreamSubmit(task *model.Task) bool {
+	return task != nil && task.PrivateData.PendingUpstream
+}
+
+func pendingUpstreamSubmitExpired(task *model.Task, now int64) bool {
+	return isPendingUpstreamSubmit(task) && task.SubmitTime > 0 && now-task.SubmitTime > int64(pendingUpstreamSubmitTimeoutMinutes)*60
+}
+
+func failPendingUpstreamTask(ctx context.Context, task *model.Task) {
+	if task == nil {
+		return
+	}
+	oldStatus := task.Status
+	task.Status = model.TaskStatusFailure
+	task.Progress = "100%"
+	task.FinishTime = time.Now().Unix()
+	task.PrivateData.PendingUpstream = false
+	task.FailReason = fmt.Sprintf("上游提交超时（%d分钟未返回任务）", pendingUpstreamSubmitTimeoutMinutes)
+	won, err := task.UpdateWithStatus(oldStatus)
+	if err != nil || !won {
+		return
+	}
+	logger.LogInfo(ctx, fmt.Sprintf("failPendingUpstreamTask: %s failed after %d min", task.TaskID, pendingUpstreamSubmitTimeoutMinutes))
+	if task.Quota != 0 {
+		RefundTaskQuota(ctx, task, task.FailReason)
 	}
 }
 
@@ -184,7 +217,14 @@ func TaskPollingLoop() {
 				taskChannelM := make(map[int][]string)
 				taskM := make(map[string]*model.Task)
 				nullTaskIds := make([]int64, 0)
+				now := time.Now().Unix()
 				for _, task := range tasks {
+					if isPendingUpstreamSubmit(task) {
+						if pendingUpstreamSubmitExpired(task, now) {
+							failPendingUpstreamTask(ctx, task)
+						}
+						continue
+					}
 					upstreamID := task.GetUpstreamTaskID()
 					if upstreamID == "" {
 						// 统计失败的未完成任务

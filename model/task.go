@@ -216,6 +216,11 @@ type TaskPrivateData struct {
 	BillingContext *TaskBillingContext `json:"billing_context,omitempty"` // 计费参数快照（用于轮询阶段重新计算）
 	// Upscaler 请求了出片后超分（upscaler 参数）。为空表示不超分
 	Upscaler *TaskUpscaler `json:"upscaler,omitempty"`
+	// PendingUpstream means the public task id was returned to the client
+	// before the upstream create call finished. Polling must not treat the
+	// local task_xxxx as an upstream id, and must not fail the row as
+	// "null task_id".
+	PendingUpstream bool `json:"pending_upstream,omitempty"`
 }
 
 // TaskUpscaler 超分参数与进度（upscaler2api）

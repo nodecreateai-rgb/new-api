@@ -540,6 +540,11 @@ func RelayTask(c *gin.Context) {
 		return
 	}
 
+	if c.Request != nil && relay.ShouldDeferOpenAIVideoSubmit(c.Request.Method, c.Request.URL.Path) {
+		relayVideoSubmitAsync(c, relayInfo)
+		return
+	}
+
 	var result *relay.TaskSubmitResult
 	var taskErr *dto.TaskError
 	defer func() {

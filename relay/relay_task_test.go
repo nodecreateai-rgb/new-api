@@ -70,3 +70,19 @@ func TestRecalcQuotaFromRatiosUsesSecondsForSeedancePerSecond(t *testing.T) {
 	quota := recalcQuotaFromRatios(info, map[string]float64{"seconds": 10, "size": 1})
 	require.Equal(t, int(0.2*10*common.QuotaPerUnit), quota)
 }
+
+func TestShouldDeferOpenAIVideoSubmit(t *testing.T) {
+	require.True(t, ShouldDeferOpenAIVideoSubmit("POST", "/v1/videos"))
+	require.True(t, ShouldDeferOpenAIVideoSubmit("POST", "/v1/videos/"))
+	require.True(t, ShouldDeferOpenAIVideoSubmit("POST", "/v1/video/generations"))
+	require.True(t, ShouldDeferOpenAIVideoSubmit("POST", "/v1/videos/task_abc/remix"))
+	require.False(t, ShouldDeferOpenAIVideoSubmit("GET", "/v1/videos/task_abc"))
+	require.False(t, ShouldDeferOpenAIVideoSubmit("POST", "/v1/chat/completions"))
+}
+
+func TestParseUpstreamVideoTaskID(t *testing.T) {
+	require.Equal(t, "videoprep_abc", ParseUpstreamVideoTaskID([]byte(`{"id":"videoprep_abc","status":"queued"}`)))
+	require.Equal(t, "videoprep_nested", ParseUpstreamVideoTaskID([]byte(`{"data":{"id":"videoprep_nested"}}`)))
+	require.Equal(t, "task_from_alias", ParseUpstreamVideoTaskID([]byte(`{"task_id":"task_from_alias"}`)))
+	require.Equal(t, "", ParseUpstreamVideoTaskID([]byte(`{"status":"queued"}`)))
+}

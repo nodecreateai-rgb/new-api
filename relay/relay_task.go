@@ -29,7 +29,51 @@ type TaskSubmitResult struct {
 	TaskData       []byte
 	Platform       constant.TaskPlatform
 	Quota          int
+	RequestBody    []byte
+	ContentType    string
+	UpstreamURL    string
 	//PerCallPrice   types.PriceData
+}
+
+// ShouldDeferOpenAIVideoSubmit is true for POST /v1/videos (including remix).
+// Cloudflare's 120s origin read timeout fires when we wait for the upstream
+// create call to return an id, so those requests return a local task id first.
+func ShouldDeferOpenAIVideoSubmit(method, path string) bool {
+	if !strings.EqualFold(strings.TrimSpace(method), http.MethodPost) {
+		return false
+	}
+	path = strings.TrimRight(strings.TrimSpace(path), "/")
+	if path == "/v1/videos" || path == "/v1/video/generations" {
+		return true
+	}
+	return strings.HasPrefix(path, "/v1/videos/") && strings.HasSuffix(path, "/remix")
+}
+
+// ParseUpstreamVideoTaskID reads the provider task id from a create-video body.
+func ParseUpstreamVideoTaskID(body []byte) string {
+	var parsed map[string]any
+	if common.Unmarshal(body, &parsed) != nil {
+		return ""
+	}
+	if id := firstNonEmptyString(parsed["id"], parsed["task_id"], parsed["taskId"]); id != "" {
+		return id
+	}
+	if nested, ok := parsed["data"].(map[string]any); ok {
+		return firstNonEmptyString(nested["id"], nested["task_id"], nested["taskId"])
+	}
+	return ""
+}
+
+func firstNonEmptyString(vals ...any) string {
+	for _, val := range vals {
+		switch typed := val.(type) {
+		case string:
+			if s := strings.TrimSpace(typed); s != "" {
+				return s
+			}
+		}
+	}
+	return ""
 }
 
 // ResolveOriginTask 处理基于已有任务的提交（remix / continuation）：
@@ -217,9 +261,27 @@ func RelayTaskSubmit(c *gin.Context, info *relaycommon.RelayInfo) (*TaskSubmitRe
 	if err != nil {
 		return nil, service.TaskErrorWrapper(err, "build_request_failed", http.StatusInternalServerError)
 	}
+	bodyBytes, err := io.ReadAll(requestBody)
+	if err != nil {
+		return nil, service.TaskErrorWrapper(err, "read_request_body_failed", http.StatusInternalServerError)
+	}
+	contentType := c.Request.Header.Get("Content-Type")
+	upstreamURL, err := adaptor.BuildRequestURL(info)
+	if err != nil {
+		return nil, service.TaskErrorWrapper(err, "build_request_url_failed", http.StatusInternalServerError)
+	}
+	if info.TaskRelayInfo != nil && info.DeferUpstreamSubmit {
+		return &TaskSubmitResult{
+			Platform:    platform,
+			Quota:       info.PriceData.Quota,
+			RequestBody: bodyBytes,
+			ContentType: contentType,
+			UpstreamURL: upstreamURL,
+		}, nil
+	}
 
 	// 9. 发送请求
-	resp, err := adaptor.DoRequest(c, info, requestBody)
+	resp, err := adaptor.DoRequest(c, info, bytes.NewReader(bodyBytes))
 	if err != nil {
 		return nil, service.TaskErrorWrapper(err, "do_request_failed", http.StatusInternalServerError)
 	}
