@@ -14,6 +14,16 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+func insufficientUserQuotaAPIError() *types.NewAPIError {
+	return types.NewErrorWithStatusCode(
+		fmt.Errorf("用户额度不足"),
+		types.ErrorCodeInsufficientUserQuota,
+		http.StatusForbidden,
+		types.ErrOptionWithSkipRetry(),
+		types.ErrOptionWithNoRecordErrorLog(),
+	)
+}
+
 func ReturnPreConsumedQuota(c *gin.Context, relayInfo *relaycommon.RelayInfo) {
 	if relayInfo.FinalPreConsumedQuota != 0 {
 		logger.LogInfo(c, fmt.Sprintf("用户 %d 请求失败, 返还预扣费额度 %s", relayInfo.UserId, logger.FormatQuota(relayInfo.FinalPreConsumedQuota)))
@@ -36,10 +46,12 @@ func PreConsumeQuota(c *gin.Context, preConsumedQuota int, relayInfo *relaycommo
 		return types.NewError(err, types.ErrorCodeQueryDataError, types.ErrOptionWithSkipRetry())
 	}
 	if userQuota <= 0 {
-		return types.NewErrorWithStatusCode(fmt.Errorf("用户额度不足, 剩余额度: %s", logger.FormatQuota(userQuota)), types.ErrorCodeInsufficientUserQuota, http.StatusForbidden, types.ErrOptionWithSkipRetry(), types.ErrOptionWithNoRecordErrorLog())
+		logger.LogInfo(c, fmt.Sprintf("用户 %d 额度不足, 剩余额度: %s", relayInfo.UserId, logger.FormatQuota(userQuota)))
+		return insufficientUserQuotaAPIError()
 	}
 	if userQuota-preConsumedQuota < 0 {
-		return types.NewErrorWithStatusCode(fmt.Errorf("预扣费额度失败, 用户剩余额度: %s, 需要预扣费额度: %s", logger.FormatQuota(userQuota), logger.FormatQuota(preConsumedQuota)), types.ErrorCodeInsufficientUserQuota, http.StatusForbidden, types.ErrOptionWithSkipRetry(), types.ErrOptionWithNoRecordErrorLog())
+		logger.LogInfo(c, fmt.Sprintf("用户 %d 预扣费额度失败, 剩余额度: %s, 需要预扣费额度: %s", relayInfo.UserId, logger.FormatQuota(userQuota), logger.FormatQuota(preConsumedQuota)))
+		return insufficientUserQuotaAPIError()
 	}
 
 	trustQuota := common.GetTrustQuota()
