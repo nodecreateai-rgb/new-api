@@ -316,7 +316,7 @@ func ensureDopioRMBPricing() {
 		"seedance-2.0-fast-720p-c1":          1.8,
 		"seedance-2.0-fast-720p-c2":          1.8,
 		"seedance-2.0-fast-720p-c3":          1.8,
-		"seedance-2.0-720p-c2":               2.2,
+		"seedance-2.0-720p-c2":               2.4,
 		"seedance-2.0-720p-c3":               1.5,
 		"seedance-2.5-720p-c5":               4.5,
 		"anthropic/claude-opus-5-5":          10000000,
@@ -706,8 +706,8 @@ func ensureDopioRMBPricing() {
 			groupPrices["seedance-2.5-c2"] = 1
 			changed = true
 		}
-		if groupPrices["seedance-2.0-720p-c2"] != 2.2 {
-			groupPrices["seedance-2.0-720p-c2"] = 2.2
+		if groupPrices["seedance-2.0-720p-c2"] != 2.4 {
+			groupPrices["seedance-2.0-720p-c2"] = 2.4
 			changed = true
 		}
 		if groupPrices["seedance-2.0-720p-c1"] != 1.5 {

@@ -41,7 +41,7 @@ func ensureXingapiRouting() error {
 		return err
 	}
 	modelDescriptions := map[string]string{
-		"seedance-2.0-720p-c2": "Seedance 2.0 文生/图生视频（异步，¥2.2/次，固定720P，4-15秒，画幅16:9、9:16、1:1、4:3、3:4、21:9，最多9张图片、3段音频，不支持参考视频，原生过人脸）",
+		"seedance-2.0-720p-c2": "Seedance 2.0 文生/图生视频（异步，¥2.4/次，固定720P，4-15秒，画幅16:9、9:16、1:1、4:3、3:4、21:9，最多9张图片、3段音频，不支持参考视频，原生过人脸）",
 		"seedance-2.0-720p-c3": "Seedance 2.0 文生/图生/参考生视频（异步，¥1.5/次，固定720P，仅9:16，4-15秒，最多9张图片、3段视频、3段音频，原生过人脸）",
 	}
 	return ensureXingapiNamedChannel(xingapiChannelName, modelsCSV, mappingJSON, baseURL, key, xingapiPublicModels, modelDescriptions)

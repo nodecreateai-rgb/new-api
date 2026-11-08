@@ -15,7 +15,7 @@ func TestXingapiModelsListedWithPrices(t *testing.T) {
 	for _, want := range []string{
 		`ensureXingapiRouting()`,
 		`ensureXingapi25Routing()`,
-		`"seedance-2.0-720p-c2":               2.2,`,
+		`"seedance-2.0-720p-c2":               2.4,`,
 		`"seedance-2.0-720p-c3":               1.5,`,
 		`"seedance-2.5-720p-c5":               4.5,`,
 	} {
@@ -37,7 +37,7 @@ func TestXingapiModelsListedWithPrices(t *testing.T) {
 		`XINGAPI_V_GATEWAY_KEY`,
 		`XINGAPI_V_API_KEY`,
 		`https://xingapi.top`,
-		`¥2.2/次，固定720P，4-15秒`,
+		`¥2.4/次，固定720P，4-15秒`,
 		`最多9张图片、3段音频，不支持参考视频，原生过人脸`,
 		`¥1.5/次，固定720P，仅9:16`,
 		`最多9张图片、3段视频、3段音频，原生过人脸`,
