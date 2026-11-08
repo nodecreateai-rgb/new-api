@@ -170,7 +170,7 @@ func ensureXxzRoutingClickHouse(neutralName, modelsCSV, mappingJSON, groupsCSV, 
 		return err
 	} else if err := DB.Exec(`ALTER TABLE channels UPDATE
 		type = ?, key = ?, status = ?, name = ?, base_url = ?, models = ?, `+commonGroupCol+` = ?, model_mapping = ?, priority = 10, auto_ban = 0
-		WHERE id = ?`, constant.ChannelTypeSora, key, common.ChannelStatusEnabled, neutralName, baseURL, modelsCSV, groupsCSV, mappingJSON, channel.Id).Error; err != nil {
+		WHERE id = ? SETTINGS mutations_sync = 2`, constant.ChannelTypeSora, key, common.ChannelStatusEnabled, neutralName, baseURL, modelsCSV, groupsCSV, mappingJSON, channel.Id).Error; err != nil {
 		return err
 	}
 

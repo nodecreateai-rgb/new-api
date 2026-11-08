@@ -30,6 +30,8 @@ func TestXxzModelsListedWithPrices(t *testing.T) {
 		`xxzChannelName = "Video Fast 720p C2"`,
 		`"seedance-2.0-fast-720p-c2":"521ai-SD-fast-720-xd"`,
 		`https://api.521way.com`,
+		`XXZ_API_KEY`,
+		`existing.Key`,
 		`¥2/次，固定720P，4-15秒`,
 		`最多9张图片、3段音频，不支持参考视频，原生过人脸`,
 		`ChannelStatusEnabled`,
@@ -51,6 +53,18 @@ func TestXxzModelsListedWithPrices(t *testing.T) {
 	}
 	if strings.Contains(s, "sk-") {
 		t.Fatal("xxz seeder must not hardcode a gateway key")
+	}
+
+	compose, err := os.ReadFile("../docker-compose.yml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	c := string(compose)
+	if !strings.Contains(c, `XXZ_BASE_URL=${XXZ_BASE_URL:-https://api.521way.com}`) {
+		t.Fatal("compose must default Video Fast 720p C2 to api.521way.com")
+	}
+	if strings.Contains(c, `XXZ_GATEWAY_KEY=${XXZ_GATEWAY_KEY:-${XXZ_API_KEY:-}}`) {
+		t.Fatal("empty XXZ_GATEWAY_KEY compose override would wipe the env_file key on restart")
 	}
 }
 
