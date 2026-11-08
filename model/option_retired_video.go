@@ -28,7 +28,6 @@ var deadVideoChannels = []string{
 	"Video 480p C3", "Video Seedance C5",
 	"Bramble Video",
 	"Video Fast 720p C1",
-	"Video Fast 720p C2",
 }
 
 // retireDeadVideoModels runs after every ensure step, because several of

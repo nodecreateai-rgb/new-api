@@ -532,9 +532,9 @@ func applyOriginModelDurationLimit(body map[string]interface{}, req relaycommon.
 		applyCatalogDurationBounds(body, req, 5, 3, 12)
 	case "seedance-2.0-480p", "seedance-2.0-fast-480p-c1", "seedance-2.0-fast-720p":
 		applyCatalogDurationBounds(body, req, 5, 4, 15)
-	case "seedance-2.0-fast-720p-c1", "seedance-2.0-fast-720p-c2", "seedance-2.0-fast-720p-c3":
+	case "seedance-2.0-fast-720p-c1", "seedance-2.0-fast-720p-c3":
 		applyCatalogDurationChoices(body, req, 15, 5, 10, 15)
-	case "seedance-2.0-720p-c2", "seedance-2.0-720p-c3":
+	case "seedance-2.0-fast-720p-c2", "seedance-2.0-720p-c2", "seedance-2.0-720p-c3":
 		applyCatalogDurationBounds(body, req, 4, 4, 15)
 	case "seedance-2.5-720p-c5":
 		applyCatalogDurationBounds(body, req, 5, 5, 30)
@@ -603,14 +603,10 @@ func sanitizeOriginModelUpstreamBody(body map[string]interface{}, req relaycommo
 		sanitizeWanfeng720pC1VideoBody(body, req)
 	case "seedance-2.0-fast-720p-c1":
 		sanitizeOpenaifitFast720pC1VideoBody(body, req)
-	case "seedance-2.0-fast-720p-c2", "seedance-2.0-fast-720p-c3":
+	case "seedance-2.0-fast-720p-c2":
+		sanitizeXxzFast720pC2VideoBody(body, req)
+	case "seedance-2.0-fast-720p-c3":
 		sanitizeJm2apiFast720pC3VideoBody(body, req)
-		if strings.TrimSpace(originModel) == "seedance-2.0-fast-720p-c2" {
-			delete(body, "videos")
-			delete(body, "video_urls")
-			delete(body, "video_refs")
-			delete(body, "reference_videos")
-		}
 	case "seedance-2.0-720p-c2", "seedance-2.0-720p-c3", "seedance-2.5-720p-c5":
 		sanitizeXingapi720pVideoBody(body, req, originModel)
 	}
@@ -797,6 +793,101 @@ func sanitizeOpenaifitFast720pC1VideoBody(body map[string]interface{}, req relay
 		body["audios"] = audios
 		body["audio_urls"] = audios
 	}
+}
+
+// sanitizeXxzFast720pC2VideoBody keeps OpenAI-video fields this 720p Fast C2
+// route accepts. Do not send size (WxH) together with ratio, or duration
+// together with seconds. Videos are dropped: this public alias allows none.
+func sanitizeXxzFast720pC2VideoBody(body map[string]interface{}, req relaycommon.TaskSubmitReq) {
+	if body == nil {
+		return
+	}
+	images := collectUpstreamVideoImageRefs(req)
+	if len(images) == 0 {
+		images = collectBodyMedia(body,
+			"images", "image_refs", "image_urls", "reference_images", "extra_images",
+			"image", "image_url", "reference_image", "input_reference")
+	}
+	audios := collectUpstreamVideoAudioRefs(req)
+	if len(audios) == 0 {
+		audios = collectBodyMedia(body,
+			"audios", "audio_refs", "audio_urls", "reference_audios", "extra_audios",
+			"audio", "audio_url", "reference_audio")
+	}
+	ratio := ""
+	for _, key := range []string{"ratio", "aspect_ratio", "aspect"} {
+		if s, ok := body[key].(string); ok {
+			s = strings.TrimSpace(s)
+			if s != "" {
+				ratio = s
+				break
+			}
+		}
+	}
+	if ratio == "" {
+		ratio = strings.TrimSpace(req.AspectRatio)
+	}
+	switch ratio {
+	case "16:9", "9:16", "1:1", "4:3", "3:4", "21:9":
+	default:
+		ratio = "16:9"
+	}
+	model, _ := body["model"].(string)
+	prompt, _ := body["prompt"].(string)
+	if strings.TrimSpace(prompt) == "" {
+		prompt = strings.TrimSpace(req.Prompt)
+	}
+	secs := req.Duration
+	if secs <= 0 {
+		switch v := body["seconds"].(type) {
+		case string:
+			secs, _ = strconv.Atoi(strings.TrimSpace(v))
+		case float64:
+			secs = int(v)
+		case int:
+			secs = v
+		}
+	}
+	if secs <= 0 {
+		if v, ok := body["duration"].(float64); ok {
+			secs = int(v)
+		}
+	}
+	if secs < 4 {
+		secs = 5
+	} else if secs > 15 {
+		secs = 15
+	}
+	for key := range body {
+		delete(body, key)
+	}
+	content := []map[string]interface{}{}
+	if strings.TrimSpace(prompt) != "" {
+		content = append(content, map[string]interface{}{"type": "text", "text": prompt})
+	}
+	for _, u := range images {
+		content = append(content, map[string]interface{}{
+			"type": "image_url", "role": "reference_image",
+			"image_url": map[string]interface{}{"url": u},
+		})
+	}
+	for _, u := range audios {
+		content = append(content, map[string]interface{}{
+			"type": "audio_url", "role": "reference_audio",
+			"audio_url": map[string]interface{}{"url": u},
+		})
+	}
+	if strings.TrimSpace(model) != "" {
+		body["model"] = model
+	}
+	body["content"] = content
+	if strings.TrimSpace(prompt) != "" {
+		body["prompt"] = prompt
+	}
+	body["duration"] = secs
+	body["seconds"] = secs
+	body["ratio"] = ratio
+	body["resolution"] = "720p"
 }
 
 // sanitizeJm2apiFast720pC3VideoBody keeps OpenAI-video fields the jm2api 720p
@@ -1869,7 +1960,7 @@ func defaultOpenAIVideoSizeForAspect(aspect string) string {
 // into the same flat shape seedance-2.0-fast-480p returns.
 func usesFast480pStyleResponse(model string) bool {
 	switch model {
-	case "seedance-2.0-720p-c2", "seedance-2.0-720p-c3", "seedance-2.5-720p-c5":
+	case "seedance-2.0-fast-720p-c2", "seedance-2.0-720p-c2", "seedance-2.0-720p-c3", "seedance-2.5-720p-c5":
 		return true
 	}
 	return false

@@ -31,12 +31,10 @@ func TestJm2apiModelsListedWithPrices(t *testing.T) {
 	s := string(data)
 	for _, want := range []string{
 		`jm2apiChannelName = "Video Fast 720p C3"`,
-		`"seedance-2.0-fast-720p-c2":"seedance-2.0-fast"`,
 		`"seedance-2.0-fast-720p-c3":"seedance-2.0-fast"`,
 		`http://jimeng2api:38695`,
 		`JM2API_BASE_URL`,
 		`¥1.8/次，固定720P，4-15秒`,
-		`最多9张图片、3段音频，不支持参考视频，原生过人脸`,
 		`最多9张图片、3段视频、3段音频，原生过人脸`,
 		`vip15`,
 	} {
@@ -72,10 +70,8 @@ func TestJm2apiModelSurvivesRestartCleanup(t *testing.T) {
 	if strings.Contains(body, "permanentlyRetiredPublicModels") {
 		retired := body[strings.Index(body, "var permanentlyRetiredPublicModels"):]
 		retired = retired[:strings.Index(retired, "}")]
-		for _, model := range []string{`"seedance-2.0-fast-720p-c2"`, `"seedance-2.0-fast-720p-c3"`} {
-			if strings.Contains(retired, model) {
-				t.Fatalf("%s must not be permanently retired", model)
-			}
+		if strings.Contains(retired, `"seedance-2.0-fast-720p-c3"`) {
+			t.Fatal("seedance-2.0-fast-720p-c3 must not be permanently retired")
 		}
 	}
 
