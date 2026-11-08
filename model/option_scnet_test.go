@@ -31,6 +31,7 @@ func TestScnetModelsListedWithPrices(t *testing.T) {
 		`scnetChannelName = "Video 2K C4"`,
 		`"minimax-h3-2k":"minimax-h3"`,
 		`"seedance-2.5-720p-c4":"seedance-2.5"`,
+		`http://172.17.0.1:38697`,
 		`¥1/次，固定2K输出`,
 		`¥4/次，固定720P`,
 	} {
@@ -40,5 +41,8 @@ func TestScnetModelsListedWithPrices(t *testing.T) {
 	}
 	if strings.Contains(strings.ToLower(s[strings.Index(s, "modelDescriptions"):strings.Index(s, "endpoint :=")]), "scnet") {
 		t.Fatal("public descriptions must not name the upstream")
+	}
+	if strings.Contains(s, "172.17.0.1:38695") {
+		t.Fatal("Video 2K C4 must not use port 38695; that port is the other video gateway")
 	}
 }

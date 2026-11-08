@@ -21,7 +21,7 @@ func ensureScnetRouting() error {
 	const groupsCSV = "default,vip,svip,vip1,vip2,vip3,vip6,vip7,vip8,vip9,vip10,vip11,vip13,llm-vip"
 	baseURL := strings.TrimSpace(os.Getenv("SCNET2API_BASE_URL"))
 	if baseURL == "" {
-		baseURL = "http://172.17.0.1:38695"
+		baseURL = "http://172.17.0.1:38697"
 	}
 	key := strings.TrimSpace(os.Getenv("SCNET2API_GATEWAY_KEY"))
 	if key == "" {
