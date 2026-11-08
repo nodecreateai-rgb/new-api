@@ -29,7 +29,7 @@ func TestXxzModelsListedWithPrices(t *testing.T) {
 	for _, want := range []string{
 		`xxzChannelName = "Video Fast 720p C2"`,
 		`"seedance-2.0-fast-720p-c2":"521ai-SD-fast-720-xd"`,
-		`https://www.521xxz.com`,
+		`https://api.521way.com`,
 		`¥2/次，固定720P，4-15秒`,
 		`最多9张图片、3段音频，不支持参考视频，原生过人脸`,
 		`ChannelStatusEnabled`,
@@ -44,10 +44,13 @@ func TestXxzModelsListedWithPrices(t *testing.T) {
 		t.Fatal("missing modelDescriptions block")
 	}
 	desc := strings.ToLower(s[descStart:descEnd])
-	for _, forbidden := range []string{"521xxz", "521ai", "xxz.com"} {
+	for _, forbidden := range []string{"521xxz", "521ai", "xxz.com", "521way"} {
 		if strings.Contains(desc, forbidden) {
 			t.Fatalf("public descriptions must not name the upstream: %s", forbidden)
 		}
+	}
+	if strings.Contains(s, "sk-") {
+		t.Fatal("xxz seeder must not hardcode a gateway key")
 	}
 }
 

@@ -205,12 +205,16 @@ func TestPublicErrorMessageHidesXxz(t *testing.T) {
 	if got != "request failed" {
 		t.Fatalf("got %q", got)
 	}
+	got = PublicErrorMessage(`Post "https://api.521way.com/v1/videos": dial tcp: connection refused`)
+	if got != "request failed" {
+		t.Fatalf("got %q", got)
+	}
 }
 
 func TestMaskUpstreamProviderInfoXxz(t *testing.T) {
-	got := MaskUpstreamProviderInfo("521ai-SD-fast-720-xd www.521xxz.com 521ai 521xxz")
+	got := MaskUpstreamProviderInfo("521ai-SD-fast-720-xd www.521xxz.com api.521way.com 521ai 521xxz 521way")
 	lower := strings.ToLower(got)
-	for _, forbidden := range []string{"521xxz", "521ai"} {
+	for _, forbidden := range []string{"521xxz", "521ai", "521way"} {
 		if strings.Contains(lower, forbidden) {
 			t.Fatalf("leaked %q in %q", forbidden, got)
 		}

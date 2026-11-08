@@ -21,8 +21,9 @@ func ensureXxzRouting() error {
 	const groupsCSV = "default,vip,svip,vip1,vip2,vip3,vip6,vip7,vip8,vip9,vip10,vip11,vip13,llm-vip"
 	baseURL := strings.TrimSpace(os.Getenv("XXZ_BASE_URL"))
 	if baseURL == "" {
-		baseURL = "https://www.521xxz.com"
+		baseURL = "https://api.521way.com"
 	}
+	baseURL = strings.TrimRight(baseURL, "/")
 	key := strings.TrimSpace(os.Getenv("XXZ_GATEWAY_KEY"))
 	if key == "" {
 		if keyFile := strings.TrimSpace(os.Getenv("XXZ_GATEWAY_KEY_FILE")); keyFile != "" {
@@ -38,9 +39,10 @@ func ensureXxzRouting() error {
 		var existing Channel
 		if err := DB.Where("name = ?", xxzChannelName).First(&existing).Error; err == nil && strings.TrimSpace(existing.Key) != "" {
 			key = existing.Key
-		} else {
-			key = "sk-khrQic2gcX8yFYZEv4NvFaX5WFyoEtvJGC7qzdTq1Xt4QVmH"
 		}
+	}
+	if key == "" {
+		return errors.New("XXZ_GATEWAY_KEY (or XXZ_API_KEY) is required")
 	}
 
 	groups := []string{"default", "vip", "svip", "vip1", "vip2", "vip3", "vip6", "vip7", "vip8", "vip9", "vip10", "vip11", "vip13", "llm-vip"}
