@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/constant"
@@ -52,6 +53,73 @@ func TestCompletedVideoTimeoutDoesNotBlockFinishedURL(t *testing.T) {
 	}
 	if completedVideoCanFinishWithoutBytes(errors.New("zero duration: duration=0 timescale=0"), "https://cdn.example.com/done.mp4") {
 		t.Fatal("a parsed invalid video must still fail")
+	}
+	if completedVideoCanFinishWithoutBytes(timeoutErr, "/outputs/task_public.mp4") {
+		t.Fatal("a relative URL is not client-usable until it is resolved")
+	}
+	if !videoURLNeedsChannelAuth("https://upstream.example/v1/videos/abc/content") {
+		t.Fatal("provider content URL must keep the channel key")
+	}
+	if videoURLNeedsChannelAuth("https://cdn.example.com/done.mp4") {
+		t.Fatal("public CDN URL must be fetched without the channel key")
+	}
+}
+
+func TestSlowFinishedVideoStopsQuickly(t *testing.T) {
+	InitHttpClient()
+	previous := videoValidationTimeout
+	videoValidationTimeout = 200 * time.Millisecond
+	t.Cleanup(func() { videoValidationTimeout = previous })
+
+	authSeen := make(chan string, 1)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		authSeen <- r.Header.Get("Authorization")
+		time.Sleep(2 * time.Second)
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	ch := &model.Channel{Type: constant.ChannelTypeSora, BaseURL: &server.URL, Key: "secret-channel-key"}
+	task := &model.Task{TaskID: "task_public", Platform: constant.TaskPlatform("1")}
+	result := &relaycommon.TaskInfo{Url: server.URL + "/cdn/done.mp4"}
+
+	started := time.Now()
+	_, err := validateCompletedVideo(context.Background(), ch, task, result)
+	if elapsed := time.Since(started); elapsed > time.Second {
+		t.Fatalf("validation waited %s; a slow file must not block completion", elapsed)
+	}
+	if !errors.Is(err, errVideoValidationInconclusive) {
+		t.Fatalf("expected inconclusive download, got %v", err)
+	}
+	if !completedVideoCanFinishWithoutBytes(err, result.Url) {
+		t.Fatal("slow CDN URL must still finish the task")
+	}
+	select {
+	case auth := <-authSeen:
+		if auth != "" {
+			t.Fatalf("CDN download must not send the channel key, got %q", auth)
+		}
+	default:
+		t.Fatal("download never reached the CDN")
+	}
+}
+
+func TestProviderContentDownloadKeepsChannelKey(t *testing.T) {
+	InitHttpClient()
+	var auth string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		auth = r.Header.Get("Authorization")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("not-a-video"))
+	}))
+	defer server.Close()
+
+	ch := &model.Channel{Type: constant.ChannelTypeSora, BaseURL: &server.URL, Key: "secret-channel-key"}
+	task := &model.Task{TaskID: "task_public", Platform: constant.TaskPlatform("1")}
+	result := &relaycommon.TaskInfo{Url: server.URL + "/v1/videos/abc/content"}
+	_, _ = validateCompletedVideo(context.Background(), ch, task, result)
+	if auth != "Bearer secret-channel-key" {
+		t.Fatalf("provider content download auth = %q", auth)
 	}
 }
 

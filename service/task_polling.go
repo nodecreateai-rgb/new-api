@@ -663,18 +663,45 @@ func updateVideoSingleTask(ctx context.Context, adaptor TaskPollingAdaptor, ch *
 		var videoBytes []byte
 		passthrough := ksyunSeedanceReturnsUpstreamVideo(ch, task)
 		if !passthrough && task.Platform != constant.TaskPlatformImage && task.Platform != constant.TaskPlatformPay {
+			readyURL := absoluteUpstreamVideoURL(ch, taskResult.Url)
 			var err error
 			videoBytes, err = validateCompletedVideo(ctx, ch, task, taskResult)
 			if err != nil {
-				if completedVideoCanFinishWithoutBytes(err, taskResult.Url) {
-					// Upstream already finished. A slow or stalled download must not
-					// leave the task at 30% forever; hand the finished URL through.
+				if readyURL != "" && errors.Is(err, errVideoValidationInconclusive) {
+					// Upstream already published a file URL. A slow, busy, or
+					// rejected download must not leave the task at 30%.
 					logger.LogWarn(ctx, fmt.Sprintf("Task %s upstream video is ready; skip local validation: %v", task.TaskID, err))
+					clearVideoValidationMiss(task.TaskID)
 					videoBytes = nil
-					passthrough = true
+					taskResult.Url = readyURL
+					if videoURLNeedsChannelAuth(readyURL) {
+						passthrough = false
+					} else {
+						passthrough = true
+					}
 				} else if errors.Is(err, errVideoValidationInconclusive) {
-					return fmt.Errorf("video validation inconclusive for task %s: %w", task.TaskID, err)
+					misses := noteVideoValidationMiss(task.TaskID)
+					if misses < maxVideoValidationMisses {
+						return fmt.Errorf("video validation inconclusive for task %s: %w", task.TaskID, err)
+					}
+					clearVideoValidationMiss(task.TaskID)
+					taskResult.Status = string(model.TaskStatusFailure)
+					taskResult.Progress = taskcommon.ProgressComplete
+					taskResult.Reason = "视频文件暂时无法下载，已自动退款，请重新提交"
+					task.Status = model.TaskStatusFailure
+					task.Progress = taskcommon.ProgressComplete
+					task.FailReason = common.PublicErrorMessage(taskResult.Reason)
+					task.PrivateData.ResultURL = ""
+					if task.FinishTime == 0 {
+						task.FinishTime = now
+					}
+					logger.LogWarn(ctx, fmt.Sprintf("Task %s gave up fetching the finished video after %d attempts: %v", task.TaskID, misses, err))
+					if quota != 0 {
+						shouldRefund = true
+					}
+					break
 				} else {
+					clearVideoValidationMiss(task.TaskID)
 					taskResult.Status = string(model.TaskStatusFailure)
 					taskResult.Progress = taskcommon.ProgressComplete
 					taskResult.Reason = "视频文件无效或时长为0秒"
@@ -691,6 +718,8 @@ func updateVideoSingleTask(ctx context.Context, adaptor TaskPollingAdaptor, ch *
 					}
 					break
 				}
+			} else {
+				clearVideoValidationMiss(task.TaskID)
 			}
 		}
 		if up := task.PrivateData.Upscaler; up != nil && !up.Done && task.Status == model.TaskStatusSuccess {
@@ -698,10 +727,6 @@ func updateVideoSingleTask(ctx context.Context, adaptor TaskPollingAdaptor, ch *
 			if len(src) == 0 && up.TaskID == "" {
 				if d, derr := decodeVideoDataURL(strings.TrimSpace(taskResult.Url)); derr == nil {
 					src = d
-				} else if passthrough {
-					if b, verr := validateCompletedVideo(ctx, ch, task, taskResult); verr == nil {
-						src = b
-					}
 				}
 			}
 			upVideo, wait := handleVideoUpscale(ctx, task, src)
@@ -784,7 +809,9 @@ func updateVideoSingleTask(ctx context.Context, adaptor TaskPollingAdaptor, ch *
 	default:
 		return fmt.Errorf("unknown task status %s for task %s", taskResult.Status, task.TaskID)
 	}
-	if taskResult.Progress != "" {
+	if task.Status == model.TaskStatusSuccess || task.Status == model.TaskStatusFailure {
+		task.Progress = taskcommon.ProgressComplete
+	} else if taskResult.Progress != "" {
 		task.Progress = taskResult.Progress
 	}
 
@@ -828,16 +855,75 @@ func updateVideoSingleTask(ctx context.Context, adaptor TaskPollingAdaptor, ch *
 // 30s 720p/1080p outputs routinely exceed 64MB; keep a generous ceiling.
 const maxVideoValidationBytes int64 = 1 << 30
 
+// A finished URL only gets a short local fetch. Waiting minutes for a slow CDN
+// is what left completed videos at 30%.
+var videoValidationTimeout = 20 * time.Second
+
+// maxVideoValidationMisses bounds retries when upstream says the video is done
+// but no client-usable URL exists. After this, the task fails and is refunded.
+const maxVideoValidationMisses = 6
+
+// Keep only a few full-file fetches in flight. Extra completed tasks fall
+// through to their upstream URL instead of queueing behind a slow download.
+var videoValidationSlots = make(chan struct{}, 4)
+
+var videoValidationMisses sync.Map
+
 var errVideoValidationInconclusive = errors.New("video validation inconclusive")
+
+func noteVideoValidationMiss(taskID string) int {
+	n := 1
+	if current, ok := videoValidationMisses.Load(taskID); ok {
+		if misses, ok := current.(int); ok {
+			n = misses + 1
+		}
+	}
+	videoValidationMisses.Store(taskID, n)
+	return n
+}
+
+func clearVideoValidationMiss(taskID string) {
+	videoValidationMisses.Delete(taskID)
+}
+
+func acquireVideoValidationSlot() bool {
+	select {
+	case videoValidationSlots <- struct{}{}:
+		return true
+	default:
+		return false
+	}
+}
+
+func releaseVideoValidationSlot() {
+	select {
+	case <-videoValidationSlots:
+	default:
+	}
+}
 
 // completedVideoCanFinishWithoutBytes is true when upstream already returned a
 // playable URL and the only problem is that this process could not download
-// the file in time. A missing URL still retries; a parsed invalid MP4 does not.
+// the file. A missing URL still retries; a parsed invalid MP4 does not.
 func completedVideoCanFinishWithoutBytes(err error, videoURL string) bool {
 	if err == nil || !errors.Is(err, errVideoValidationInconclusive) {
 		return false
 	}
-	return absoluteUpstreamVideoURL(nil, videoURL) != ""
+	videoURL = strings.TrimSpace(videoURL)
+	return strings.HasPrefix(videoURL, "https://") || strings.HasPrefix(videoURL, "http://")
+}
+
+// videoURLNeedsChannelAuth reports provider API paths that reject anonymous
+// downloads. Public CDN links must be fetched without the channel key.
+func videoURLNeedsChannelAuth(videoURL string) bool {
+	parsed, err := url.Parse(strings.TrimSpace(videoURL))
+	if err != nil || parsed.Host == "" {
+		return false
+	}
+	path := parsed.Path
+	return strings.Contains(path, "/v1/task/") ||
+		strings.Contains(path, "/v1/videos/") ||
+		strings.Contains(path, "/outputs/")
 }
 
 func extractCompletedVideoURL(body []byte) string {
@@ -936,13 +1022,17 @@ func validateCompletedVideo(ctx context.Context, ch *model.Channel, task *model.
 	if err != nil {
 		return nil, fmt.Errorf("%w: create client: %v", errVideoValidationInconclusive, err)
 	}
-	requestCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
+	if !acquireVideoValidationSlot() {
+		return nil, fmt.Errorf("%w: validation busy", errVideoValidationInconclusive)
+	}
+	defer releaseVideoValidationSlot()
+	requestCtx, cancel := context.WithTimeout(ctx, videoValidationTimeout)
 	defer cancel()
 	req, err := http.NewRequestWithContext(requestCtx, http.MethodGet, videoURL, nil)
 	if err != nil {
 		return nil, fmt.Errorf("create video validation request: %w", err)
 	}
-	if ch.Type == constant.ChannelTypeOpenAI || ch.Type == constant.ChannelTypeSora {
+	if videoURLNeedsChannelAuth(videoURL) && (ch.Type == constant.ChannelTypeOpenAI || ch.Type == constant.ChannelTypeSora) {
 		key := strings.TrimSpace(task.PrivateData.Key)
 		if key == "" {
 			key = strings.TrimSpace(ch.Key)
