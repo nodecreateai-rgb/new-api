@@ -248,6 +248,16 @@ func RelayTaskSubmit(c *gin.Context, info *relaycommon.RelayInfo) (*TaskSubmitRe
 		}
 	}
 
+	// 6.5 合规素材在网关处理，每张参考图加 1 积分（aicron 最便宜档）。
+	complianceOpt, complianceImages, complianceErr := service.InspectComplianceFromContext(c)
+	if complianceErr != nil {
+		return nil, service.TaskErrorWrapperLocal(complianceErr, "invalid_compliance", http.StatusBadRequest)
+	}
+	if extra := complianceOpt.Quota(complianceImages, info.PriceData.GroupRatioInfo.GroupRatio); extra > 0 {
+		info.PriceData.Quota += extra
+		info.PriceData.FreeModel = false
+	}
+
 	// 7. 预扣费（仅首次 — 重试时 info.Billing 已存在，跳过）
 	if info.Billing == nil && !info.PriceData.FreeModel {
 		info.ForcePreConsume = true
@@ -266,6 +276,18 @@ func RelayTaskSubmit(c *gin.Context, info *relaycommon.RelayInfo) (*TaskSubmitRe
 		return nil, service.TaskErrorWrapper(err, "read_request_body_failed", http.StatusInternalServerError)
 	}
 	contentType := c.Request.Header.Get("Content-Type")
+	// Deferred video submits return before upstream create, so image compliance
+	// runs in that background job. Synchronous submits edit the materials here.
+	if info.TaskRelayInfo == nil || !info.DeferUpstreamSubmit {
+		treated, treatedType, treatErr := service.ApplyComplianceMaterials(c.Request.Context(), bodyBytes, contentType, complianceOpt)
+		if treatErr != nil {
+			return nil, service.TaskErrorWrapper(treatErr, "compliance_material_failed", http.StatusBadGateway)
+		}
+		bodyBytes = treated
+		if treatedType != "" {
+			contentType = treatedType
+		}
+	}
 	upstreamURL, err := adaptor.BuildRequestURL(info)
 	if err != nil {
 		return nil, service.TaskErrorWrapper(err, "build_request_url_failed", http.StatusInternalServerError)

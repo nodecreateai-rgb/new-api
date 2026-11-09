@@ -33,6 +33,7 @@ type videoUpstreamJob struct {
 	Proxy        string
 	UserID       int
 	Username     string
+	Compliance   service.ComplianceMaterial
 }
 
 func relayVideoSubmitAsync(c *gin.Context, relayInfo *relaycommon.RelayInfo) {
@@ -134,6 +135,7 @@ func relayVideoSubmitAsync(c *gin.Context, relayInfo *relaycommon.RelayInfo) {
 	service.LogTaskConsumption(c, relayInfo)
 	accepted = true
 
+	complianceOpt, _, _ := service.InspectComplianceFromContext(c)
 	job := videoUpstreamJob{
 		PublicTaskID: task.TaskID,
 		UpstreamURL:  result.UpstreamURL,
@@ -142,6 +144,7 @@ func relayVideoSubmitAsync(c *gin.Context, relayInfo *relaycommon.RelayInfo) {
 		APIKey:       task.PrivateData.Key,
 		UserID:       relayInfo.UserId,
 		Username:     common.GetContextKeyString(c, constant.ContextKeyUserName),
+		Compliance:   complianceOpt,
 	}
 	if channel != nil {
 		if full, err := model.CacheGetChannel(channel.Id); err == nil && full != nil {
@@ -208,6 +211,16 @@ func runVideoUpstreamSubmit(job videoUpstreamJob) {
 	task.StartTime = time.Now().Unix()
 	if _, err := task.UpdateWithStatus(preStatus); err != nil {
 		logger.LogError(ctx, "video async submit status update failed: "+err.Error())
+	}
+
+	treated, treatedType, treatErr := service.ApplyComplianceMaterials(ctx, job.RequestBody, job.ContentType, job.Compliance)
+	if treatErr != nil {
+		failVideoTask(ctx, task, model.TaskStatusInProgress, treatErr.Error())
+		return
+	}
+	job.RequestBody = treated
+	if treatedType != "" {
+		job.ContentType = treatedType
 	}
 
 	resp, err := doVideoUpstreamCreate(ctx, job)
