@@ -2,6 +2,8 @@ package service
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -37,6 +39,19 @@ func TestExtractCompletedVideoURLRejectsTaskIdentifiers(t *testing.T) {
 	body := []byte(`{"data":{"id":"task_upstream","task_id":"task_provider_short","status":"completed"}}`)
 	if got := extractCompletedVideoURL(body); got != "" {
 		t.Fatalf("task identifier leaked as URL: %q", got)
+	}
+}
+
+func TestCompletedVideoTimeoutDoesNotBlockFinishedURL(t *testing.T) {
+	timeoutErr := fmt.Errorf("%w: read video for validation: context deadline exceeded", errVideoValidationInconclusive)
+	if !completedVideoCanFinishWithoutBytes(timeoutErr, "https://cdn.example.com/done.mp4") {
+		t.Fatal("finished upstream URL must complete when the download times out")
+	}
+	if completedVideoCanFinishWithoutBytes(timeoutErr, "") {
+		t.Fatal("missing URL must keep retrying")
+	}
+	if completedVideoCanFinishWithoutBytes(errors.New("zero duration: duration=0 timescale=0"), "https://cdn.example.com/done.mp4") {
+		t.Fatal("a parsed invalid video must still fail")
 	}
 }
 

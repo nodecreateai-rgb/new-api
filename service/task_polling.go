@@ -666,24 +666,31 @@ func updateVideoSingleTask(ctx context.Context, adaptor TaskPollingAdaptor, ch *
 			var err error
 			videoBytes, err = validateCompletedVideo(ctx, ch, task, taskResult)
 			if err != nil {
-				if errors.Is(err, errVideoValidationInconclusive) {
+				if completedVideoCanFinishWithoutBytes(err, taskResult.Url) {
+					// Upstream already finished. A slow or stalled download must not
+					// leave the task at 30% forever; hand the finished URL through.
+					logger.LogWarn(ctx, fmt.Sprintf("Task %s upstream video is ready; skip local validation: %v", task.TaskID, err))
+					videoBytes = nil
+					passthrough = true
+				} else if errors.Is(err, errVideoValidationInconclusive) {
 					return fmt.Errorf("video validation inconclusive for task %s: %w", task.TaskID, err)
+				} else {
+					taskResult.Status = string(model.TaskStatusFailure)
+					taskResult.Progress = taskcommon.ProgressComplete
+					taskResult.Reason = "视频文件无效或时长为0秒"
+					task.Status = model.TaskStatusFailure
+					task.Progress = taskcommon.ProgressComplete
+					task.FailReason = common.PublicErrorMessage(taskResult.Reason)
+					task.PrivateData.ResultURL = ""
+					if task.FinishTime == 0 {
+						task.FinishTime = now
+					}
+					logger.LogWarn(ctx, fmt.Sprintf("Task %s returned invalid video, mark failed and refund: %v", task.TaskID, err))
+					if quota != 0 {
+						shouldRefund = true
+					}
+					break
 				}
-				taskResult.Status = string(model.TaskStatusFailure)
-				taskResult.Progress = taskcommon.ProgressComplete
-				taskResult.Reason = "视频文件无效或时长为0秒"
-				task.Status = model.TaskStatusFailure
-				task.Progress = taskcommon.ProgressComplete
-				task.FailReason = common.PublicErrorMessage(taskResult.Reason)
-				task.PrivateData.ResultURL = ""
-				if task.FinishTime == 0 {
-					task.FinishTime = now
-				}
-				logger.LogWarn(ctx, fmt.Sprintf("Task %s returned invalid video, mark failed and refund: %v", task.TaskID, err))
-				if quota != 0 {
-					shouldRefund = true
-				}
-				break
 			}
 		}
 		if up := task.PrivateData.Upscaler; up != nil && !up.Done && task.Status == model.TaskStatusSuccess {
@@ -822,6 +829,16 @@ func updateVideoSingleTask(ctx context.Context, adaptor TaskPollingAdaptor, ch *
 const maxVideoValidationBytes int64 = 1 << 30
 
 var errVideoValidationInconclusive = errors.New("video validation inconclusive")
+
+// completedVideoCanFinishWithoutBytes is true when upstream already returned a
+// playable URL and the only problem is that this process could not download
+// the file in time. A missing URL still retries; a parsed invalid MP4 does not.
+func completedVideoCanFinishWithoutBytes(err error, videoURL string) bool {
+	if err == nil || !errors.Is(err, errVideoValidationInconclusive) {
+		return false
+	}
+	return absoluteUpstreamVideoURL(nil, videoURL) != ""
+}
 
 func extractCompletedVideoURL(body []byte) string {
 	var payload any
