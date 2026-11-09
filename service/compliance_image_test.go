@@ -49,7 +49,7 @@ func TestInspectComplianceReadsMetadataAndRejectsMode(t *testing.T) {
 
 func TestApplyComplianceMaterialsRewritesImagesAndStripsFlags(t *testing.T) {
 	var posts int
-	var gotModel, gotPrompt, gotImage string
+	var gotModel, gotPrompt, gotImage, gotQuality string
 	png := []byte{0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a}
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch {
@@ -63,6 +63,7 @@ func TestApplyComplianceMaterialsRewritesImagesAndStripsFlags(t *testing.T) {
 			gotModel, _ = req["model"].(string)
 			gotPrompt, _ = req["prompt"].(string)
 			gotImage, _ = req["image_url"].(string)
+			gotQuality, _ = req["quality"].(string)
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = w.Write([]byte(`{"id":"img1","status":"processing"}`))
 		case r.Method == http.MethodGet && r.URL.Path == "/v1/task/img1":
@@ -76,8 +77,8 @@ func TestApplyComplianceMaterialsRewritesImagesAndStripsFlags(t *testing.T) {
 		}
 	}))
 	defer srv.Close()
-	t.Setenv("AICRON2API_BASE_URL", srv.URL)
-	t.Setenv("AICRON_COMPLIANCE_MODEL", "")
+	t.Setenv("TEMPLIX2API_BASE_URL", srv.URL)
+	t.Setenv("TEMPLIX_COMPLIANCE_MODEL", "")
 
 	body := []byte(`{
 		"model":"seedance-2.0",
@@ -98,8 +99,8 @@ func TestApplyComplianceMaterialsRewritesImagesAndStripsFlags(t *testing.T) {
 	if posts != 1 {
 		t.Fatalf("posts=%d", posts)
 	}
-	if gotModel != complianceImageModel || gotImage != "https://cdn.example/a.png" || !strings.Contains(gotPrompt, "square grid") {
-		t.Fatalf("model=%s image=%s prompt=%s", gotModel, gotImage, gotPrompt)
+	if gotModel != complianceImageModel || gotImage != "https://cdn.example/a.png" || !strings.Contains(gotPrompt, "square grid") || gotQuality != complianceImageQuality {
+		t.Fatalf("model=%s image=%s quality=%s prompt=%s", gotModel, gotImage, gotQuality, gotPrompt)
 	}
 	var payload map[string]any
 	if err := common.Unmarshal(out, &payload); err != nil {
@@ -125,6 +126,34 @@ func TestApplyComplianceMaterialsRewritesImagesAndStripsFlags(t *testing.T) {
 	}
 }
 
+func TestSeedance25C5SkipsComplianceEvenWhenEnabled(t *testing.T) {
+	if !CompliancePassthrough("seedance-2.5-720p-c5") {
+		t.Fatal("c5 must skip compliance")
+	}
+	if CompliancePassthrough("seedance-2.5-720p-c4") {
+		t.Fatal("c4 still uses gateway compliance")
+	}
+	body := []byte(`{"model":"seedance2.5-V","prompt":"角色走进房间","compliance_enabled":true,"compliance_mode":"grid","image_refs":["https://cdn.example/a.png"]}`)
+	posts := 0
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		posts++
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer srv.Close()
+	t.Setenv("TEMPLIX2API_BASE_URL", srv.URL)
+	out, _, err := ApplyComplianceMaterials(context.Background(), body, "application/json", ComplianceMaterial{Passthrough: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if posts != 0 || string(out) != string(body) {
+		t.Fatalf("posts=%d out=%s", posts, out)
+	}
+	opt := ComplianceMaterial{Enabled: true, Mode: "grid", Passthrough: true}
+	if opt.Quota(8, 1) != 0 {
+		t.Fatal("passthrough must not add image credits")
+	}
+}
+
 func TestApplyComplianceMaterialsLeavesPlainRequestsUntouched(t *testing.T) {
 	posts := 0
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -132,7 +161,7 @@ func TestApplyComplianceMaterialsLeavesPlainRequestsUntouched(t *testing.T) {
 		w.WriteHeader(http.StatusInternalServerError)
 	}))
 	defer srv.Close()
-	t.Setenv("AICRON2API_BASE_URL", srv.URL)
+	t.Setenv("TEMPLIX2API_BASE_URL", srv.URL)
 	body := []byte(`{"prompt":"walk","image_refs":["https://cdn.example/a.png"],"compliance_enabled":false}`)
 	out, _, err := ApplyComplianceMaterials(context.Background(), body, "application/json", ComplianceMaterial{})
 	if err != nil {

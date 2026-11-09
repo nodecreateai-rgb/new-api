@@ -248,14 +248,22 @@ func RelayTaskSubmit(c *gin.Context, info *relaycommon.RelayInfo) (*TaskSubmitRe
 		}
 	}
 
-	// 6.5 合规素材在网关处理，每张参考图加 1 积分（aicron 最便宜档）。
-	complianceOpt, complianceImages, complianceErr := service.InspectComplianceFromContext(c)
-	if complianceErr != nil {
-		return nil, service.TaskErrorWrapperLocal(complianceErr, "invalid_compliance", http.StatusBadRequest)
-	}
-	if extra := complianceOpt.Quota(complianceImages, info.PriceData.GroupRatioInfo.GroupRatio); extra > 0 {
-		info.PriceData.Quota += extra
-		info.PriceData.FreeModel = false
+	// 6.5 合规素材在网关处理，每张参考图加 1 积分（templix GPT Image 2.5 low，5 积分档）。
+	// 原生过人脸的模型即使请求开了合规也不处理、不加约束、不加价。
+	complianceOpt := service.ComplianceMaterial{}
+	if service.CompliancePassthrough(info.OriginModelName) {
+		complianceOpt.Passthrough = true
+	} else {
+		var complianceImages int
+		var complianceErr error
+		complianceOpt, complianceImages, complianceErr = service.InspectComplianceFromContext(c)
+		if complianceErr != nil {
+			return nil, service.TaskErrorWrapperLocal(complianceErr, "invalid_compliance", http.StatusBadRequest)
+		}
+		if extra := complianceOpt.Quota(complianceImages, info.PriceData.GroupRatioInfo.GroupRatio); extra > 0 {
+			info.PriceData.Quota += extra
+			info.PriceData.FreeModel = false
+		}
 	}
 
 	// 7. 预扣费（仅首次 — 重试时 info.Billing 已存在，跳过）

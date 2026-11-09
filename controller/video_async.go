@@ -135,7 +135,12 @@ func relayVideoSubmitAsync(c *gin.Context, relayInfo *relaycommon.RelayInfo) {
 	service.LogTaskConsumption(c, relayInfo)
 	accepted = true
 
-	complianceOpt, _, _ := service.InspectComplianceFromContext(c)
+	complianceOpt := service.ComplianceMaterial{}
+	if service.CompliancePassthrough(relayInfo.OriginModelName) {
+		complianceOpt.Passthrough = true
+	} else {
+		complianceOpt, _, _ = service.InspectComplianceFromContext(c)
+	}
 	job := videoUpstreamJob{
 		PublicTaskID: task.TaskID,
 		UpstreamURL:  result.UpstreamURL,

@@ -19,9 +19,11 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// complianceImageModel is aicron's cheapest image model that accepts a
-// reference and currently completes. Flat cost is 1 credit.
-const complianceImageModel = "z-image-turbo"
+// complianceImageModel is GPT Image 2.5 at the low tier. That tier is 5
+// templix credits, the same as turbo, and finishes faster. The gateway still
+// charges the caller 1 credit per image.
+const complianceImageModel = "gpt-image-25"
+const complianceImageQuality = "low"
 
 // complianceImageCredit is the gateway price, in the same unit as model
 // prices (1 == one credit / ¥1 at the default quota rate), charged once per
@@ -31,34 +33,49 @@ const complianceImageCredit = 1.0
 // ComplianceMaterial is the gateway decision for a video request.
 // Enabled means reference images are edited here before the video upstream
 // sees them, instead of forwarding compliance_enabled for air2api.
+// Passthrough means the selected model already accepts real faces, so an
+// enabled flag must not edit images, add a cleanup prompt, or add a charge.
 type ComplianceMaterial struct {
-	Enabled bool
-	Mode    string
+	Enabled     bool
+	Mode        string
+	Passthrough bool
 }
 
 func (m ComplianceMaterial) Quota(images int, groupRatio float64) int {
-	if !m.Enabled || images <= 0 || groupRatio <= 0 {
+	if m.Passthrough || !m.Enabled || images <= 0 || groupRatio <= 0 {
 		return 0
 	}
 	return images * int(complianceImageCredit*common.QuotaPerUnit*groupRatio)
 }
 
+// CompliancePassthrough reports models that already accept real faces.
+// seedance-2.5-720p-c5 is native, so compliance must not run even when the
+// request turns it on.
+func CompliancePassthrough(model string) bool {
+	switch strings.ToLower(strings.TrimSpace(model)) {
+	case "seedance-2.5-720p-c5":
+		return true
+	default:
+		return false
+	}
+}
+
 func complianceBaseURL() string {
-	if v := strings.TrimSpace(os.Getenv("AICRON2API_BASE_URL")); v != "" {
+	if v := strings.TrimSpace(os.Getenv("TEMPLIX2API_BASE_URL")); v != "" {
 		return strings.TrimRight(v, "/")
 	}
-	return "http://domiex-aicron-pyax1d-aicron2api-1:38705"
+	return "http://domiex-templix-5pvyf6-templix2api-1:38715"
 }
 
 func complianceModel() string {
-	if v := strings.TrimSpace(os.Getenv("AICRON_COMPLIANCE_MODEL")); v != "" {
+	if v := strings.TrimSpace(os.Getenv("TEMPLIX_COMPLIANCE_MODEL")); v != "" {
 		return v
 	}
 	return complianceImageModel
 }
 
 func complianceKey() string {
-	return strings.TrimSpace(firstEnv("AICRON2API_GATEWAY_KEY", "AC2API_API_KEY"))
+	return strings.TrimSpace(firstEnv("TEMPLIX2API_GATEWAY_KEY", "TX2API_API_KEY"))
 }
 
 var complianceImageKeys = map[string]struct{}{
@@ -114,10 +131,13 @@ func InspectComplianceFromContext(c *gin.Context) (ComplianceMaterial, int, erro
 	return InspectCompliance(body, c.GetHeader("Content-Type"))
 }
 
-// ApplyComplianceMaterials edits each reference image through aicron and
+// ApplyComplianceMaterials edits each reference image through templix and
 // rewrites the upstream body so the video service receives the treated
 // materials with compliance flags removed.
 func ApplyComplianceMaterials(ctx context.Context, body []byte, contentType string, opt ComplianceMaterial) ([]byte, string, error) {
+	if opt.Passthrough {
+		return body, contentType, nil
+	}
 	if !opt.Enabled {
 		detected, _, err := InspectCompliance(body, contentType)
 		if err != nil {
@@ -167,7 +187,7 @@ func applyComplianceJSON(ctx context.Context, body []byte, opt ComplianceMateria
 }
 
 func editComplianceImages(ctx context.Context, mode string, images []string) (map[string]string, error) {
-	logger.LogInfo(ctx, fmt.Sprintf("compliance: treating %d image(s) via aicron model %s mode %s", len(images), complianceModel(), mode))
+	logger.LogInfo(ctx, fmt.Sprintf("compliance: treating %d image(s) via templix model %s mode %s", len(images), complianceModel(), mode))
 	ctx, cancel := context.WithTimeout(ctx, 20*time.Minute)
 	defer cancel()
 	out := make(map[string]string, len(images))
@@ -186,6 +206,7 @@ func editComplianceImage(ctx context.Context, mode, src string) (string, error) 
 		"model":     complianceModel(),
 		"prompt":    compliancePrompt(mode),
 		"image_url": src,
+		"quality":   complianceImageQuality,
 		"n":         1,
 	})
 	if err != nil {
@@ -217,12 +238,12 @@ func editComplianceImage(ctx context.Context, mode, src string) (string, error) 
 	}
 	id := complianceTaskID(created)
 	if id == "" {
-		return "", fmt.Errorf("aicron did not return a task id")
+		return "", fmt.Errorf("templix did not return a task id")
 	}
 	deadline := time.Now().Add(6 * time.Minute)
 	for {
 		if time.Now().After(deadline) {
-			return "", fmt.Errorf("aicron image timed out")
+			return "", fmt.Errorf("templix image timed out")
 		}
 		select {
 		case <-ctx.Done():
@@ -239,7 +260,7 @@ func editComplianceImage(ctx context.Context, mode, src string) (string, error) 
 		status := strings.ToLower(asComplianceString(view["status"]))
 		switch status {
 		case "failed", "error", "canceled", "cancelled":
-			return "", fmt.Errorf("aicron image %s", complianceErrorMessage(view))
+			return "", fmt.Errorf("templix image %s", complianceErrorMessage(view))
 		}
 		if complianceDone(view) {
 			if url := complianceResultURL(view); url != "" {
@@ -261,14 +282,14 @@ func complianceJSON(ctx context.Context, method, path string, body []byte, timeo
 		return nil, err
 	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return nil, fmt.Errorf("aicron http %d", resp.StatusCode)
+		return nil, fmt.Errorf("templix http %d", resp.StatusCode)
 	}
 	var out map[string]any
 	if err := common.Unmarshal(raw, &out); err != nil {
-		return nil, fmt.Errorf("aicron response is not json")
+		return nil, fmt.Errorf("templix response is not json")
 	}
 	if errObj, ok := out["error"]; ok && errObj != nil {
-		return nil, fmt.Errorf("aicron rejected the image")
+		return nil, fmt.Errorf("templix rejected the image")
 	}
 	return out, nil
 }
@@ -302,7 +323,7 @@ func complianceDo(ctx context.Context, method, path string, body []byte, timeout
 func complianceFetchDataURL(ctx context.Context, link string) (string, error) {
 	link = strings.TrimSpace(link)
 	if link == "" {
-		return "", fmt.Errorf("aicron image has no output")
+		return "", fmt.Errorf("templix image has no output")
 	}
 	if strings.HasPrefix(link, "data:") {
 		return link, nil
@@ -325,11 +346,11 @@ func complianceFetchDataURL(ctx context.Context, link string) (string, error) {
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return "", fmt.Errorf("aicron image http %d", resp.StatusCode)
+		return "", fmt.Errorf("templix image http %d", resp.StatusCode)
 	}
 	data, err := io.ReadAll(io.LimitReader(resp.Body, 32<<20))
 	if err != nil || len(data) == 0 {
-		return "", fmt.Errorf("aicron image is empty")
+		return "", fmt.Errorf("templix image is empty")
 	}
 	ct := resp.Header.Get("Content-Type")
 	if i := strings.Index(ct, ";"); i > 0 {
