@@ -47,7 +47,6 @@ func TestClaudeChatPricingPersistsOnRestart(t *testing.T) {
 		`"llm-vip": 1,`,
 		`"llm-vip": "LLM VIP分组"`,
 		`"anthropic/claude-opus-5-5": 0,`,
-		`ensureClaudeChatRouting()`,
 		`ensureLLMVipOnEnabledChannels()`,
 	} {
 		if !strings.Contains(body, want) {

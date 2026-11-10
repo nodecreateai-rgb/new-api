@@ -35,7 +35,6 @@ func TestSekotvMiniRoutingUsesSekotvGateway(t *testing.T) {
 	}
 	body := string(option)
 	for _, want := range []string{
-		`ensureSekotvMiniRouting()`,
 		`"seedance-2.0-mini-720p":             1,`,
 	} {
 		if !strings.Contains(body, want) {

@@ -76,9 +76,8 @@ func TestXxzModelSurvivesRestartCleanup(t *testing.T) {
 	body := string(option)
 	ensureAt := strings.Index(body, "ensureXxzRouting()")
 	retireAt := strings.Index(body, "retireDeadVideoModels()")
-	ensureJm2 := strings.Index(body, "ensureJm2apiRouting()")
-	if ensureAt < 0 || retireAt < 0 || ensureJm2 < 0 || ensureAt < retireAt || ensureAt < ensureJm2 {
-		t.Fatal("ensureXxzRouting must run after retireDeadVideoModels and ensureJm2apiRouting so c2 stays on Video Fast 720p C2")
+	if ensureAt < 0 || retireAt < 0 || ensureAt < retireAt || strings.Contains(body, "ensureJm2apiRouting()") {
+		t.Fatal("ensureXxzRouting must run after retireDeadVideoModels, and the jimeng fast channel must stay unpublished")
 	}
 	if strings.Contains(body, `"seedance-2.0-fast-720p-c2"`) && strings.Contains(body, "permanentlyRetiredPublicModels") {
 		retired := body[strings.Index(body, "var permanentlyRetiredPublicModels"):]

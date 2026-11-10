@@ -13,7 +13,6 @@ func TestJm2apiModelsListedWithPrices(t *testing.T) {
 	}
 	body := string(option)
 	for _, want := range []string{
-		`ensureJm2apiRouting()`,
 		`ensureVIP15OnEnabledChannels()`,
 		`"seedance-2.0-fast-720p-c3":          1.8,`,
 		`"seedance-2.0-fast-720p-c3": 1`,
@@ -61,18 +60,10 @@ func TestJm2apiModelSurvivesRestartCleanup(t *testing.T) {
 		t.Fatal(err)
 	}
 	body := string(option)
-	ensureAt := strings.Index(body, "ensureJm2apiRouting()")
 	vip15 := strings.Index(body, "ensureVIP15OnEnabledChannels()")
 	retireAt := strings.Index(body, "retireDeadVideoModels()")
-	if ensureAt < 0 || vip15 < 0 || retireAt < 0 || ensureAt < retireAt || vip15 < ensureAt {
-		t.Fatal("ensureJm2apiRouting must run after retireDeadVideoModels, and vip15 after the channel is published")
-	}
-	if strings.Contains(body, "permanentlyRetiredPublicModels") {
-		retired := body[strings.Index(body, "var permanentlyRetiredPublicModels"):]
-		retired = retired[:strings.Index(retired, "}")]
-		if strings.Contains(retired, `"seedance-2.0-fast-720p-c3"`) {
-			t.Fatal("seedance-2.0-fast-720p-c3 must not be permanently retired")
-		}
+	if vip15 < 0 || retireAt < 0 || strings.Contains(body, "ensureJm2apiRouting()") {
+		t.Fatal("seedance-2.0-fast-720p-c3 must stay unpublished; retireDeadVideoModels strips it")
 	}
 
 	retiredVideo, err := os.ReadFile("option_retired_video.go")
@@ -83,10 +74,28 @@ func TestJm2apiModelSurvivesRestartCleanup(t *testing.T) {
 	if strings.Contains(dead, `"seedance-2.0-fast-720p-c2"`) {
 		t.Fatal("seedance-2.0-fast-720p-c2 must not be in deadVideoModels")
 	}
-	if strings.Contains(dead, `"seedance-2.0-fast-720p-c3"`) {
-		t.Fatal("seedance-2.0-fast-720p-c3 must not be in deadVideoModels")
+	if !strings.Contains(dead, `"seedance-2.0-fast-720p-c3"`) {
+		t.Fatal("seedance-2.0-fast-720p-c3 must be in deadVideoModels")
 	}
-	if strings.Contains(dead, `"Video Fast 720p C3"`) {
-		t.Fatal("Video Fast 720p C3 must not be in deadVideoChannels")
+	if !strings.Contains(dead, `"Video Fast 720p C3"`) {
+		t.Fatal("Video Fast 720p C3 must be in deadVideoChannels")
+	}
+	for _, model := range []string{
+		`"kling-o3-omni"`,
+		`"anthropic/claude-opus-5-5"`,
+		`"minimax-h3-max-768p"`,
+		`"seedance-2.0-mini-480p-12s"`,
+	} {
+		if !strings.Contains(dead, model) {
+			t.Fatalf("%s must be in deadVideoModels", model)
+		}
+	}
+	for _, channel := range []string{`"Kling O3 Omni"`, `"Claude Chat"`, `"Aicron Video"`} {
+		if !strings.Contains(dead, channel) {
+			t.Fatalf("%s must be in deadVideoChannels", channel)
+		}
+	}
+	if strings.Contains(body, "ensureClaudeChatRouting()") || strings.Contains(body, "ensureSekotvMiniRouting()") {
+		t.Fatal("retired Claude and Kling routes must not be published on startup")
 	}
 }

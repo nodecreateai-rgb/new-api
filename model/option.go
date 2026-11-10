@@ -529,6 +529,12 @@ func ensureDopioRMBPricing() {
 			changed = true
 		}
 	}
+	for _, gone := range []string{"seedance-2.0-fast-720p-c3", "kling-o3-omni", "anthropic/claude-opus-5-5", "minimax-h3-max-768p", "seedance-2.0-mini-480p-12s"} {
+		if _, exists := prices[gone]; exists {
+			delete(prices, gone)
+			changed = true
+		}
+	}
 	for _, chatModel := range tokenBilledChatModels() {
 		if _, exists := prices[chatModel]; exists {
 			delete(prices, chatModel)
@@ -775,7 +781,7 @@ func ensureDopioRMBPricing() {
 				changed = true
 			}
 		}
-		for _, model := range append([]string{"seedance-2.0", "seedance-2.0-c2", "seedance-2.0-480p-c2", "seedance-2.0-fast-c2", "seedance-2.0-fast-480p-c2", "seedance-2.0-mini-c2", "wan-3.0-c2"}, permanentlyRetiredPublicModels...) {
+		for _, model := range append([]string{"seedance-2.0", "seedance-2.0-c2", "seedance-2.0-480p-c2", "seedance-2.0-fast-c2", "seedance-2.0-fast-480p-c2", "seedance-2.0-mini-c2", "wan-3.0-c2", "seedance-2.0-fast-720p-c3", "kling-o3-omni", "anthropic/claude-opus-5-5", "minimax-h3-max-768p", "seedance-2.0-mini-480p-12s"}, permanentlyRetiredPublicModels...) {
 			if _, exists := groupPrices[model]; exists {
 				delete(groupPrices, model)
 				changed = true
@@ -863,9 +869,6 @@ func ensureDopioRMBPricing() {
 	if err := retireNonCoreGateways(); err != nil {
 		common.SysLog("failed to retire non-dola/roboneo models: " + err.Error())
 	}
-	if err := ensureSekotvMiniRouting(); err != nil {
-		common.SysLog("failed to enforce Seko Seedance Mini gateway routing: " + err.Error())
-	}
 	if err := retireVideoStudioRouting(); err != nil {
 		common.SysLog("failed to retire video studio gateway routing: " + err.Error())
 	}
@@ -900,9 +903,6 @@ func ensureDopioRMBPricing() {
 	}
 	if err := ensureSeedanceFastRouting(); err != nil {
 		common.SysLog("failed to enforce Seedance 2.0 Fast gateway routing: " + err.Error())
-	}
-	if err := ensureClaudeChatRouting(); err != nil {
-		common.SysLog("failed to enforce Claude Chat gateway routing: " + err.Error())
 	}
 	if err := ensureSeedance480Routing(); err != nil {
 		common.SysLog("failed to enforce Seedance 480p gateway routing: " + err.Error())
@@ -947,9 +947,6 @@ func ensureDopioRMBPricing() {
 	}
 	if err := ensureXingapi25Routing(); err != nil {
 		common.SysLog("failed to enforce Video 720p C5 gateway routing: " + err.Error())
-	}
-	if err := ensureJm2apiRouting(); err != nil {
-		common.SysLog("failed to enforce Video Fast 720p C3 gateway routing: " + err.Error())
 	}
 	if err := ensureXxzRouting(); err != nil {
 		common.SysLog("failed to enforce Video Fast 720p C2 gateway routing: " + err.Error())

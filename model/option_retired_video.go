@@ -18,6 +18,13 @@ var deadVideoModels = []string{
 	"wan3.0-video-prime", "seedance-2.5",
 	// openai.fit (Video Fast 720p C1)
 	"seedance-2.0-fast-720p-c1",
+	// jimeng fast 720p, seko kling, Claude Opus 5.5, and the Aicron pair
+	// are withdrawn for good. Startup must not publish them again.
+	"seedance-2.0-fast-720p-c3",
+	"kling-o3-omni",
+	"anthropic/claude-opus-5-5",
+	"minimax-h3-max-768p",
+	"seedance-2.0-mini-480p-12s",
 }
 
 // deadVideoChannels served only dead models, so they are switched off.
@@ -28,6 +35,10 @@ var deadVideoChannels = []string{
 	"Video 480p C3", "Video Seedance C5",
 	"Bramble Video",
 	"Video Fast 720p C1",
+	"Video Fast 720p C3",
+	"Kling O3 Omni",
+	"Claude Chat",
+	"Aicron Video",
 }
 
 // retireDeadVideoModels runs after every ensure step, because several of
