@@ -536,12 +536,18 @@ func GetTimedOutUnfinishedTasks(cutoffUnix int64, limit int) []*Task {
 	return tasks
 }
 
-// GetFalseFailedDownloadTasks returns tasks that were failed only because the
-// gateway could not download an already-finished upstream video in time.
+// GetFalseFailedDownloadTasks returns tasks that the gateway marked failed
+// after upstream already finished: download queue timeouts, or a local MP4
+// probe that rejected a still-valid provider file.
 func GetFalseFailedDownloadTasks(sinceUnix int64, limit int) []*Task {
 	var tasks []*Task
 	err := DB.Where("status = ?", TaskStatusFailure).
-		Where("fail_reason LIKE ?", "%视频文件暂时无法下载%").
+		Where(
+			"fail_reason LIKE ? OR fail_reason LIKE ? OR fail_reason = ?",
+			"%视频文件暂时无法下载%",
+			"%视频文件无效或时长为0秒%",
+			"视频文件无效或时长为0秒",
+		).
 		Where("finish_time >= ?", sinceUnix).
 		Order("finish_time").
 		Limit(limit).

@@ -141,8 +141,8 @@ func failPendingUpstreamTask(ctx context.Context, task *model.Task) {
 const falseFailedDownloadReason = "视频文件暂时无法下载"
 
 func recoverFalseFailedDownloads(ctx context.Context) {
-	since := time.Now().Unix() - 48*3600
-	tasks := model.GetFalseFailedDownloadTasks(since, 50)
+	since := time.Now().Unix() - 14*24*3600
+	tasks := model.GetFalseFailedDownloadTasks(since, 200)
 	if len(tasks) == 0 {
 		return
 	}
