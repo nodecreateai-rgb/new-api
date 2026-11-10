@@ -148,6 +148,43 @@ func taskModelName(task *model.Task) string {
 	return task.Properties.OriginModelName
 }
 
+// ReclaimTaskQuota charges again after a false failure refund.
+// Used when upstream already finished but the gateway wrongly failed the task.
+func ReclaimTaskQuota(ctx context.Context, task *model.Task, reason string) {
+	quota := task.Quota
+	if quota == 0 {
+		return
+	}
+	if ok, err := common.RedisSetNX("task_reclaim:"+task.TaskID, "1", 48*time.Hour); err != nil {
+		logger.LogWarn(ctx, fmt.Sprintf("task reclaim claim error %s: %s", task.TaskID, err.Error()))
+	} else if !ok {
+		logger.LogWarn(ctx, fmt.Sprintf("task %s reclaim already claimed, skip", task.TaskID))
+		return
+	}
+	if err := taskAdjustFunding(task, quota); err != nil {
+		logger.LogWarn(ctx, fmt.Sprintf("reclaim funding failed task %s: %s", task.TaskID, err.Error()))
+		_ = common.RedisDel("task_reclaim:" + task.TaskID)
+		return
+	}
+	taskAdjustTokenQuota(ctx, task, quota)
+	model.AdjustUserUsedQuota(task.UserId, quota)
+	model.UpdateChannelUsedQuota(task.ChannelId, quota)
+	other := taskBillingOther(task)
+	other["task_id"] = task.TaskID
+	other["reason"] = reason
+	model.RecordTaskBillingLog(model.RecordTaskBillingLogParams{
+		UserId:    task.UserId,
+		LogType:   model.LogTypeConsume,
+		Content:   "",
+		ChannelId: task.ChannelId,
+		ModelName: taskModelName(task),
+		Quota:     quota,
+		TokenId:   task.PrivateData.TokenId,
+		Group:     task.Group,
+		Other:     other,
+	})
+}
+
 // RefundTaskQuota 统一的任务失败退款逻辑。
 // 当异步任务失败时，将预扣的 quota 退还给用户（支持钱包和订阅），并退还令牌额度。
 func RefundTaskQuota(ctx context.Context, task *model.Task, reason string) {

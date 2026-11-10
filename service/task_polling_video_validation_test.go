@@ -80,6 +80,9 @@ func TestCompletedVideoTimeoutDoesNotBlockFinishedURL(t *testing.T) {
 	if clientMayKeepUpstreamVideoURL(ch, "https://xingapi.top/api/v1/media-content/token") {
 		t.Fatal("provider host URL must be stored by the gateway")
 	}
+	if clientMayKeepUpstreamVideoURL(ch, "https://xingapi.top/api/v1/media-content/token") == clientMayKeepUpstreamVideoURL(ch, "https://cdn.example.com/done.mp4") {
+		t.Fatal("provider and public CDN URLs must take different completion paths")
+	}
 }
 
 func TestSlowFinishedVideoStopsQuickly(t *testing.T) {

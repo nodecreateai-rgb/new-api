@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -137,6 +138,94 @@ func failPendingUpstreamTask(ctx context.Context, task *model.Task) {
 	}
 }
 
+const falseFailedDownloadReason = "视频文件暂时无法下载"
+
+func recoverFalseFailedDownloads(ctx context.Context) {
+	since := time.Now().Unix() - 48*3600
+	tasks := model.GetFalseFailedDownloadTasks(since, 50)
+	if len(tasks) == 0 {
+		return
+	}
+	recovered := 0
+	for _, task := range tasks {
+		if task == nil || strings.TrimSpace(task.GetUpstreamTaskID()) == "" {
+			continue
+		}
+		ch, err := model.CacheGetChannel(task.ChannelId)
+		if err != nil {
+			ch, err = model.GetChannelById(task.ChannelId, true)
+			if err != nil {
+				continue
+			}
+		}
+		adaptor := GetTaskAdaptorFunc(constant.TaskPlatform(strconv.Itoa(ch.Type)))
+		if adaptor == nil {
+			adaptor = GetTaskAdaptorFunc(task.Platform)
+		}
+		if adaptor == nil {
+			continue
+		}
+		info := &relaycommon.RelayInfo{}
+		info.ChannelMeta = &relaycommon.ChannelMeta{ChannelBaseUrl: ch.GetBaseURL()}
+		info.ApiKey = ch.Key
+		adaptor.Init(info)
+		baseURL := ch.GetBaseURL()
+		if baseURL == "" {
+			baseURL = constant.ChannelBaseURLs[ch.Type]
+		}
+		key := strings.TrimSpace(task.PrivateData.Key)
+		if key == "" {
+			key = strings.TrimSpace(ch.Key)
+		}
+		resp, err := adaptor.FetchTask(baseURL, key, map[string]any{
+			"task_id": task.GetUpstreamTaskID(),
+			"action":  task.Action,
+		}, ch.GetSetting().Proxy)
+		if err != nil || resp == nil {
+			continue
+		}
+		body, err := io.ReadAll(resp.Body)
+		_ = resp.Body.Close()
+		if err != nil {
+			continue
+		}
+		taskResult, err := adaptor.ParseTaskResult(body)
+		if err != nil || taskResult == nil {
+			continue
+		}
+		if taskResult.Url == "" {
+			taskResult.Url = extractCompletedVideoURL(body)
+		}
+		if model.TaskStatus(taskResult.Status) != model.TaskStatusSuccess {
+			continue
+		}
+		readyURL := absoluteUpstreamVideoURL(ch, taskResult.Url)
+		if readyURL == "" {
+			continue
+		}
+		oldStatus := task.Status
+		now := time.Now().Unix()
+		task.Status = model.TaskStatusSuccess
+		task.Progress = taskcommon.ProgressComplete
+		task.FailReason = ""
+		task.FinishTime = now
+		task.Data = model.JSONRaw(redactVideoResponseBody(body))
+		task.PrivateData.DirectUpstreamVideo = false
+		task.PrivateData.UpstreamResultURL = readyURL
+		task.PrivateData.ResultURL = taskcommon.BuildProxyURL(task.TaskID)
+		won, err := task.UpdateWithStatus(oldStatus)
+		if err != nil || !won {
+			continue
+		}
+		ReclaimTaskQuota(ctx, task, "上游已完成，恢复成功并补扣")
+		recovered++
+		logger.LogInfo(ctx, fmt.Sprintf("recoverFalseFailedDownloads: restored %s", task.TaskID))
+	}
+	if recovered > 0 {
+		logger.LogInfo(ctx, fmt.Sprintf("recoverFalseFailedDownloads: restored %d tasks", recovered))
+	}
+}
+
 func sweepFastModelTimeouts(ctx context.Context) {
 	now := time.Now().Unix()
 	for modelName, minutes := range fastTaskTimeoutMinutes {
@@ -200,6 +289,7 @@ func TaskPollingLoop() {
 		common.SysLog("任务进度轮询开始")
 		ctx := context.TODO()
 		sweepTimedOutTasks(ctx)
+		recoverFalseFailedDownloads(ctx)
 		allTasks := model.GetAllUnFinishSyncTasks(constant.TaskQueryLimit)
 		platformTask := make(map[constant.TaskPlatform][]*model.Task)
 		for _, t := range allTasks {
@@ -664,58 +754,67 @@ func updateVideoSingleTask(ctx context.Context, adaptor TaskPollingAdaptor, ch *
 		passthrough := ksyunSeedanceReturnsUpstreamVideo(ch, task)
 		if !passthrough && task.Platform != constant.TaskPlatformImage && task.Platform != constant.TaskPlatformPay {
 			readyURL := absoluteUpstreamVideoURL(ch, taskResult.Url)
-			var err error
-			videoBytes, err = validateCompletedVideo(ctx, ch, task, taskResult)
-			if err != nil {
-				if readyURL != "" && errors.Is(err, errVideoValidationInconclusive) && clientMayKeepUpstreamVideoURL(ch, readyURL) {
-					// A public CDN file can be handed to the client. A provider
-					// API or content URL cannot: the browser would get 401.
-					logger.LogWarn(ctx, fmt.Sprintf("Task %s upstream video is ready; skip local validation: %v", task.TaskID, err))
-					clearVideoValidationMiss(task.TaskID)
-					videoBytes = nil
-					passthrough = true
-					taskResult.Url = readyURL
-				} else if errors.Is(err, errVideoValidationInconclusive) {
-					misses := noteVideoValidationMiss(task.TaskID)
-					if misses < maxVideoValidationMisses {
-						return fmt.Errorf("video validation inconclusive for task %s: %w", task.TaskID, err)
+			if readyURL != "" && !clientMayKeepUpstreamVideoURL(ch, readyURL) {
+				// Provider content must stay behind our proxy. Do not block the
+				// poller on a full local download: queueing here was marking
+				// finished upstream jobs as failures.
+				clearVideoValidationMiss(task.TaskID)
+				videoBytes = nil
+				passthrough = false
+				taskResult.Url = readyURL
+				logger.LogInfo(ctx, fmt.Sprintf("Task %s keeps provider video behind gateway content URL", task.TaskID))
+			} else {
+				var err error
+				videoBytes, err = validateCompletedVideo(ctx, ch, task, taskResult)
+				if err != nil {
+					if readyURL != "" && errors.Is(err, errVideoValidationInconclusive) {
+						logger.LogWarn(ctx, fmt.Sprintf("Task %s upstream video is ready; skip local validation: %v", task.TaskID, err))
+						clearVideoValidationMiss(task.TaskID)
+						videoBytes = nil
+						passthrough = true
+						taskResult.Url = readyURL
+					} else if errors.Is(err, errVideoValidationInconclusive) {
+						misses := noteVideoValidationMiss(task.TaskID)
+						if misses < maxVideoValidationMisses {
+							return fmt.Errorf("video validation inconclusive for task %s: %w", task.TaskID, err)
+						}
+						clearVideoValidationMiss(task.TaskID)
+						taskResult.Status = string(model.TaskStatusFailure)
+						taskResult.Progress = taskcommon.ProgressComplete
+						taskResult.Reason = "视频文件暂时无法下载，已自动退款，请重新提交"
+						task.Status = model.TaskStatusFailure
+						task.Progress = taskcommon.ProgressComplete
+						task.FailReason = common.PublicErrorMessage(taskResult.Reason)
+						task.PrivateData.ResultURL = ""
+						if task.FinishTime == 0 {
+							task.FinishTime = now
+						}
+						logger.LogWarn(ctx, fmt.Sprintf("Task %s gave up fetching the finished video after %d attempts: %v", task.TaskID, misses, err))
+						if quota != 0 {
+							shouldRefund = true
+						}
+						break
+					} else {
+						clearVideoValidationMiss(task.TaskID)
+						taskResult.Status = string(model.TaskStatusFailure)
+						taskResult.Progress = taskcommon.ProgressComplete
+						taskResult.Reason = "视频文件无效或时长为0秒"
+						task.Status = model.TaskStatusFailure
+						task.Progress = taskcommon.ProgressComplete
+						task.FailReason = common.PublicErrorMessage(taskResult.Reason)
+						task.PrivateData.ResultURL = ""
+						if task.FinishTime == 0 {
+							task.FinishTime = now
+						}
+						logger.LogWarn(ctx, fmt.Sprintf("Task %s returned invalid video, mark failed and refund: %v", task.TaskID, err))
+						if quota != 0 {
+							shouldRefund = true
+						}
+						break
 					}
-					clearVideoValidationMiss(task.TaskID)
-					taskResult.Status = string(model.TaskStatusFailure)
-					taskResult.Progress = taskcommon.ProgressComplete
-					taskResult.Reason = "视频文件暂时无法下载，已自动退款，请重新提交"
-					task.Status = model.TaskStatusFailure
-					task.Progress = taskcommon.ProgressComplete
-					task.FailReason = common.PublicErrorMessage(taskResult.Reason)
-					task.PrivateData.ResultURL = ""
-					if task.FinishTime == 0 {
-						task.FinishTime = now
-					}
-					logger.LogWarn(ctx, fmt.Sprintf("Task %s gave up fetching the finished video after %d attempts: %v", task.TaskID, misses, err))
-					if quota != 0 {
-						shouldRefund = true
-					}
-					break
 				} else {
 					clearVideoValidationMiss(task.TaskID)
-					taskResult.Status = string(model.TaskStatusFailure)
-					taskResult.Progress = taskcommon.ProgressComplete
-					taskResult.Reason = "视频文件无效或时长为0秒"
-					task.Status = model.TaskStatusFailure
-					task.Progress = taskcommon.ProgressComplete
-					task.FailReason = common.PublicErrorMessage(taskResult.Reason)
-					task.PrivateData.ResultURL = ""
-					if task.FinishTime == 0 {
-						task.FinishTime = now
-					}
-					logger.LogWarn(ctx, fmt.Sprintf("Task %s returned invalid video, mark failed and refund: %v", task.TaskID, err))
-					if quota != 0 {
-						shouldRefund = true
-					}
-					break
 				}
-			} else {
-				clearVideoValidationMiss(task.TaskID)
 			}
 		}
 		if up := task.PrivateData.Upscaler; up != nil && !up.Done && task.Status == model.TaskStatusSuccess {
