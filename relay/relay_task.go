@@ -735,7 +735,7 @@ func scrubTaskPayload(payload map[string]any, publicTaskID string) {
 		"local_path", "parent_email", "account_email", "upstream_video_id", "video_id", "remote_task_id",
 		"upstream_task_id", "chat_id", "chatId", "log_id", "logId", "conversation_id",
 		"url", "video_url", "download_url", "no_watermark_url", "watermark_url",
-		"remote_url", "output_url", "upstream_video_url", "poster", "thumb",
+		"remote_url", "output_url", "upstream_video_url", "content_url", "result_url", "poster", "thumb",
 	} {
 		delete(payload, key)
 	}

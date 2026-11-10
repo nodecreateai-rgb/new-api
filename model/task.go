@@ -5,6 +5,7 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"strings"
 	"time"
 
@@ -315,13 +316,44 @@ func (t *Task) PublicResultURL() string {
 
 func directUpstreamVideoURL(raw string) string {
 	raw = strings.TrimSpace(raw)
-	if raw == "" || r2.PublicObjectURL(raw) != "" {
+	if raw == "" || r2.PublicObjectURL(raw) != "" || !ClientMayReceiveDirectVideoURL(raw) {
 		return ""
 	}
 	if strings.HasPrefix(raw, "https://") || strings.HasPrefix(raw, "http://") {
 		return raw
 	}
 	return ""
+}
+
+// ClientMayReceiveDirectVideoURL is true only for a public file URL.
+// Provider API hosts and content endpoints, including the original upstream
+// content link, stay inside the gateway.
+func ClientMayReceiveDirectVideoURL(raw string) bool {
+	raw = strings.TrimSpace(raw)
+	if !strings.HasPrefix(raw, "https://") && !strings.HasPrefix(raw, "http://") {
+		return false
+	}
+	if r2.PublicObjectURL(raw) != "" {
+		return false
+	}
+	return !privateProviderVideoURL(raw)
+}
+
+func privateProviderVideoURL(raw string) bool {
+	parsed, err := url.Parse(strings.TrimSpace(raw))
+	if err != nil || parsed.Hostname() == "" {
+		return false
+	}
+	host := strings.ToLower(parsed.Hostname())
+	if host == "xingapi.top" || strings.HasSuffix(host, ".xingapi.top") {
+		return true
+	}
+	path := strings.ToLower(parsed.Path)
+	return strings.Contains(path, "/api/v1/") ||
+		strings.Contains(path, "/media-content/") ||
+		strings.Contains(path, "/v1/videos/") ||
+		strings.Contains(path, "/v1/task/") ||
+		strings.Contains(path, "/outputs/")
 }
 
 // GenerateTaskID 生成对外暴露的 task_xxxx 格式 ID

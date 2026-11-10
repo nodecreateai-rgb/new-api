@@ -667,18 +667,14 @@ func updateVideoSingleTask(ctx context.Context, adaptor TaskPollingAdaptor, ch *
 			var err error
 			videoBytes, err = validateCompletedVideo(ctx, ch, task, taskResult)
 			if err != nil {
-				if readyURL != "" && errors.Is(err, errVideoValidationInconclusive) {
-					// Upstream already published a file URL. A slow, busy, or
-					// rejected download must not leave the task at 30%.
+				if readyURL != "" && errors.Is(err, errVideoValidationInconclusive) && clientMayKeepUpstreamVideoURL(ch, readyURL) {
+					// A public CDN file can be handed to the client. A provider
+					// API or content URL cannot: the browser would get 401.
 					logger.LogWarn(ctx, fmt.Sprintf("Task %s upstream video is ready; skip local validation: %v", task.TaskID, err))
 					clearVideoValidationMiss(task.TaskID)
 					videoBytes = nil
+					passthrough = true
 					taskResult.Url = readyURL
-					if videoURLNeedsChannelAuth(readyURL) {
-						passthrough = false
-					} else {
-						passthrough = true
-					}
 				} else if errors.Is(err, errVideoValidationInconclusive) {
 					misses := noteVideoValidationMiss(task.TaskID)
 					if misses < maxVideoValidationMisses {
@@ -855,9 +851,13 @@ func updateVideoSingleTask(ctx context.Context, adaptor TaskPollingAdaptor, ch *
 // 30s 720p/1080p outputs routinely exceed 64MB; keep a generous ceiling.
 const maxVideoValidationBytes int64 = 1 << 30
 
-// A finished URL only gets a short local fetch. Waiting minutes for a slow CDN
+// A public CDN only gets a short local fetch. Waiting minutes for a slow CDN
 // is what left completed videos at 30%.
 var videoValidationTimeout = 20 * time.Second
+
+// Provider content links expire and reject anonymous downloads. The gateway
+// has to store the file itself, so this fetch is allowed to take longer.
+var providerVideoDownloadTimeout = 3 * time.Minute
 
 // maxVideoValidationMisses bounds retries when upstream says the video is done
 // but no client-usable URL exists. After this, the task fails and is refunded.
@@ -920,10 +920,34 @@ func videoURLNeedsChannelAuth(videoURL string) bool {
 	if err != nil || parsed.Host == "" {
 		return false
 	}
-	path := parsed.Path
+	path := strings.ToLower(parsed.Path)
 	return strings.Contains(path, "/v1/task/") ||
 		strings.Contains(path, "/v1/videos/") ||
-		strings.Contains(path, "/outputs/")
+		strings.Contains(path, "/outputs/") ||
+		strings.Contains(path, "/api/v1/") ||
+		strings.Contains(path, "/media-content/")
+}
+
+// clientMayKeepUpstreamVideoURL is true when the client can fetch the file
+// without our channel key. Provider hosts and content endpoints must be
+// downloaded and replaced with our own URL.
+func clientMayKeepUpstreamVideoURL(ch *model.Channel, raw string) bool {
+	if !model.ClientMayReceiveDirectVideoURL(raw) {
+		return false
+	}
+	return !videoURLOnChannelHost(ch, raw)
+}
+
+func videoURLOnChannelHost(ch *model.Channel, raw string) bool {
+	if ch == nil {
+		return false
+	}
+	base, err := url.Parse(strings.TrimSpace(ch.GetBaseURL()))
+	file, err2 := url.Parse(strings.TrimSpace(raw))
+	if err != nil || err2 != nil || base.Hostname() == "" || file.Hostname() == "" {
+		return false
+	}
+	return strings.EqualFold(base.Hostname(), file.Hostname())
 }
 
 func extractCompletedVideoURL(body []byte) string {
@@ -1026,13 +1050,18 @@ func validateCompletedVideo(ctx context.Context, ch *model.Channel, task *model.
 		return nil, fmt.Errorf("%w: validation busy", errVideoValidationInconclusive)
 	}
 	defer releaseVideoValidationSlot()
-	requestCtx, cancel := context.WithTimeout(ctx, videoValidationTimeout)
+	downloadTimeout := videoValidationTimeout
+	storeLocally := !clientMayKeepUpstreamVideoURL(ch, videoURL)
+	if storeLocally {
+		downloadTimeout = providerVideoDownloadTimeout
+	}
+	requestCtx, cancel := context.WithTimeout(ctx, downloadTimeout)
 	defer cancel()
 	req, err := http.NewRequestWithContext(requestCtx, http.MethodGet, videoURL, nil)
 	if err != nil {
 		return nil, fmt.Errorf("create video validation request: %w", err)
 	}
-	if videoURLNeedsChannelAuth(videoURL) && (ch.Type == constant.ChannelTypeOpenAI || ch.Type == constant.ChannelTypeSora) {
+	if storeLocally && (ch.Type == constant.ChannelTypeOpenAI || ch.Type == constant.ChannelTypeSora) {
 		key := strings.TrimSpace(task.PrivateData.Key)
 		if key == "" {
 			key = strings.TrimSpace(ch.Key)
@@ -1117,7 +1146,7 @@ func scrubVideoResponsePayload(payload map[string]any) {
 		"parent_email", "account_email", "local_path", "upstream_video_id", "video_id", "remote_task_id",
 		"upstream_task_id", "chat_id", "chatId", "log_id", "logId", "conversation_id",
 		"url", "video_url", "public_url", "download_url", "no_watermark_url", "watermark_url",
-		"remote_url", "output_url", "upstream_video_url", "poster", "thumb", "bytesBase64Encoded",
+		"remote_url", "output_url", "upstream_video_url", "content_url", "result_url", "poster", "thumb", "bytesBase64Encoded",
 		"thumbnail_url", "thumb_url", "file_url", "fileUrl", "file_thumb_url",
 	} {
 		delete(payload, key)

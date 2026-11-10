@@ -63,6 +63,23 @@ func TestCompletedVideoTimeoutDoesNotBlockFinishedURL(t *testing.T) {
 	if videoURLNeedsChannelAuth("https://cdn.example.com/done.mp4") {
 		t.Fatal("public CDN URL must be fetched without the channel key")
 	}
+	if !videoURLNeedsChannelAuth("https://xingapi.top/api/v1/media-content/token") {
+		t.Fatal("provider media-content URL must be downloaded with the channel key")
+	}
+	if model.ClientMayReceiveDirectVideoURL("https://xingapi.top/api/v1/media-content/token") {
+		t.Fatal("provider media-content URL must not be returned to the client")
+	}
+	if model.ClientMayReceiveDirectVideoURL("https://xingapi.top/v1/videos/videoprep_x/content") {
+		t.Fatal("upstream content URL must not be returned to the client")
+	}
+	base := "https://xingapi.top"
+	ch := &model.Channel{BaseURL: &base}
+	if !clientMayKeepUpstreamVideoURL(ch, "https://cdn.example.com/done.mp4") {
+		t.Fatal("public CDN URL can be returned")
+	}
+	if clientMayKeepUpstreamVideoURL(ch, "https://xingapi.top/api/v1/media-content/token") {
+		t.Fatal("provider host URL must be stored by the gateway")
+	}
 }
 
 func TestSlowFinishedVideoStopsQuickly(t *testing.T) {
@@ -79,7 +96,8 @@ func TestSlowFinishedVideoStopsQuickly(t *testing.T) {
 	}))
 	defer server.Close()
 
-	ch := &model.Channel{Type: constant.ChannelTypeSora, BaseURL: &server.URL, Key: "secret-channel-key"}
+	base := "https://cdn.example.com"
+	ch := &model.Channel{Type: constant.ChannelTypeSora, BaseURL: &base, Key: "secret-channel-key"}
 	task := &model.Task{TaskID: "task_public", Platform: constant.TaskPlatform("1")}
 	result := &relaycommon.TaskInfo{Url: server.URL + "/cdn/done.mp4"}
 

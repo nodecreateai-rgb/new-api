@@ -70,11 +70,9 @@ func VideoProxy(c *gin.Context) {
 	}
 
 	if task.PrivateData.DirectUpstreamVideo {
-		if direct := strings.TrimSpace(task.PrivateData.UpstreamResultURL); strings.HasPrefix(direct, "http://") || strings.HasPrefix(direct, "https://") {
-			if r2.PublicObjectURL(direct) == "" {
-				c.Redirect(http.StatusFound, direct)
-				return
-			}
+		if direct := strings.TrimSpace(task.PrivateData.UpstreamResultURL); model.ClientMayReceiveDirectVideoURL(direct) {
+			c.Redirect(http.StatusFound, direct)
+			return
 		}
 	}
 
@@ -272,15 +270,27 @@ func uniqueNonEmptyURLs(urls []string) []string {
 	return out
 }
 
-func videoURLNeedsAuth(videoURL string) bool {
+func videoURLNeedsAuth(videoURL, baseURL string) bool {
 	parsed, err := url.Parse(videoURL)
 	if err != nil {
 		return false
 	}
-	path := parsed.Path
-	return strings.Contains(path, "/v1/task/") ||
+	path := strings.ToLower(parsed.Path)
+	if strings.Contains(path, "/v1/task/") ||
 		strings.Contains(path, "/v1/videos/") ||
-		strings.Contains(path, "/outputs/")
+		strings.Contains(path, "/outputs/") ||
+		strings.Contains(path, "/api/v1/") ||
+		strings.Contains(path, "/media-content/") {
+		return true
+	}
+	if parsed.Hostname() == "" {
+		return false
+	}
+	base, err := url.Parse(strings.TrimSpace(baseURL))
+	if err != nil || base.Hostname() == "" {
+		return false
+	}
+	return strings.EqualFold(parsed.Hostname(), base.Hostname())
 }
 
 func fetchFirstAvailableVideo(c *gin.Context, req *http.Request, client *http.Client, ctx context.Context, task *model.Task, baseURL, apiKey string, candidates []string) error {
@@ -306,7 +316,7 @@ func fetchFirstAvailableVideo(c *gin.Context, req *http.Request, client *http.Cl
 		}
 		tryReq := req.Clone(ctx)
 		tryReq.URL = parsed
-		if videoURLNeedsAuth(videoURL) && strings.TrimSpace(apiKey) != "" {
+		if videoURLNeedsAuth(videoURL, baseURL) && strings.TrimSpace(apiKey) != "" {
 			tryReq.Header.Set("Authorization", "Bearer "+apiKey)
 		} else {
 			tryReq.Header.Del("Authorization")

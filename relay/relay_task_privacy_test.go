@@ -123,6 +123,25 @@ func TestTaskModel2DtoReturnsKsyunUpstreamURL(t *testing.T) {
 	}
 }
 
+func TestTaskModel2DtoHidesProviderContentURL(t *testing.T) {
+	task := &model.Task{
+		TaskID: "task_public",
+		Status: model.TaskStatusSuccess,
+		PrivateData: model.TaskPrivateData{
+			DirectUpstreamVideo: true,
+			UpstreamResultURL:   "https://xingapi.top/api/v1/media-content/token",
+			ResultURL:           "https://xingapi.top/v1/videos/videoprep_x/content",
+		},
+	}
+	dto := TaskModel2Dto(task)
+	if strings.Contains(strings.ToLower(dto.ResultURL), "xingapi") {
+		t.Fatalf("provider URL leaked: %s", dto.ResultURL)
+	}
+	if !strings.Contains(dto.ResultURL, "/v1/videos/task_public/content") {
+		t.Fatalf("result_url=%q", dto.ResultURL)
+	}
+}
+
 func TestTaskModel2DtoReturnsR2PublicURL(t *testing.T) {
 	task := &model.Task{
 		TaskID: "task_public",
