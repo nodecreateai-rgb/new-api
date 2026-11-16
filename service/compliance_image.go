@@ -53,7 +53,7 @@ func (m ComplianceMaterial) Quota(images int, groupRatio float64) int {
 // not run even when the request turns it on.
 func CompliancePassthrough(model string) bool {
 	switch strings.ToLower(strings.TrimSpace(model)) {
-	case "seedance-2.5-720p", "seedance-2.5-flash-720p", "seedance-2.5-720p-c5", "seedance-2.5-480p-c5", "seedance-2.5-720p-c6", "seedance-2.5-flash-480p-c5", "seedance-2.5-flash-720p-c5":
+	case "seedance-2.5-720p", "seedance-2.5-flash-720p", "seedance-2.0-fast-720p-c5", "seedance-2.5-720p-c5", "seedance-2.5-480p-c5", "seedance-2.5-720p-c6", "seedance-2.5-flash-480p-c5", "seedance-2.5-flash-720p-c5":
 		return true
 	default:
 		return false

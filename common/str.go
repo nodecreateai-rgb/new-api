@@ -27,6 +27,8 @@ var upstreamBrandReplacers = strings.NewReplacer(
 	"xingapi", "video service",
 	"星光API", "视频服务",
 	"星光", "视频服务",
+	"Seedance2.0-Fast-M", "video-model",
+	"seedance2.0-fast-M", "video-model",
 	"seedance2.0-933-Q", "video-model",
 	"seedance2.0-933-C", "video-model",
 	"seedance2.5-V", "video-model",

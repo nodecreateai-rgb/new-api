@@ -27,9 +27,14 @@ var xingapi111PublicModels = []string{
 	"seedance-2.5-flash-720p-c5",
 }
 
+var xingapiFastMPublicModels = []string{
+	"seedance-2.0-fast-720p-c5",
+}
+
 const xingapiChannelName = "Video 720p C2"
 const xingapi25ChannelName = "Video 720p C5"
 const xingapi111ChannelName = "Video 720p C6"
+const xingapiFastMChannelName = "Video Fast 720p C5"
 
 const xingapiGroupsCSV = "default,vip,svip,vip1,vip2,vip3,vip6,vip7,vip8,vip9,vip10,vip11,vip13,llm-vip"
 
@@ -62,7 +67,8 @@ func ensureXingapi25Routing() error {
 	if baseURL == "" {
 		baseURL = "https://xingapi.top"
 	}
-	key, err := xingapiResolveKey("XINGAPI_V_GATEWAY_KEY", "XINGAPI_V_GATEWAY_KEY_FILE", "XINGAPI_V_API_KEY", xingapi25ChannelName, "XINGAPI_V_GATEWAY_KEY or XINGAPI_V_API_KEY is required")
+	// seedance2.5-V stays on the same upstream key as seedance-2.5-flash-480p-c5.
+	key, err := xingapiResolveKey("XINGAPI_111_GATEWAY_KEY", "XINGAPI_111_GATEWAY_KEY_FILE", "XINGAPI_111_API_KEY", xingapi111ChannelName, "XINGAPI_111_GATEWAY_KEY or XINGAPI_111_API_KEY is required")
 	if err != nil {
 		return err
 	}
@@ -90,6 +96,23 @@ func ensureXingapi111Routing() error {
 		"seedance-2.5-flash-720p-c5": "Seedance 2.5 Flash 文生/图生/参考生视频（异步，¥3.6/次，固定720P，4-30秒，画幅16:9、9:16、1:1、4:3、3:4、21:9，最多10张图片、5段视频、5段音频，原生过人脸）",
 	}
 	return ensureXingapiNamedChannel(xingapi111ChannelName, modelsCSV, mappingJSON, baseURL, key, xingapi111PublicModels, modelDescriptions)
+}
+
+func ensureXingapiFastMRouting() error {
+	const modelsCSV = "seedance-2.0-fast-720p-c5"
+	const mappingJSON = `{"seedance-2.0-fast-720p-c5":"seedance2.0-fast-M"}`
+	baseURL := strings.TrimSpace(os.Getenv("XINGAPI_BASE_URL"))
+	if baseURL == "" {
+		baseURL = "https://xingapi.top"
+	}
+	key, err := xingapiResolveKey("XINGAPI_FAST_M_GATEWAY_KEY", "XINGAPI_FAST_M_GATEWAY_KEY_FILE", "XINGAPI_V_API_KEY", xingapiFastMChannelName, "XINGAPI_FAST_M_GATEWAY_KEY or XINGAPI_V_API_KEY is required")
+	if err != nil {
+		return err
+	}
+	modelDescriptions := map[string]string{
+		"seedance-2.0-fast-720p-c5": "Seedance 2.0 Fast 文生/图生/参考生视频（异步，¥1.5/次，固定720P，4-15秒，画幅16:9、9:16、1:1、4:3、3:4、21:9，最多9张图片、3段视频、3段音频，原生过人脸）",
+	}
+	return ensureXingapiNamedChannel(xingapiFastMChannelName, modelsCSV, mappingJSON, baseURL, key, xingapiFastMPublicModels, modelDescriptions)
 }
 
 func xingapiResolveKey(gatewayEnv, gatewayFileEnv, apiKeyEnv, channelName, requiredMsg string) (string, error) {

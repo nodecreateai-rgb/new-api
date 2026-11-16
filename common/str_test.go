@@ -262,7 +262,7 @@ func TestPublicErrorMessageHidesXingapi(t *testing.T) {
 }
 
 func TestMaskUpstreamProviderInfoXingapi(t *testing.T) {
-	got := MaskUpstreamProviderInfo("seedance-933 seedance2.0-933-Q seedance2.5-V seedance2.5-M Seedance2.5-480P-M xingapi.top 星光API")
+	got := MaskUpstreamProviderInfo("seedance-933 seedance2.0-933-Q seedance2.0-fast-M Seedance2.0-Fast-M seedance2.5-V seedance2.5-M Seedance2.5-480P-M xingapi.top 星光API")
 	lower := strings.ToLower(got)
 	for _, forbidden := range []string{"xingapi", "星光", "seedance-933", "933-q", "seedance2.5"} {
 		if strings.Contains(got, forbidden) || strings.Contains(lower, forbidden) {

@@ -316,6 +316,7 @@ func ensureDopioRMBPricing() {
 		"seedance-2.5":                       4,
 		"seedance-2.0-fast-720p-c1":          1.8,
 		"seedance-2.0-fast-720p-c2":          2,
+		"seedance-2.0-fast-720p-c5":          1.5,
 		"seedance-2.5-flash-720p":            5,
 		"seedance-2.0-fast-720p-c3":          1.8,
 		"seedance-2.0-720p-c2":               2.4,
@@ -480,6 +481,7 @@ func ensureDopioRMBPricing() {
 		targetModelGroupPrices[group]["sd2.5"] = 0.5
 		targetModelGroupPrices[group]["seedance-2.5-c2"] = 1
 		targetModelGroupPrices[group]["seedance-2.0-fast-720p-c2"] = 2
+		targetModelGroupPrices[group]["seedance-2.0-fast-720p-c5"] = 1.5
 		targetModelGroupPrices[group]["seedance-2.5-flash-720p"] = 5
 		if group != "vip9" {
 			targetModelGroupPrices[group]["seedance-2.5-1080p"] = 5
@@ -719,6 +721,10 @@ func ensureDopioRMBPricing() {
 		}
 		if groupPrices["seedance-2.0-fast-720p-c2"] != 2 {
 			groupPrices["seedance-2.0-fast-720p-c2"] = 2
+			changed = true
+		}
+		if groupPrices["seedance-2.0-fast-720p-c5"] != 1.5 {
+			groupPrices["seedance-2.0-fast-720p-c5"] = 1.5
 			changed = true
 		}
 		if groupPrices["seedance-2.5-flash-720p"] != 5 {
@@ -970,6 +976,9 @@ func ensureDopioRMBPricing() {
 	}
 	if err := ensureXingapi111Routing(); err != nil {
 		common.SysLog("failed to enforce Video 720p C6 gateway routing: " + err.Error())
+	}
+	if err := ensureXingapiFastMRouting(); err != nil {
+		common.SysLog("failed to enforce Video Fast 720p C5 gateway routing: " + err.Error())
 	}
 	if err := ensureXxzRouting(); err != nil {
 		common.SysLog("failed to enforce Video Fast 720p C2 gateway routing: " + err.Error())
