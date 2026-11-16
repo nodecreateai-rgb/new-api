@@ -249,6 +249,10 @@ func ensureDopioRMBPricing() {
 		"seedance-2.0-720p":                  3,
 		"seedance-2.0-480p":                  1.6,
 		"seedance-2.0-fast-480p-c1":          1.5,
+		"seedance-2.0-480p-c7":               1,
+		"seedance-2.0-fast-480p-c7":          0.6,
+		"seedance-2.0-mini-480p-c7":          0.5,
+		"seedance-2.0-mini-720p-c7":          0.5,
 		"seedance-2.5-480p":                  1.5,
 		"wan-3.0-prime-720p":                 1.5,
 		"grok-imagine-720p":                  0.5,
@@ -950,6 +954,10 @@ func ensureDopioRMBPricing() {
 	// Last, so a later routing pass cannot put these models back on sale.
 	if err := retireDeadVideoModels(); err != nil {
 		common.SysLog("failed to retire dead video models: " + err.Error())
+	}
+	// After every cleanup pass, so a redeploy puts these back on the plaza.
+	if err := ensureSeedanceC7Routing(); err != nil {
+		common.SysLog("failed to enforce Video Seedance C7 gateway routing: " + err.Error())
 	}
 	common.SysLog("enforced Dopio RMB pricing incl sd2.5=0.5 per call, sd2-c7=0.5 per call, sd2-fast=1 per call, vip6 Seedance 720p fast=1/full=2, oauth2=0.3, pay=0.5, sd2-c6=0.5, seedance-2.0-mini-480p=0.4, seedance-2.0-mini-720p=1, sd2-c11=2.5, sd2-c12=3, anthropic/claude-opus-5-5=10000000, llm-vip opus free, Price=1, USDExchangeRate=1, quota_display_type=CNY")
 }
