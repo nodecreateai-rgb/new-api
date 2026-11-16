@@ -15,7 +15,10 @@ func TestXxzModelsListedWithPrices(t *testing.T) {
 	for _, want := range []string{
 		`ensureXxzRouting()`,
 		`"seedance-2.0-fast-720p-c2":          2,`,
+		`"seedance-2.5-flash-720p":            5,`,
 		`groupPrices["seedance-2.0-fast-720p-c2"] != 2`,
+		`groupPrices["seedance-2.5-flash-720p"] != 5`,
+		`targetModelGroupPrices[group]["seedance-2.5-flash-720p"] = 5`,
 	} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("missing %s", want)
@@ -29,11 +32,14 @@ func TestXxzModelsListedWithPrices(t *testing.T) {
 	for _, want := range []string{
 		`xxzChannelName = "Video Fast 720p C2"`,
 		`"seedance-2.0-fast-720p-c2":"521ai-SD-fast-720-xd"`,
+		`"seedance-2.5-flash-720p":"seedance2.5flash-720-XD"`,
 		`https://api.521way.com`,
 		`XXZ_API_KEY`,
 		`existing.Key`,
 		`¥2/次，固定720P，4-15秒`,
 		`最多9张图片、3段音频，不支持参考视频，原生过人脸`,
+		`¥5/次，固定720P，4-30秒`,
+		`最多10张图片、5段音频，不支持参考视频，原生过人脸`,
 		`ChannelStatusEnabled`,
 	} {
 		if !strings.Contains(s, want) {
@@ -95,6 +101,9 @@ func TestXxzModelSurvivesRestartCleanup(t *testing.T) {
 	if strings.Contains(dead, `"seedance-2.0-fast-720p-c2"`) {
 		t.Fatal("seedance-2.0-fast-720p-c2 must not be in deadVideoModels")
 	}
+	if strings.Contains(dead, `"seedance-2.5-flash-720p"`) {
+		t.Fatal("seedance-2.5-flash-720p must stay published across retireDeadVideoModels")
+	}
 	if strings.Contains(dead, `"Video Fast 720p C2"`) {
 		t.Fatal("Video Fast 720p C2 must not be in deadVideoChannels")
 	}
@@ -105,5 +114,25 @@ func TestXxzModelSurvivesRestartCleanup(t *testing.T) {
 	}
 	if strings.Contains(string(jm2), `"seedance-2.0-fast-720p-c2"`) {
 		t.Fatal("jm2api must not keep seedance-2.0-fast-720p-c2 after it returns to Video Fast 720p C2")
+	}
+	if !strings.Contains(dead, `"seedance-2.5-720p",`) {
+		t.Fatal("seedance-2.5-720p must be withdrawn")
+	}
+	xxz, err := os.ReadFile("option_xxz.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(xxz), `"seedance-2.5-720p"`) {
+		t.Fatal("Video Fast 720p C2 must not publish seedance-2.5-720p")
+	}
+	if !strings.Contains(string(xxz), `"seedance-2.5-flash-720p"`) {
+		t.Fatal("Video Fast 720p C2 must publish seedance-2.5-flash-720p")
+	}
+	laihua, err := os.ReadFile("option_laihua.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(laihua), `"seedance-2.5-720p"`) {
+		t.Fatal("laihua must not reclaim seedance-2.5-720p")
 	}
 }

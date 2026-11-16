@@ -26,8 +26,10 @@ var deadVideoModels = []string{
 	"minimax-h3-max-768p",
 	"seedance-2.0-mini-480p-12s",
 	// scnet (Video 2K C4)
-	"minimax-h3-2k", "seedance-2.5-720p-c4",
+	"minimax-h3-2k", "seedance-2.5-720p-c4", "seedance-2.0",
 	"seedance-2.0-720p-c1",
+	// Video Fast 720p C2 no longer sells this 2.5 alias.
+	"seedance-2.5-720p",
 }
 
 // deadVideoChannels served only dead models, so they are switched off.

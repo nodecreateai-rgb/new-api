@@ -94,7 +94,7 @@ func VideoProxy(c *gin.Context) {
 
 	var videoURL string
 	proxy := channel.GetSetting().Proxy
-	client, err := service.GetHttpClientWithProxy(proxy)
+	client, err := service.NewProviderVideoHTTPClient(proxy)
 	if err != nil {
 		logger.LogError(c.Request.Context(), fmt.Sprintf("Failed to create proxy client for task %s: %s", taskID, err.Error()))
 		videoProxyError(c, http.StatusInternalServerError, "server_error", "Failed to create proxy client")
@@ -103,6 +103,12 @@ func VideoProxy(c *gin.Context) {
 
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 180*time.Second)
 	defer cancel()
+	// The poller leaves provider files behind this URL. The first content
+	// request copies that file once; later requests redirect to the copy.
+	if publicURL := service.StoreProviderVideoOnce(ctx, task, channel); publicURL != "" {
+		c.Redirect(http.StatusFound, publicURL)
+		return
+	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "", nil)
 	if err != nil {
 		logger.LogError(c.Request.Context(), fmt.Sprintf("Failed to create request: %s", err.Error()))
@@ -140,37 +146,62 @@ func VideoProxy(c *gin.Context) {
 		}
 	case constant.ChannelTypeOpenAI, constant.ChannelTypeSora:
 		upstreamID := task.GetUpstreamTaskID()
-		localCandidates := make([]string, 0, 4)
+		// Stored file URLs first. A signed media link often expires before the
+		// file itself does, so a miss is followed by one fresh task lookup
+		// before any speculative path.
+		primary := make([]string, 0, 2)
 		if directURL := getStoredVideoURL(task); directURL != "" {
-			localCandidates = append(localCandidates, directURL)
+			primary = append(primary, directURL)
 		}
-		if outputURL := upstreamVideoOutputURL(baseURL, upstreamID); outputURL != "" {
-			localCandidates = append(localCandidates, outputURL)
-		}
-		if contentURL := privateVideoContentURL(baseURL, upstreamID); contentURL != "" {
-			localCandidates = append(localCandidates, contentURL)
-		}
-		if contentURL := roboneoStyleTaskContentURL(baseURL, upstreamID); contentURL != "" {
-			localCandidates = append(localCandidates, contentURL)
-		}
-		if contentURL := aiveedStyleTaskContentURL(baseURL, upstreamID); contentURL != "" {
-			localCandidates = append(localCandidates, contentURL)
-		}
-		localCandidates = append(localCandidates, fmt.Sprintf("%s/v1/videos/%s/content", strings.TrimRight(baseURL, "/"), upstreamID))
 		if directURL := strings.TrimSpace(task.PrivateData.UpstreamResultURL); directURL != "" {
-			localCandidates = append(localCandidates, directURL)
+			primary = append(primary, directURL)
 		}
-		if err := fetchFirstAvailableVideo(c, req, client, ctx, task, baseURL, channel.Key, localCandidates); err == nil {
+		primaryErr := fetchFirstAvailableVideo(c, req, client, ctx, task, baseURL, channel.Key, primary)
+		if primaryErr == nil || c.Writer.Written() {
+			if primaryErr == nil {
+				service.ScheduleProviderVideoMirror(task.TaskID)
+			}
 			return
 		}
-		remoteCandidates := make([]string, 0, 2)
-		if directURL := resolveUpstreamTaskVideoURL(c.Request.Context(), client, baseURL, channel.Key, upstreamID); directURL != "" {
-			remoteCandidates = append(remoteCandidates, directURL)
+		fresh := resolveUpstreamTaskVideoURL(c.Request.Context(), client, baseURL, channel.Key, upstreamID)
+		if fresh != "" {
+			freshErr := fetchFirstAvailableVideo(c, req, client, ctx, task, baseURL, channel.Key, []string{fresh})
+			if freshErr == nil || c.Writer.Written() {
+				if freshErr == nil {
+					service.ScheduleProviderVideoMirror(task.TaskID)
+				}
+				return
+			}
+			if providerMediaExpired(freshErr) {
+				logger.LogError(c.Request.Context(), fmt.Sprintf("Provider video expired for task %s", taskID))
+				videoProxyError(c, http.StatusBadGateway, "server_error", "Failed to fetch video content")
+				return
+			}
+		} else if providerMediaExpired(primaryErr) {
+			logger.LogError(c.Request.Context(), fmt.Sprintf("Provider video expired for task %s", taskID))
+			videoProxyError(c, http.StatusBadGateway, "server_error", "Failed to fetch video content")
+			return
 		}
-		if err := fetchFirstAvailableVideo(c, req, client, ctx, task, baseURL, channel.Key, remoteCandidates); err != nil {
+		secondary := make([]string, 0, 4)
+		if contentURL := privateVideoContentURL(baseURL, upstreamID); contentURL != "" {
+			secondary = append(secondary, contentURL)
+		}
+		if contentURL := roboneoStyleTaskContentURL(baseURL, upstreamID); contentURL != "" {
+			secondary = append(secondary, contentURL)
+		}
+		if contentURL := aiveedStyleTaskContentURL(baseURL, upstreamID); contentURL != "" {
+			secondary = append(secondary, contentURL)
+		}
+		secondary = append(secondary, fmt.Sprintf("%s/v1/videos/%s/content", strings.TrimRight(baseURL, "/"), upstreamID))
+		if outputURL := upstreamVideoOutputURL(baseURL, upstreamID); outputURL != "" {
+			secondary = append(secondary, outputURL)
+		}
+		if err := fetchFirstAvailableVideo(c, req, client, ctx, task, baseURL, channel.Key, secondary); err != nil {
 			logger.LogError(c.Request.Context(), fmt.Sprintf("Failed to fetch video content for task %s: %s", taskID, err.Error()))
 			videoProxyError(c, http.StatusBadGateway, "server_error", "Failed to fetch video content")
+			return
 		}
+		service.ScheduleProviderVideoMirror(task.TaskID)
 		return
 	default:
 		videoURL = getStoredVideoURL(task)
@@ -240,6 +271,11 @@ func VideoProxy(c *gin.Context) {
 			fmt.Sprintf("Upstream service returned status %d", resp.StatusCode))
 		return
 	}
+	if !isLikelyPlayableVideoResponse(resp) {
+		logger.LogError(c.Request.Context(), fmt.Sprintf("Upstream returned non-video content-type %q for %s", resp.Header.Get("Content-Type"), videoURL))
+		videoProxyError(c, http.StatusBadGateway, "server_error", "Failed to fetch video content")
+		return
+	}
 
 	for _, key := range []string{"Content-Type", "Content-Length", "Content-Range", "Accept-Ranges", "Last-Modified", "ETag", "Content-Disposition"} {
 		if value := resp.Header.Get(key); value != "" {
@@ -251,6 +287,39 @@ func VideoProxy(c *gin.Context) {
 	if _, err = io.Copy(c.Writer, resp.Body); err != nil {
 		logger.LogError(c.Request.Context(), fmt.Sprintf("Failed to stream video content: %s", err.Error()))
 	}
+}
+
+// isLikelyPlayableVideoResponse rejects SPA/HTML and JSON error pages that some
+// upstreams return with HTTP 200 on speculative paths like /outputs/*.mp4.
+func isLikelyPlayableVideoResponse(resp *http.Response) bool {
+	if resp == nil {
+		return false
+	}
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusPartialContent {
+		return false
+	}
+	contentType := strings.ToLower(resp.Header.Get("Content-Type"))
+	if contentType == "" {
+		return true
+	}
+	if strings.Contains(contentType, "json") ||
+		strings.Contains(contentType, "text/html") ||
+		strings.Contains(contentType, "text/plain") ||
+		strings.Contains(contentType, "text/xml") ||
+		strings.Contains(contentType, "application/xml") {
+		return false
+	}
+	return true
+}
+
+// providerMediaExpired reports a signed provider file that the upstream has
+// already deleted. Speculative /outputs and /content paths will not have it.
+func providerMediaExpired(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := err.Error()
+	return strings.Contains(msg, "status 410") && strings.Contains(msg, "/media-content/")
 }
 
 func uniqueNonEmptyURLs(urls []string) []string {
@@ -276,11 +345,13 @@ func videoURLNeedsAuth(videoURL, baseURL string) bool {
 		return false
 	}
 	path := strings.ToLower(parsed.Path)
+	if strings.Contains(path, "/media-content/") {
+		return false
+	}
 	if strings.Contains(path, "/v1/task/") ||
 		strings.Contains(path, "/v1/videos/") ||
 		strings.Contains(path, "/outputs/") ||
-		strings.Contains(path, "/api/v1/") ||
-		strings.Contains(path, "/media-content/") {
+		strings.Contains(path, "/api/v1/") {
 		return true
 	}
 	if parsed.Hostname() == "" {
@@ -344,6 +415,13 @@ func fetchFirstAvailableVideo(c *gin.Context, req *http.Request, client *http.Cl
 			lastStatus = resp.StatusCode
 			lastURL = videoURL
 			logger.LogError(c.Request.Context(), fmt.Sprintf("Upstream returned status %d for %s", resp.StatusCode, videoURL))
+			_ = resp.Body.Close()
+			continue
+		}
+		if !isLikelyPlayableVideoResponse(resp) {
+			lastStatus = resp.StatusCode
+			lastURL = videoURL
+			logger.LogError(c.Request.Context(), fmt.Sprintf("Upstream returned non-video content-type %q for %s", resp.Header.Get("Content-Type"), videoURL))
 			_ = resp.Body.Close()
 			continue
 		}

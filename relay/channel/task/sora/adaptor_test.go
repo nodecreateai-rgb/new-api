@@ -361,6 +361,53 @@ func TestSanitizeXxzFast720pC2DropsVideosKeepsAudio(t *testing.T) {
 	}
 }
 
+func TestSanitizeXxzSeedance25720pDropsVideosClampsDuration(t *testing.T) {
+	body := map[string]interface{}{
+		"model":        "seedance2.5flash-720-XD",
+		"prompt":       "a cat walking",
+		"seconds":      "40",
+		"duration":     40,
+		"aspect_ratio": "9:16",
+		"size":         "720x1280",
+		"image_refs":   []interface{}{"https://cdn.example/a.png"},
+		"video_refs":   []interface{}{"https://cdn.example/clip.mp4"},
+		"audio_refs":   []interface{}{"https://cdn.example/voice.mp3"},
+	}
+	sanitizeOriginModelUpstreamBody(body, relaycommon.TaskSubmitReq{
+		Prompt:      "a cat walking",
+		Seconds:     "40",
+		Duration:    40,
+		AspectRatio: "9:16",
+		ImageRefs:   []string{"https://cdn.example/a.png"},
+		VideoRefs:   []string{"https://cdn.example/clip.mp4"},
+		AudioRefs:   []string{"https://cdn.example/voice.mp3"},
+	}, "seedance-2.5-720p")
+
+	require.Equal(t, "seedance2.5flash-720-XD", body["model"])
+	require.Equal(t, "9:16", body["ratio"])
+	require.Equal(t, "720p", body["resolution"])
+	require.Equal(t, 30, body["seconds"])
+	require.Equal(t, 30, body["duration"])
+	content := body["content"].([]map[string]interface{})
+	require.Len(t, content, 3)
+	require.Equal(t, "reference_image", content[1]["role"])
+	require.Equal(t, "reference_audio", content[2]["role"])
+	for _, forbidden := range []string{"videos", "video_refs", "size", "aspect_ratio"} {
+		require.NotContains(t, body, forbidden)
+	}
+
+	body = map[string]interface{}{
+		"model":  "seedance2.5flash-720-XD",
+		"prompt": "a cat walking",
+	}
+	sanitizeOriginModelUpstreamBody(body, relaycommon.TaskSubmitReq{
+		Prompt:   "a cat walking",
+		Duration: 2,
+	}, "seedance-2.5-720p")
+	require.Equal(t, 4, body["duration"])
+	require.Equal(t, 4, body["seconds"])
+}
+
 func TestSanitizeXingapi720pC2DropsVideosMapsImageRefs(t *testing.T) {
 	body := map[string]interface{}{
 		"model":        "seedance-933",
@@ -471,6 +518,72 @@ func TestSanitizeXingapi720pC5SendsIntegerSecondsFlooredAtFive(t *testing.T) {
 		Duration: 40,
 	}, "seedance-2.5-720p-c5")
 	require.Equal(t, 30, body["seconds"])
+}
+
+func TestSanitizeXingapi480pC5Sends480p(t *testing.T) {
+	body := map[string]interface{}{
+		"model":    "seedance2.5-M",
+		"prompt":   "a meadow in sunlight",
+		"seconds":  "4",
+		"duration": 4,
+		"size":     "1280x720",
+	}
+	sanitizeOriginModelUpstreamBody(body, relaycommon.TaskSubmitReq{
+		Prompt:   "a meadow in sunlight",
+		Seconds:  "4",
+		Duration: 4,
+	}, "seedance-2.5-480p-c5")
+
+	require.Equal(t, "seedance2.5-M", body["model"])
+	require.Equal(t, 5, body["seconds"])
+	require.Equal(t, "480p", body["resolution"])
+	require.Equal(t, true, body["generate_audio"])
+	require.NotContains(t, body, "duration")
+	require.NotContains(t, body, "size")
+
+	body = map[string]interface{}{
+		"model":   "seedance2.5-M",
+		"prompt":  "a meadow in sunlight",
+		"seconds": "8",
+	}
+	sanitizeOriginModelUpstreamBody(body, relaycommon.TaskSubmitReq{
+		Prompt:   "a meadow in sunlight",
+		Seconds:  "8",
+		Duration: 8,
+	}, "seedance-2.5-720p-c6")
+	require.Equal(t, "seedance2.5-M", body["model"])
+	require.Equal(t, 8, body["seconds"])
+	require.Equal(t, "720p", body["resolution"])
+
+	body = map[string]interface{}{
+		"model":   "seedance2.5-flash-M",
+		"prompt":  "a meadow in sunlight",
+		"seconds": "3",
+	}
+	sanitizeOriginModelUpstreamBody(body, relaycommon.TaskSubmitReq{
+		Prompt:   "a meadow in sunlight",
+		Seconds:  "3",
+		Duration: 3,
+	}, "seedance-2.5-flash-480p-c5")
+	require.Equal(t, "seedance2.5-flash-M", body["model"])
+	require.Equal(t, 4, body["duration"])
+	require.NotContains(t, body, "seconds")
+	require.Equal(t, "480p", body["resolution"])
+
+	body = map[string]interface{}{
+		"model":   "seedance2.5-flash-M",
+		"prompt":  "a meadow in sunlight",
+		"seconds": "8",
+	}
+	sanitizeOriginModelUpstreamBody(body, relaycommon.TaskSubmitReq{
+		Prompt:   "a meadow in sunlight",
+		Seconds:  "8",
+		Duration: 8,
+	}, "seedance-2.5-flash-720p-c5")
+	require.Equal(t, "seedance2.5-flash-M", body["model"])
+	require.Equal(t, 8, body["duration"])
+	require.NotContains(t, body, "seconds")
+	require.Equal(t, "720p", body["resolution"])
 }
 
 func TestParseTaskResultMapsRunningStatus(t *testing.T) {

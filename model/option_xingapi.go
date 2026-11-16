@@ -20,8 +20,14 @@ var xingapi25PublicModels = []string{
 	"seedance-2.5-720p-c5",
 }
 
+var xingapi111PublicModels = []string{
+	"seedance-2.5-480p-c5",
+	"seedance-2.5-720p-c6",
+}
+
 const xingapiChannelName = "Video 720p C2"
 const xingapi25ChannelName = "Video 720p C5"
+const xingapi111ChannelName = "Video 720p C6"
 
 const xingapiGroupsCSV = "default,vip,svip,vip1,vip2,vip3,vip6,vip7,vip8,vip9,vip10,vip11,vip13,llm-vip"
 
@@ -59,9 +65,28 @@ func ensureXingapi25Routing() error {
 		return err
 	}
 	modelDescriptions := map[string]string{
-		"seedance-2.5-720p-c5": "Seedance 2.5 文生/图生/参考生视频（异步，¥4.5/次，固定720P，5-30秒，画幅16:9、9:16、1:1、4:3、3:4、21:9，最多30张图片、10段视频、10段音频，原生过人脸）",
+		"seedance-2.5-720p-c5": "Seedance 2.5 文生/图生/参考生视频（异步，¥5/次，固定720P，5-30秒，画幅16:9、9:16、1:1、4:3、3:4、21:9，最多30张图片、10段视频、10段音频，原生过人脸）",
 	}
 	return ensureXingapiNamedChannel(xingapi25ChannelName, modelsCSV, mappingJSON, baseURL, key, xingapi25PublicModels, modelDescriptions)
+}
+
+func ensureXingapi111Routing() error {
+	// The two Flash aliases stay off this channel until upstream duration is fixed.
+	const modelsCSV = "seedance-2.5-480p-c5,seedance-2.5-720p-c6"
+	const mappingJSON = `{"seedance-2.5-480p-c5":"seedance2.5-M","seedance-2.5-720p-c6":"seedance2.5-M"}`
+	baseURL := strings.TrimSpace(os.Getenv("XINGAPI_BASE_URL"))
+	if baseURL == "" {
+		baseURL = "https://xingapi.top"
+	}
+	key, err := xingapiResolveKey("XINGAPI_111_GATEWAY_KEY", "XINGAPI_111_GATEWAY_KEY_FILE", "XINGAPI_111_API_KEY", xingapi111ChannelName, "XINGAPI_111_GATEWAY_KEY or XINGAPI_111_API_KEY is required")
+	if err != nil {
+		return err
+	}
+	modelDescriptions := map[string]string{
+		"seedance-2.5-480p-c5": "Seedance 2.5 文生/图生/参考生视频（异步，¥3.6/次，固定480P，5-30秒，画幅16:9、9:16、1:1、4:3、3:4、21:9，最多30张图片、10段视频、10段音频，原生过人脸）",
+		"seedance-2.5-720p-c6": "Seedance 2.5 文生/图生/参考生视频（异步，¥5/次，固定720P，5-30秒，画幅16:9、9:16、1:1、4:3、3:4、21:9，最多30张图片、10段视频、10段音频，原生过人脸）",
+	}
+	return ensureXingapiNamedChannel(xingapi111ChannelName, modelsCSV, mappingJSON, baseURL, key, xingapi111PublicModels, modelDescriptions)
 }
 
 func xingapiResolveKey(gatewayEnv, gatewayFileEnv, apiKeyEnv, channelName, requiredMsg string) (string, error) {
@@ -211,7 +236,7 @@ func ensureXingapiRoutingClickHouse(neutralName, modelsCSV, mappingJSON, groupsC
 		return err
 	} else if err := DB.Exec(`ALTER TABLE channels UPDATE
 		type = ?, key = ?, status = ?, name = ?, base_url = ?, models = ?, `+commonGroupCol+` = ?, model_mapping = ?, priority = 10, auto_ban = 0
-		WHERE id = ?`, constant.ChannelTypeSora, key, common.ChannelStatusEnabled, neutralName, baseURL, modelsCSV, groupsCSV, mappingJSON, channel.Id).Error; err != nil {
+		WHERE id = ? SETTINGS mutations_sync = 2`, constant.ChannelTypeSora, key, common.ChannelStatusEnabled, neutralName, baseURL, modelsCSV, groupsCSV, mappingJSON, channel.Id).Error; err != nil {
 		return err
 	}
 
@@ -270,7 +295,7 @@ func ensureXingapiRoutingClickHouse(neutralName, modelsCSV, mappingJSON, groupsC
 		}).Error; err != nil {
 			return err
 		}
-		if err := DB.Exec(`ALTER TABLE models UPDATE description = ?, status = 1, updated_time = ? WHERE id = ?`, desc, common.GetTimestamp(), meta.Id).Error; err != nil {
+		if err := DB.Exec(`ALTER TABLE models UPDATE description = ?, status = 1, updated_time = ? WHERE id = ? SETTINGS mutations_sync = 2`, desc, common.GetTimestamp(), meta.Id).Error; err != nil {
 			return err
 		}
 	}

@@ -40,6 +40,7 @@ func TestSD2MiniUsesFixedPerRequestBilling(t *testing.T) {
 	require.False(t, a.UseRequestBillingRatios(&relaycommon.RelayInfo{OriginModelName: "seedance-2.0-720p-c2"}))
 	require.False(t, a.UseRequestBillingRatios(&relaycommon.RelayInfo{OriginModelName: "seedance-2.0-720p-c3"}))
 	require.False(t, a.UseRequestBillingRatios(&relaycommon.RelayInfo{OriginModelName: "seedance-2.5-720p-c5"}))
+	require.False(t, a.UseRequestBillingRatios(&relaycommon.RelayInfo{OriginModelName: "seedance-2.5-480p-c5"}))
 }
 
 func TestFlovaUsesFixedPerRequestBilling(t *testing.T) {
@@ -175,6 +176,18 @@ func TestLaihuaSeedanceLocksResolutionFromModel(t *testing.T) {
 	require.Equal(t, 15, body["duration"])
 	body = map[string]interface{}{}
 	applyOriginModelDurationLimit(body, relaycommon.TaskSubmitReq{}, "seedance-2.0-fast-720p-c2")
+	require.Equal(t, 4, body["duration"])
+	body = map[string]interface{}{}
+	applyOriginModelDurationLimit(body, relaycommon.TaskSubmitReq{Duration: 2}, "seedance-2.5-720p")
+	applyOriginModelResolution(body, "seedance-2.5-720p")
+	require.Equal(t, 4, body["duration"])
+	require.Equal(t, "720p", body["resolution"])
+	applyOriginModelDurationLimit(body, relaycommon.TaskSubmitReq{Duration: 28}, "seedance-2.5-720p")
+	require.Equal(t, 28, body["duration"])
+	applyOriginModelDurationLimit(body, relaycommon.TaskSubmitReq{Duration: 40}, "seedance-2.5-720p")
+	require.Equal(t, 30, body["duration"])
+	body = map[string]interface{}{}
+	applyOriginModelDurationLimit(body, relaycommon.TaskSubmitReq{}, "seedance-2.5-720p")
 	require.Equal(t, 4, body["duration"])
 	body = map[string]interface{}{}
 	applyOriginModelDurationLimit(body, relaycommon.TaskSubmitReq{Duration: 2}, "seedance-2.0-720p-c2")

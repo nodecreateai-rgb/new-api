@@ -13,19 +13,20 @@ func TestScnetModelsStayRetired(t *testing.T) {
 	}
 	body := string(option)
 	if strings.Contains(body, "ensureScnetRouting()") {
-		t.Fatal("minimax-h3-2k and seedance-2.5-720p-c4 must stay unpublished")
+		t.Fatal("minimax-h3-2k, seedance-2.5-720p-c4, and seedance-2.0 must stay unpublished; retireDeadVideoModels strips them")
 	}
 	for _, price := range []string{
 		`"minimax-h3-2k":                      1,`,
 		`"seedance-2.5-720p-c4":               4,`,
+		`"seedance-2.0":                       2,`,
 		`"seedance-2.5-720p-c4":   1.5,`,
 	} {
 		if strings.Contains(body, price) {
 			t.Fatalf("retired model price must not be enforced: %s", price)
 		}
 	}
-	for _, gone := range []string{`"minimax-h3-2k"`, `"seedance-2.5-720p-c4"`} {
-		if !strings.Contains(body, gone) {
+	for _, gone := range []string{`"minimax-h3-2k"`, `"seedance-2.5-720p-c4"`, `"seedance-2.0"`} {
+		if strings.Count(body, gone) < 1 {
 			t.Fatalf("%s must be stripped from stored prices", gone)
 		}
 	}
@@ -35,7 +36,7 @@ func TestScnetModelsStayRetired(t *testing.T) {
 		t.Fatal(err)
 	}
 	dead := string(retiredVideo)
-	for _, model := range []string{`"minimax-h3-2k"`, `"seedance-2.5-720p-c4"`} {
+	for _, model := range []string{`"minimax-h3-2k"`, `"seedance-2.5-720p-c4"`, `"seedance-2.0"`} {
 		if !strings.Contains(dead, model) {
 			t.Fatalf("%s must be in deadVideoModels", model)
 		}
@@ -49,7 +50,10 @@ func TestScnetModelsStayRetired(t *testing.T) {
 		t.Fatal(err)
 	}
 	defaults := string(ratio)
-	for _, price := range []string{`"minimax-h3-2k":`, `"seedance-2.5-720p-c4":`} {
+	for _, price := range []string{
+		`"minimax-h3-2k":`,
+		`"seedance-2.5-720p-c4":`,
+	} {
 		if strings.Contains(defaults, price) {
 			t.Fatalf("default ModelPrice must not keep %s", price)
 		}

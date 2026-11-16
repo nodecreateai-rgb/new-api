@@ -127,8 +127,11 @@ func TestApplyComplianceMaterialsRewritesImagesAndStripsFlags(t *testing.T) {
 }
 
 func TestSeedance25C5SkipsComplianceEvenWhenEnabled(t *testing.T) {
-	if !CompliancePassthrough("seedance-2.5-720p-c5") {
+	if !CompliancePassthrough("seedance-2.5-720p-c5") || !CompliancePassthrough("seedance-2.5-480p-c5") || !CompliancePassthrough("seedance-2.5-720p-c6") || !CompliancePassthrough("seedance-2.5-flash-480p-c5") || !CompliancePassthrough("seedance-2.5-flash-720p-c5") {
 		t.Fatal("c5 must skip compliance")
+	}
+	if !CompliancePassthrough("seedance-2.5-720p") || !CompliancePassthrough("seedance-2.5-flash-720p") {
+		t.Fatal("seedance-2.5-flash-720p must skip compliance")
 	}
 	if CompliancePassthrough("seedance-2.5-720p-c4") {
 		t.Fatal("c4 still uses gateway compliance")

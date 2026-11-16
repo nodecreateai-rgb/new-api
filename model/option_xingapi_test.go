@@ -15,9 +15,14 @@ func TestXingapiModelsListedWithPrices(t *testing.T) {
 	for _, want := range []string{
 		`ensureXingapiRouting()`,
 		`ensureXingapi25Routing()`,
+		`ensureXingapi111Routing()`,
 		`"seedance-2.0-720p-c2":               2.4,`,
 		`"seedance-2.0-720p-c3":               1.5,`,
-		`"seedance-2.5-720p-c5":               4.5,`,
+		`"seedance-2.5-720p-c5":               5,`,
+		`"seedance-2.5-480p-c5":               3.6,`,
+		`"seedance-2.5-flash-480p-c5":         3,`,
+		`"seedance-2.5-flash-720p-c5":         4,`,
+		`"seedance-2.5-720p-c6":               5,`,
 	} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("missing %s", want)
@@ -31,9 +36,13 @@ func TestXingapiModelsListedWithPrices(t *testing.T) {
 	for _, want := range []string{
 		`xingapiChannelName = "Video 720p C2"`,
 		`xingapi25ChannelName = "Video 720p C5"`,
+		`xingapi111ChannelName = "Video 720p C6"`,
 		`"seedance-2.0-720p-c2":"seedance-933"`,
 		`"seedance-2.0-720p-c3":"seedance-933"`,
 		`"seedance-2.5-720p-c5":"seedance2.5-V"`,
+		`"seedance-2.5-480p-c5":"seedance2.5-M"`,
+		`"seedance-2.5-720p-c6":"seedance2.5-M"`,
+		`XINGAPI_111_GATEWAY_KEY`,
 		`XINGAPI_V_GATEWAY_KEY`,
 		`XINGAPI_V_API_KEY`,
 		`https://xingapi.top`,
@@ -41,7 +50,9 @@ func TestXingapiModelsListedWithPrices(t *testing.T) {
 		`最多9张图片、3段音频，不支持参考视频，原生过人脸`,
 		`¥1.5/次，固定720P，仅9:16`,
 		`最多9张图片、3段视频、3段音频，原生过人脸`,
-		`¥4.5/次，固定720P，5-30秒`,
+		`¥5/次，固定720P，5-30秒`,
+		`¥3.6/次，固定480P，5-30秒`,
+		`¥5/次，固定720P，5-30秒`,
 		`最多30张图片、10段视频、10段音频，原生过人脸`,
 	} {
 		if !strings.Contains(s, want) {
@@ -54,15 +65,22 @@ func TestXingapiModelsListedWithPrices(t *testing.T) {
 	if strings.Contains(s, "seedance2.0-933-Q") {
 		t.Fatal("720p c3 must use the discounted 933 upstream, not 933-Q")
 	}
+	if strings.Contains(s, "seedance-2.5-flash-480p-c5") || strings.Contains(s, "seedance-2.5-flash-720p-c5") {
+		t.Fatal("flash 480p/720p must stay unpublished until upstream duration is fixed")
+	}
 	if strings.Contains(s, "sk-") {
 		t.Fatal("channel key must come from env, not a hardcoded secret")
 	}
-	descStart := strings.Index(s, "modelDescriptions")
-	descEnd := strings.Index(s, "endpoint :=")
-	if descStart < 0 || descEnd <= descStart {
-		t.Fatal("missing modelDescriptions block")
+	var descriptions []string
+	for _, line := range strings.Split(s, "\n") {
+		if strings.Contains(line, "异步") {
+			descriptions = append(descriptions, line)
+		}
 	}
-	desc := strings.ToLower(s[descStart:descEnd])
+	if len(descriptions) == 0 {
+		t.Fatal("missing model descriptions")
+	}
+	desc := strings.ToLower(strings.Join(descriptions, "\n"))
 	for _, forbidden := range []string{"xingapi", "星光", "933-q", "933-c", "seedance2.5-v", "seedance-933"} {
 		if strings.Contains(desc, forbidden) {
 			t.Fatalf("public descriptions must not name the upstream: %s", forbidden)
@@ -78,11 +96,12 @@ func TestXingapiModelsSurviveRestartCleanup(t *testing.T) {
 	body := string(option)
 	ensureAt := strings.Index(body, "ensureXingapiRouting()")
 	ensure25At := strings.Index(body, "ensureXingapi25Routing()")
+	ensure111At := strings.Index(body, "ensureXingapi111Routing()")
 	retireAt := strings.Index(body, "retireDeadVideoModels()")
-	if ensureAt < 0 || ensure25At < 0 || retireAt < 0 || ensureAt < retireAt || ensure25At < ensureAt {
-		t.Fatal("xingapi ensure must run on every start, after retireDeadVideoModels, with 2.5-V after 933")
+	if ensureAt < 0 || ensure25At < 0 || ensure111At < 0 || retireAt < 0 || ensureAt < retireAt || ensure25At < ensureAt || ensure111At < ensure25At {
+		t.Fatal("xingapi ensure must run on every start, after retireDeadVideoModels, with 2.5-V after 933 and the 111 channel after that")
 	}
-	for _, model := range []string{"seedance-2.0-720p-c2", "seedance-2.0-720p-c3", "seedance-2.5-720p-c5"} {
+	for _, model := range []string{"seedance-2.0-720p-c2", "seedance-2.0-720p-c3", "seedance-2.5-720p-c5", "seedance-2.5-480p-c5", "seedance-2.5-720p-c6", "seedance-2.5-flash-480p-c5", "seedance-2.5-flash-720p-c5"} {
 		if strings.Contains(body, `"`+model+`"`) && strings.Contains(body, "permanentlyRetiredPublicModels") {
 			retired := body[strings.Index(body, "var permanentlyRetiredPublicModels"):]
 			retired = retired[:strings.Index(retired, "}")]
@@ -101,8 +120,11 @@ func TestXingapiModelsSurviveRestartCleanup(t *testing.T) {
 		`"seedance-2.0-720p-c2"`,
 		`"seedance-2.0-720p-c3"`,
 		`"seedance-2.5-720p-c5"`,
+		`"seedance-2.5-480p-c5"`,
+		`"seedance-2.5-720p-c6"`,
 		`"Video 720p C2"`,
 		`"Video 720p C5"`,
+		`"Video 720p C6"`,
 	} {
 		if strings.Contains(dead, needle) {
 			t.Fatalf("%s must not be in the dead video catalog", needle)

@@ -295,6 +295,7 @@ func TaskPollingLoop() {
 		ctx := context.TODO()
 		sweepTimedOutTasks(ctx)
 		recoverFalseFailedDownloads(ctx)
+		mirrorRecentProviderVideos(ctx)
 		allTasks := model.GetAllUnFinishSyncTasks(constant.TaskQueryLimit)
 		platformTask := make(map[constant.TaskPlatform][]*model.Task)
 		for _, t := range allTasks {
@@ -949,6 +950,11 @@ func updateVideoSingleTask(ctx context.Context, adaptor TaskPollingAdaptor, ch *
 	if shouldRefund {
 		RefundTaskQuota(ctx, task, task.FailReason)
 	}
+	if task.Status == model.TaskStatusSuccess {
+		// Provider content links expire after a few hours. Copy the file
+		// after the row is saved so the poller does not wait on the download.
+		ScheduleProviderVideoMirror(task.TaskID)
+	}
 
 	return nil
 }
@@ -1026,11 +1032,15 @@ func videoURLNeedsChannelAuth(videoURL string) bool {
 		return false
 	}
 	path := strings.ToLower(parsed.Path)
+	// Signed media links already authorize the download. Adding the channel
+	// key makes the provider answer 401 and the file never opens.
+	if strings.Contains(path, "/media-content/") {
+		return false
+	}
 	return strings.Contains(path, "/v1/task/") ||
 		strings.Contains(path, "/v1/videos/") ||
 		strings.Contains(path, "/outputs/") ||
-		strings.Contains(path, "/api/v1/") ||
-		strings.Contains(path, "/media-content/")
+		strings.Contains(path, "/api/v1/")
 }
 
 // clientMayKeepUpstreamVideoURL is true when the client can fetch the file

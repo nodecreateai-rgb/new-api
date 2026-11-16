@@ -558,6 +558,77 @@ func GetFalseFailedDownloadTasks(sinceUnix int64, limit int) []*Task {
 	return tasks
 }
 
+func privateDataTextColumn() string {
+	if common.UsingPostgreSQL {
+		return "private_data::text"
+	}
+	return "private_data"
+}
+
+// GetRecentUnstoredSuccessfulTasks returns finished videos that still point at
+// a gateway proxy URL. Provider file links expire, so these rows need a copy
+// in object storage. Oldest first: they are closest to disappearing.
+func GetRecentUnstoredSuccessfulTasks(sinceUnix int64, limit int) []*Task {
+	if limit <= 0 {
+		return nil
+	}
+	// Bound the read to recent primary-key values. A status filter alone walks
+	// every finished row, which is too slow to run from the poller.
+	var row struct {
+		MaxID int64 `gorm:"column:max_id"`
+	}
+	if err := DB.Model(&Task{}).Select("COALESCE(MAX(id), 0) AS max_id").Scan(&row).Error; err != nil {
+		return nil
+	}
+	minID := row.MaxID - 50000
+	if minID < 0 {
+		minID = 0
+	}
+	col := privateDataTextColumn()
+	var tasks []*Task
+	err := DB.Where("id >= ?", minID).
+		Where("status = ?", TaskStatusSuccess).
+		Where("finish_time >= ?", sinceUnix).
+		Where(col+" NOT LIKE ?", "%oss.domie.studio%").
+		Where(col+" NOT LIKE ?", "%\"direct_upstream_video\":true%").
+		Order("finish_time").
+		Limit(limit).
+		Find(&tasks).Error
+	if err != nil {
+		return nil
+	}
+	return tasks
+}
+
+// UpdatePrivateData writes result URL and other private fields without touching
+// the upstream payload. ClickHouse lightweight updates must not go through GORM Save.
+func (t *Task) UpdatePrivateData() error {
+	if t == nil || t.ID == 0 {
+		return fmt.Errorf("missing task id")
+	}
+	t.UpdatedAt = time.Now().Unix()
+	priv, err := common.Marshal(t.PrivateData)
+	if err != nil {
+		return fmt.Errorf("marshal task private_data: %w", err)
+	}
+	if common.UsingClickHouse {
+		err = DB.Exec(
+			"UPDATE `tasks` SET `updated_at` = ?, `private_data` = ? WHERE `id` = ? SETTINGS mutations_sync = 1",
+			t.UpdatedAt, string(priv), t.ID,
+		).Error
+	} else {
+		err = DB.Model(&Task{}).Where("id = ?", t.ID).Updates(map[string]any{
+			"updated_at":   t.UpdatedAt,
+			"private_data": t.PrivateData,
+		}).Error
+	}
+	if err != nil {
+		return fmt.Errorf("update task %s private_data: %w", t.TaskID, err)
+	}
+	RefreshTaskCache(t)
+	return nil
+}
+
 func GetAllUnFinishSyncTasks(limit int) []*Task {
 	var tasks []*Task
 	// Filter by status (set index) instead of progress != '100%', which scans the

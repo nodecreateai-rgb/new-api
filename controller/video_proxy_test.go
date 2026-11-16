@@ -2,10 +2,15 @@ package controller
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/QuantumNous/new-api/model"
+
+	"github.com/gin-gonic/gin"
 )
 
 func TestResolvePossiblyRelativeVideoURL(t *testing.T) {
@@ -77,6 +82,79 @@ func TestResolveUpstreamTaskVideoURL(t *testing.T) {
 	got := resolveUpstreamTaskVideoURL(context.Background(), server.Client(), server.URL, "secret", "task_upstream")
 	if got != "https://cdn.example.com/result.mp4" {
 		t.Fatalf("got %q", got)
+	}
+}
+
+func TestProviderMediaExpired(t *testing.T) {
+	err := fmt.Errorf("upstream returned status 410 for https://xingapi.top/api/v1/media-content/token")
+	if !providerMediaExpired(err) {
+		t.Fatal("signed media 410 means the provider file is gone")
+	}
+	if providerMediaExpired(fmt.Errorf("upstream returned status 404 for https://xingapi.top/outputs/task_x.mp4")) {
+		t.Fatal("a missing speculative path is not an expired file")
+	}
+	if providerMediaExpired(nil) {
+		t.Fatal("nil error is not expired")
+	}
+}
+
+func TestIsLikelyPlayableVideoResponse(t *testing.T) {
+	html := &http.Response{StatusCode: http.StatusOK, Header: http.Header{"Content-Type": []string{"text/html; charset=utf-8"}}}
+	if isLikelyPlayableVideoResponse(html) {
+		t.Fatal("SPA HTML must not count as playable video")
+	}
+	mp4 := &http.Response{StatusCode: http.StatusOK, Header: http.Header{"Content-Type": []string{"video/mp4"}}}
+	if !isLikelyPlayableVideoResponse(mp4) {
+		t.Fatal("video/mp4 must count as playable")
+	}
+	octet := &http.Response{StatusCode: http.StatusOK, Header: http.Header{"Content-Type": []string{"application/octet-stream"}}}
+	if !isLikelyPlayableVideoResponse(octet) {
+		t.Fatal("octet-stream must count as playable")
+	}
+}
+
+func TestFetchFirstAvailableVideoSkipsHTMLOutputs(t *testing.T) {
+	var hits []string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hits = append(hits, r.URL.Path)
+		switch r.URL.Path {
+		case "/outputs/task_abc.mp4":
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			w.Header().Set("ETag", `"spa"`)
+			_, _ = io.WriteString(w, "<!doctype html><html></html>")
+		case "/api/v1/media-content/abc":
+			w.Header().Set("Content-Type", "video/mp4")
+			_, _ = w.Write([]byte{0x00, 0x00, 0x00, 0x20, 'f', 't', 'y', 'p'})
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+
+	gin.SetMode(gin.TestMode)
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	req, err := http.NewRequest(http.MethodGet, "http://example/", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	c.Request = req
+	task := &model.Task{TaskID: "task_local"}
+	err = fetchFirstAvailableVideo(c, req, server.Client(), context.Background(), task, server.URL, "secret", []string{
+		server.URL + "/outputs/task_abc.mp4",
+		server.URL + "/api/v1/media-content/abc",
+	})
+	if err != nil {
+		t.Fatalf("fetch: %v", err)
+	}
+	if len(hits) < 2 || hits[0] != "/outputs/task_abc.mp4" || hits[1] != "/api/v1/media-content/abc" {
+		t.Fatalf("unexpected hit order %#v", hits)
+	}
+	if ct := recorder.Header().Get("Content-Type"); ct != "video/mp4" {
+		t.Fatalf("content-type %q", ct)
+	}
+	if body := recorder.Body.Bytes(); len(body) < 8 || string(body[4:8]) != "ftyp" {
+		t.Fatalf("body %#v", body)
 	}
 }
 

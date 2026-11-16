@@ -197,7 +197,7 @@ func TestPublicErrorMessageHidesFlova(t *testing.T) {
 }
 
 func TestPublicErrorMessageHidesXxz(t *testing.T) {
-	got := PublicErrorMessage("521xxz 521ai-SD-fast-720-xd failed")
+	got := PublicErrorMessage("521xxz 521ai-SD-fast-720-xd seedance2.5flash-720-XD failed")
 	if got != "request failed" {
 		t.Fatalf("got %q", got)
 	}
@@ -212,9 +212,9 @@ func TestPublicErrorMessageHidesXxz(t *testing.T) {
 }
 
 func TestMaskUpstreamProviderInfoXxz(t *testing.T) {
-	got := MaskUpstreamProviderInfo("521ai-SD-fast-720-xd www.521xxz.com api.521way.com 521ai 521xxz 521way")
+	got := MaskUpstreamProviderInfo("521ai-SD-fast-720-xd seedance2.5flash-720-XD www.521xxz.com api.521way.com 521ai 521xxz 521way")
 	lower := strings.ToLower(got)
-	for _, forbidden := range []string{"521xxz", "521ai", "521way"} {
+	for _, forbidden := range []string{"521xxz", "521ai", "521way", "seedance2.5flash"} {
 		if strings.Contains(lower, forbidden) {
 			t.Fatalf("leaked %q in %q", forbidden, got)
 		}
@@ -262,7 +262,7 @@ func TestPublicErrorMessageHidesXingapi(t *testing.T) {
 }
 
 func TestMaskUpstreamProviderInfoXingapi(t *testing.T) {
-	got := MaskUpstreamProviderInfo("seedance-933 seedance2.0-933-Q seedance2.5-V xingapi.top 星光API")
+	got := MaskUpstreamProviderInfo("seedance-933 seedance2.0-933-Q seedance2.5-V seedance2.5-M Seedance2.5-480P-M xingapi.top 星光API")
 	lower := strings.ToLower(got)
 	for _, forbidden := range []string{"xingapi", "星光", "seedance-933", "933-q", "seedance2.5"} {
 		if strings.Contains(got, forbidden) || strings.Contains(lower, forbidden) {

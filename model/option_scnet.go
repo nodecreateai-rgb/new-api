@@ -11,13 +11,13 @@ import (
 	"gorm.io/gorm"
 )
 
-var scnetPublicModels = []string{"minimax-h3-2k", "seedance-2.5-720p-c4"}
+var scnetPublicModels = []string{"minimax-h3-2k", "seedance-2.5-720p-c4", "seedance-2.0"}
 
 const scnetChannelName = "Video 2K C4"
 
 func ensureScnetRouting() error {
-	const modelsCSV = "minimax-h3-2k,seedance-2.5-720p-c4"
-	const mappingJSON = `{"minimax-h3-2k":"minimax-h3","seedance-2.5-720p-c4":"seedance-2.5"}`
+	const modelsCSV = "minimax-h3-2k,seedance-2.5-720p-c4,seedance-2.0"
+	const mappingJSON = `{"minimax-h3-2k":"minimax-h3","seedance-2.5-720p-c4":"seedance-2.5","seedance-2.0":"seedance-2.0"}`
 	const groupsCSV = "default,vip,svip,vip1,vip2,vip3,vip6,vip7,vip8,vip9,vip10,vip11,vip13,llm-vip"
 	baseURL := strings.TrimSpace(os.Getenv("SCNET2API_BASE_URL"))
 	if baseURL == "" {
@@ -48,6 +48,7 @@ func ensureScnetRouting() error {
 	modelDescriptions := map[string]string{
 		"minimax-h3-2k":        "MiniMax H3 文生/图生/参考生视频（异步，¥1/次，固定2K输出，有声，4-15秒，画幅 16:9/9:16/1:1/4:3/3:4/21:9（传图时按图片比例），首尾帧或参考素材二选一，参考素材最多9张图片、3段视频、3段音频）",
 		"seedance-2.5-720p-c4": "Seedance 2.5 文生/图生/参考生视频（异步，¥4/次，固定720P，有声，无水印，4-30秒，画幅 16:9/9:16/1:1/4:3/3:4/21:9/adaptive，首尾帧或参考素材二选一，参考素材最多30张图片、10段视频、10段音频）",
+		"seedance-2.0":         "Seedance 2.0 文生/图生/参考生视频（异步，¥2/次，固定720P，有声，无水印，4-15秒，画幅 16:9/9:16/1:1/4:3/3:4/21:9/adaptive，首尾帧或参考素材二选一，参考素材最多9张图片、3段视频、3段音频，可后台过人脸）",
 	}
 	endpoint := `{"openai-video":{"path":"/v1/videos","method":"POST"}}`
 

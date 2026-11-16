@@ -36,6 +36,15 @@ func TestOriginModelMediaLimitSeedanceC5(t *testing.T) {
 	if err := originModelMediaLimit("seedance-2.0", relaycommon.TaskSubmitReq{VideoURL: "https://example.com/a.mp4"}); err != nil {
 		t.Fatal(err)
 	}
+	if err := originModelMediaLimit("seedance-2.0", relaycommon.TaskSubmitReq{Images: images}); err == nil {
+		t.Fatal("seedance-2.0 accepts at most 9 images")
+	}
+	if err := originModelMediaLimit("seedance-2.0", relaycommon.TaskSubmitReq{Videos: []string{"a", "b", "c", "d"}}); err == nil {
+		t.Fatal("seedance-2.0 accepts at most 3 videos")
+	}
+	if err := originModelMediaLimit("seedance-2.0", relaycommon.TaskSubmitReq{Audios: []string{"a", "b", "c", "d"}}); err == nil {
+		t.Fatal("seedance-2.0 accepts at most 3 audios")
+	}
 	if err := originModelMediaLimit("wan-3.0-480p", relaycommon.TaskSubmitReq{
 		VideoURL: "https://example.com/a.mp4",
 	}); err == nil || !strings.Contains(err.Error(), "0 reference videos") {
@@ -154,6 +163,32 @@ func TestOriginModelMediaLimitSeedanceC5(t *testing.T) {
 	if err := originModelMediaLimit("seedance-2.0-fast-720p-c2", relaycommon.TaskSubmitReq{Audios: h3Audios[:1]}); err == nil {
 		t.Fatal("expected fast 720p c2 audio to require an image")
 	}
+	flashImages := make([]string, 11)
+	for i := range flashImages {
+		flashImages[i] = "https://example.com/f" + strings.Repeat("x", i+1) + ".jpg"
+	}
+	flashAudios := make([]string, 6)
+	for i := range flashAudios {
+		flashAudios[i] = "https://example.com/fa" + strings.Repeat("x", i+1) + ".mp3"
+	}
+	if err := originModelMediaLimit("seedance-2.5-flash-720p", relaycommon.TaskSubmitReq{
+		Images: flashImages[:10],
+		Audios: flashAudios[:5],
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := originModelMediaLimit("seedance-2.5-flash-720p", relaycommon.TaskSubmitReq{Images: flashImages}); err == nil {
+		t.Fatal("expected seedance-2.5-flash-720p image cap")
+	}
+	if err := originModelMediaLimit("seedance-2.5-flash-720p", relaycommon.TaskSubmitReq{Videos: videos[:1]}); err == nil {
+		t.Fatal("expected seedance-2.5-flash-720p video cap")
+	}
+	if err := originModelMediaLimit("seedance-2.5-flash-720p", relaycommon.TaskSubmitReq{Audios: flashAudios}); err == nil {
+		t.Fatal("expected seedance-2.5-flash-720p audio cap")
+	}
+	if err := originModelMediaLimit("seedance-2.5-flash-720p", relaycommon.TaskSubmitReq{Audios: flashAudios[:1]}); err == nil {
+		t.Fatal("expected seedance-2.5-flash-720p audio to require an image")
+	}
 	if err := originModelMediaLimit("seedance-2.0-720p-c2", relaycommon.TaskSubmitReq{
 		Images: images[:9],
 		Audios: h3Audios[:3],
@@ -197,5 +232,35 @@ func TestOriginModelMediaLimitSeedanceC5(t *testing.T) {
 	}
 	if err := originModelMediaLimit("seedance-2.5-720p-c5", relaycommon.TaskSubmitReq{Audios: c5Audios}); err == nil {
 		t.Fatal("expected 2.5 720p c5 audio cap")
+	}
+	flashC5Images := make([]string, 11)
+	for i := range flashC5Images {
+		flashC5Images[i] = "https://example.com/f" + strings.Repeat("y", i+1) + ".jpg"
+	}
+	flashC5Videos := make([]string, 6)
+	for i := range flashC5Videos {
+		flashC5Videos[i] = "https://example.com/f" + strings.Repeat("y", i+1) + ".mp4"
+	}
+	flashC5Audios := make([]string, 6)
+	for i := range flashC5Audios {
+		flashC5Audios[i] = "https://example.com/f" + strings.Repeat("y", i+1) + ".mp3"
+	}
+	for _, model := range []string{"seedance-2.5-flash-480p-c5", "seedance-2.5-flash-720p-c5"} {
+		if err := originModelMediaLimit(model, relaycommon.TaskSubmitReq{
+			Images: flashC5Images[:10],
+			Videos: flashC5Videos[:5],
+			Audios: flashC5Audios[:5],
+		}); err != nil {
+			t.Fatal(err)
+		}
+		if err := originModelMediaLimit(model, relaycommon.TaskSubmitReq{Images: flashC5Images}); err == nil {
+			t.Fatalf("%s image cap", model)
+		}
+		if err := originModelMediaLimit(model, relaycommon.TaskSubmitReq{Videos: flashC5Videos}); err == nil {
+			t.Fatalf("%s video cap", model)
+		}
+		if err := originModelMediaLimit(model, relaycommon.TaskSubmitReq{Audios: flashC5Audios}); err == nil {
+			t.Fatalf("%s audio cap", model)
+		}
 	}
 }
