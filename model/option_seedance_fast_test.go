@@ -15,9 +15,10 @@ func TestSeedanceFastStaysOnAfterStartup(t *testing.T) {
 	for _, want := range []string{
 		`ensureSeedanceFastRouting()`,
 		`"seedance-2.0-fast-480p":             1.5`,
-		`groupPrices["seedance-2.0-fast-480p"] = 1.5`,
+		`groupPrices["seedance-2.0-fast-480p"] = priceFast480`,
 		`"vip10":   "VIP10分组"`,
-		`"seedance-2.0-fast-480p": 1`,
+		`"seedance-2.0-fast-480p": 1.4`,
+		`applyVip10ModelPriceDiscount(modelGroupPrices, prices)`,
 	} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("missing %s", want)
@@ -50,7 +51,7 @@ func TestSeedanceFastStaysOnAfterStartup(t *testing.T) {
 		`seedanceFast720Model`,
 		`seedanceFastPublic720Model`,
 		`"seedance-2.0-720p":"seedance-2.0-720p"`,
-		`¥3/次，VIP10 ¥2.5/次`,
+		`¥3/次，VIP10 ¥2.9/次`,
 	} {
 		if !strings.Contains(s, want) {
 			t.Fatalf("missing %s", want)

@@ -458,7 +458,11 @@ func ensureDopioRMBPricing() {
 			"minimax-h3-max":     0.3,
 		},
 		"vip10": {
+			// Flat -¥0.1 is applied to every other model at the end of this
+			// function so a restart recomputes from sticker prices instead of
+			// stacking another 0.1. seedance-2.0-fast-480p already has that cut.
 			"seedance-2.0-fast-480p": 1.4,
+			"seedance-2.0-720p":      2.9,
 		},
 		"vip11": {
 			"seedance-2.5-480p":         1,
@@ -677,7 +681,7 @@ func ensureDopioRMBPricing() {
 		}
 		price720 := 3.0
 		if group == "vip10" {
-			price720 = 2.5
+			price720 = 2.9
 		}
 		if groupPrices["seedance-2.0-720p"] != price720 {
 			groupPrices["seedance-2.0-720p"] = price720
@@ -810,6 +814,11 @@ func ensureDopioRMBPricing() {
 			}
 		}
 		modelGroupPrices[group] = groupPrices
+	}
+	// Last, after every group is reset to sticker prices, so a restart
+	// cannot stack another ¥0.1 onto an already-discounted vip10 map.
+	if applyVip10ModelPriceDiscount(modelGroupPrices, prices) {
+		changed = true
 	}
 	if changed {
 		if b, err := json.Marshal(modelGroupPrices); err == nil {
@@ -994,7 +1003,7 @@ func ensureDopioRMBPricing() {
 	if err := ensureSeedanceC7Routing(); err != nil {
 		common.SysLog("failed to enforce Video Seedance C7 gateway routing: " + err.Error())
 	}
-	common.SysLog("enforced Dopio RMB pricing incl sd2.5=0.5 per call, sd2-c7=0.5 per call, sd2-fast=1 per call, vip6 Seedance 720p fast=1/full=2, oauth2=0.3, pay=0.5, sd2-c6=0.5, seedance-2.0-mini-480p=0.4, seedance-2.0-mini-720p=1, sd2-c11=2.5, sd2-c12=3, anthropic/claude-opus-5-5=10000000, llm-vip opus free, Price=1, USDExchangeRate=1, quota_display_type=CNY")
+	common.SysLog("enforced Dopio RMB pricing incl sd2.5=0.5 per call, sd2-c7=0.5 per call, sd2-fast=1 per call, vip6 Seedance 720p fast=1/full=2, vip10 sticker-0.1 except seedance-2.0-fast-480p=1.4, oauth2=0.3, pay=0.5, sd2-c6=0.5, seedance-2.0-mini-480p=0.4, seedance-2.0-mini-720p=1, sd2-c11=2.5, sd2-c12=3, anthropic/claude-opus-5-5=10000000, llm-vip opus free, Price=1, USDExchangeRate=1, quota_display_type=CNY")
 }
 
 func ensureRoboneoMiniRouting() error {

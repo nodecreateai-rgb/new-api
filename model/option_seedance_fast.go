@@ -17,7 +17,7 @@ const (
 	// seedanceFast720Model is the same pool rendered at 720p (45 credits/s,
 	// 15 s = 675, so one 1000-credit login covers one 720p plus one 480p).
 	seedanceFast720Model       = "seedance-2.0-720p"
-	seedanceFast720Description = "Seedance 2.0 720p 文生/图生视频（异步，¥3/次，VIP10 ¥2.5/次，903，原生720P，15秒，不卡人脸，最多9张图、3段音频）"
+	seedanceFast720Description = "Seedance 2.0 720p 文生/图生视频（异步，¥3/次，VIP10 ¥2.9/次，903，原生720P，15秒，不卡人脸，最多9张图、3段音频）"
 	// seedanceFastPublic720Model is the public alias of the same 720p render
 	// (seedance-2.0-720p stays private to one user): ¥1.8/次 in every group.
 	seedanceFastPublic720Model       = "seedance-2.0-fast-720p"
@@ -50,8 +50,8 @@ func ensureSeedanceFastRouting() error {
 	publicModels := []string{seedanceFastPublicModel, seedanceFast720Model}
 	groups := []string{"default", "vip", "svip", "vip1", "vip2", "vip3", "vip6", "vip8", "vip9", "vip10"}
 	modelDescriptions := map[string]string{
-		seedanceFastPublicModel:    seedanceFastDescription,
-		seedanceFast720Model:       seedanceFast720Description,
+		seedanceFastPublicModel: seedanceFastDescription,
+		seedanceFast720Model:    seedanceFast720Description,
 	}
 
 	if common.UsingClickHouse {
