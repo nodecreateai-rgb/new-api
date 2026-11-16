@@ -954,8 +954,10 @@ func ensureDopioRMBPricing() {
 	if err := ensureSeedanceC7Routing(); err != nil {
 		common.SysLog("failed to enforce Video Seedance C7 gateway routing: " + err.Error())
 	}
+	// Video Seedance C8 is retired for good. Startup must not publish
+	// seedance-2.0-c8 or seedance-2.0-mini-c8 again.
 	if err := ensureSeedanceC8Routing(); err != nil {
-		common.SysLog("failed to enforce Video Seedance C8 gateway routing: " + err.Error())
+		common.SysLog("failed to retire Video Seedance C8 gateway routing: " + err.Error())
 	}
 	if err := ensureLLMVipOnEnabledChannels(); err != nil {
 		common.SysLog("failed to ensure llm-vip channel abilities: " + err.Error())

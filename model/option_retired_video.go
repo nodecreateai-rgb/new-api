@@ -30,6 +30,9 @@ var deadVideoModels = []string{
 	"seedance-2.0-720p-c1",
 	// Video Fast 720p C2 no longer sells this 2.5 alias.
 	"seedance-2.5-720p",
+	// Video Seedance C8. ensureSeedanceC8Routing now only retires the
+	// channel; this list is the safety net if another pass republishes it.
+	"seedance-2.0-c8", "seedance-2.0-mini-c8",
 }
 
 // deadVideoChannels served only dead models, so they are switched off.
@@ -46,6 +49,7 @@ var deadVideoChannels = []string{
 	"Aicron Video",
 	"Video 2K C4",
 	"Video 720p C1",
+	"Video Seedance C8",
 }
 
 // retireDeadVideoModels runs after every ensure step, because several of
