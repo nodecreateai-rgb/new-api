@@ -354,7 +354,6 @@ var defaultModelPrice = map[string]float64{
 	"minimax-h3-768p":                    0.5,
 	"wan3.0-video-prime":                 2,
 	"seedance-2.5":                       4,
-	"seedance-2.0-720p-c1":               1.5,
 	"seedance-2.0-fast-720p-c1":          1.8,
 	"seedance-2.0-fast-720p-c2":          2,
 	"seedance-2.0-fast-720p-c3":          1.8,

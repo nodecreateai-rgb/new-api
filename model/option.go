@@ -314,7 +314,6 @@ func ensureDopioRMBPricing() {
 		"wan-3.0-c2":                         2,
 		"wan3.0-video-prime":                 2,
 		"seedance-2.5":                       4,
-		"seedance-2.0-720p-c1":               1.5,
 		"seedance-2.0-fast-720p-c1":          1.8,
 		"seedance-2.0-fast-720p-c2":          2,
 		"seedance-2.0-fast-720p-c3":          1.8,
@@ -530,7 +529,7 @@ func ensureDopioRMBPricing() {
 			changed = true
 		}
 	}
-	for _, gone := range []string{"seedance-2.0-fast-720p-c3", "kling-o3-omni", "anthropic/claude-opus-5-5", "minimax-h3-max-768p", "seedance-2.0-mini-480p-12s", "minimax-h3-2k", "seedance-2.5-720p-c4"} {
+	for _, gone := range []string{"seedance-2.0-fast-720p-c3", "kling-o3-omni", "anthropic/claude-opus-5-5", "minimax-h3-max-768p", "seedance-2.0-mini-480p-12s", "minimax-h3-2k", "seedance-2.5-720p-c4", "seedance-2.0-720p-c1"} {
 		if _, exists := prices[gone]; exists {
 			delete(prices, gone)
 			changed = true
@@ -610,7 +609,7 @@ func ensureDopioRMBPricing() {
 	}
 	changed = false
 	for group, groupPrices := range modelGroupPrices {
-		for _, staleModel := range append([]string{"happy-horse-1.1", "happyhorse-1.1", "kling-v3", "wan2.7", "viduq3", "seedance-video-fast", "seedance-video-standard", "seedance-video-fast-per-second", "seedance-video-standard-per-second", "minimax-h3-2k", "seedance-2.5-720p-c4"}, permanentlyRetiredPublicModels...) {
+		for _, staleModel := range append([]string{"happy-horse-1.1", "happyhorse-1.1", "kling-v3", "wan2.7", "viduq3", "seedance-video-fast", "seedance-video-standard", "seedance-video-fast-per-second", "seedance-video-standard-per-second", "minimax-h3-2k", "seedance-2.5-720p-c4", "seedance-2.0-720p-c1"}, permanentlyRetiredPublicModels...) {
 			if _, exists := groupPrices[staleModel]; exists {
 				delete(groupPrices, staleModel)
 				changed = true
@@ -720,10 +719,6 @@ func ensureDopioRMBPricing() {
 		}
 		if groupPrices["seedance-2.0-720p-c2"] != 2.4 {
 			groupPrices["seedance-2.0-720p-c2"] = 2.4
-			changed = true
-		}
-		if groupPrices["seedance-2.0-720p-c1"] != 1.5 {
-			groupPrices["seedance-2.0-720p-c1"] = 1.5
 			changed = true
 		}
 		if groupPrices["seedance-2.0-720p-c3"] != 1.5 {
@@ -933,9 +928,8 @@ func ensureDopioRMBPricing() {
 	if err := ensureBramble2apiRouting(); err != nil {
 		common.SysLog("failed to enforce Bramble video gateway routing: " + err.Error())
 	}
-	if err := ensureWanfengRouting(); err != nil {
-		common.SysLog("failed to enforce Video 720p C1 gateway routing: " + err.Error())
-	}
+	// Video 720p C1 is retired for good. Startup must not publish
+	// seedance-2.0-720p-c1 again.
 	if err := ensureOpenaifitRouting(); err != nil {
 		common.SysLog("failed to enforce Video Fast 720p C1 gateway routing: " + err.Error())
 	}
