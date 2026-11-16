@@ -50,6 +50,13 @@ func TestRateFromCountsKeepsWindowsIndependent(t *testing.T) {
 	if rateFromCounts(0, 0) != nil {
 		t.Fatal("a window with no finished tasks should be empty")
 	}
+	got := avgGenerationSec(1836, 6)
+	if got == nil || *got != 306 {
+		t.Fatalf("avg generation = %v, want 306", got)
+	}
+	if avgGenerationSec(0, 0) != nil {
+		t.Fatal("no successful generations should be empty")
+	}
 }
 
 func TestRoundedSuccessRate(t *testing.T) {

@@ -18,6 +18,7 @@ For commercial licensing, please contact support@quantumnous.com
 */
 
 import React from 'react';
+import i18n from '../../../../i18n/i18n';
 
 const WINDOWS = [
   { hours: 24, field: 'success_rate_24h' },
@@ -51,7 +52,40 @@ function successRateStyle(rate, loading) {
   return { background: 'rgba(239, 68, 68, 0.18)', color: '#b91c1c' };
 }
 
+function formatDuration(seconds) {
+  const total = Math.round(Number(seconds));
+  if (!Number.isFinite(total) || total <= 0) {
+    return null;
+  }
+  const minutes = Math.floor(total / 60);
+  const secs = total % 60;
+  const zh = String(i18n.language || '')
+    .toLowerCase()
+    .startsWith('zh');
+  if (zh) {
+    if (minutes <= 0) return `${secs}秒`;
+    if (secs === 0) return `${minutes}分`;
+    return `${minutes}分${secs}秒`;
+  }
+  if (minutes <= 0) return `${secs}s`;
+  if (secs === 0) return `${minutes}m`;
+  return `${minutes}m${secs}s`;
+}
+
 const ModelSuccessRates = ({ rates, loading = false, t }) => {
+  const duration = loading
+    ? null
+    : formatDuration(rates?.avg_generation_sec);
+  let durationDescription = t('加载中...');
+  if (!loading && duration == null) {
+    durationDescription = t('最近 24 小时没有成功生成');
+  } else if (!loading && duration != null) {
+    durationDescription = t(
+      '最近 24 小时成功任务的平均生成时长：{{duration}}',
+      { duration },
+    );
+  }
+
   return (
     <div className='flex flex-wrap items-center gap-1'>
       {WINDOWS.map((period) => {
@@ -86,6 +120,17 @@ const ModelSuccessRates = ({ rates, loading = false, t }) => {
           </span>
         );
       })}
+      <span
+        title={durationDescription}
+        aria-label={durationDescription}
+        className={`inline-flex items-baseline gap-1 whitespace-nowrap rounded-md px-1.5 py-0.5 text-xs font-semibold tabular-nums ${
+          loading ? 'animate-pulse' : ''
+        }`}
+        style={{ background: 'rgba(37, 99, 235, 0.12)', color: '#1d4ed8' }}
+      >
+        <span className='font-medium'>{t('时长')}</span>
+        <span>{duration == null ? '—' : duration}</span>
+      </span>
     </div>
   );
 };

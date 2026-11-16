@@ -43,6 +43,7 @@ export function useModelSuccessRateMap() {
         rate24h: finiteRate(model.success_rate_24h),
         rate12h: finiteRate(model.success_rate_12h),
         rate3h: finiteRate(model.success_rate_3h),
+        avgGenerationSec: finiteRate(model.avg_generation_sec),
       })
     }
     return map

@@ -15,10 +15,11 @@ const (
 )
 
 type ModelSuccessWindows struct {
-	ModelName      string   `json:"model_name"`
-	SuccessRate24h *float64 `json:"success_rate_24h"`
-	SuccessRate12h *float64 `json:"success_rate_12h"`
-	SuccessRate3h  *float64 `json:"success_rate_3h"`
+	ModelName        string   `json:"model_name"`
+	SuccessRate24h   *float64 `json:"success_rate_24h"`
+	SuccessRate12h   *float64 `json:"success_rate_12h"`
+	SuccessRate3h    *float64 `json:"success_rate_3h"`
+	AvgGenerationSec *int64   `json:"avg_generation_sec"`
 }
 
 type SuccessWindowsResult struct {
@@ -89,6 +90,17 @@ func rateFromCounts(success int64, failure int64) *float64 {
 	return &rounded
 }
 
+func avgGenerationSec(sum int64, count int64) *int64 {
+	if count <= 0 || sum <= 0 {
+		return nil
+	}
+	seconds := sum / count
+	if seconds <= 0 {
+		return nil
+	}
+	return &seconds
+}
+
 func QuerySuccessWindows(groups []string) (SuccessWindowsResult, error) {
 	now := time.Now().Unix()
 	byName := map[string]ModelSuccessWindows{}
@@ -102,10 +114,11 @@ func QuerySuccessWindows(groups []string) (SuccessWindowsResult, error) {
 			continue
 		}
 		item := ModelSuccessWindows{
-			ModelName:      row.ModelName,
-			SuccessRate24h: rateFromCounts(row.Success24h, row.Failure24h),
-			SuccessRate12h: rateFromCounts(row.Success12h, row.Failure12h),
-			SuccessRate3h:  rateFromCounts(row.Success3h, row.Failure3h),
+			ModelName:        row.ModelName,
+			SuccessRate24h:   rateFromCounts(row.Success24h, row.Failure24h),
+			SuccessRate12h:   rateFromCounts(row.Success12h, row.Failure12h),
+			SuccessRate3h:    rateFromCounts(row.Success3h, row.Failure3h),
+			AvgGenerationSec: avgGenerationSec(row.DurationSum24h, row.DurationCount24h),
 		}
 		if item.SuccessRate24h == nil && item.SuccessRate12h == nil && item.SuccessRate3h == nil {
 			continue

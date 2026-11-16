@@ -21,6 +21,7 @@ export type ModelSuccessRateWindows = {
   rate24h: number | null
   rate12h: number | null
   rate3h: number | null
+  avgGenerationSec: number | null
 }
 
 export type SuccessRateLevel = 'good' | 'warn' | 'bad'

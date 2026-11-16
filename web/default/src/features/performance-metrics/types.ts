@@ -64,6 +64,7 @@ export type PerfSuccessWindowModel = {
   success_rate_24h: number | null
   success_rate_12h: number | null
   success_rate_3h: number | null
+  avg_generation_sec: number | null
 }
 
 export type PerfSuccessWindowsData = {

@@ -31,6 +31,35 @@ export interface ModelSuccessRatesProps extends React.HTMLAttributes<HTMLDivElem
   loading?: boolean
 }
 
+function formatDuration(
+  seconds: number | null | undefined,
+  language: string
+): string | null {
+  if (seconds == null || !Number.isFinite(seconds) || seconds <= 0) {
+    return null
+  }
+  const total = Math.round(seconds)
+  const minutes = Math.floor(total / 60)
+  const secs = total % 60
+  const zh = language.toLowerCase().startsWith('zh')
+  if (zh) {
+    if (minutes <= 0) {
+      return `${secs}秒`
+    }
+    if (secs === 0) {
+      return `${minutes}分`
+    }
+    return `${minutes}分${secs}秒`
+  }
+  if (minutes <= 0) {
+    return `${secs}s`
+  }
+  if (secs === 0) {
+    return `${minutes}m`
+  }
+  return `${minutes}m${secs}s`
+}
+
 function rateStyle(
   rate: number | null,
   loading: boolean
@@ -51,8 +80,20 @@ function rateStyle(
 export const ModelSuccessRates = memo(function ModelSuccessRates(
   props: ModelSuccessRatesProps
 ) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const loading = props.loading ?? false
+  const duration = loading
+    ? null
+    : formatDuration(props.rates?.avgGenerationSec, i18n.language)
+  let durationDescription = t('Loading...')
+  if (!loading && duration == null) {
+    durationDescription = t('No successful generations in the last 24 hours')
+  } else if (!loading && duration != null) {
+    durationDescription = t(
+      'Average generation time over successful tasks in the last 24 hours: {{duration}}',
+      { duration }
+    )
+  }
 
   return (
     <div
@@ -90,6 +131,18 @@ export const ModelSuccessRates = memo(function ModelSuccessRates(
           </span>
         )
       })}
+      <span
+        title={durationDescription}
+        aria-label={durationDescription}
+        className={cn(
+          'inline-flex items-baseline gap-1 rounded-md px-1.5 py-0.5 text-xs leading-4 font-semibold tabular-nums whitespace-nowrap',
+          loading && 'animate-pulse'
+        )}
+        style={{ background: 'rgba(37, 99, 235, 0.12)', color: '#1d4ed8' }}
+      >
+        <span className='font-medium'>{t('Duration')}</span>
+        <span>{duration == null ? '—' : duration}</span>
+      </span>
     </div>
   )
 })
