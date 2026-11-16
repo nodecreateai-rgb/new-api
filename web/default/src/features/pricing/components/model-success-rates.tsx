@@ -31,18 +31,21 @@ export interface ModelSuccessRatesProps extends React.HTMLAttributes<HTMLDivElem
   loading?: boolean
 }
 
-function rateClassName(rate: number | null, loading: boolean): string {
+function rateStyle(
+  rate: number | null,
+  loading: boolean
+): React.CSSProperties {
   if (loading || rate == null) {
-    return 'bg-muted text-muted-foreground'
+    return { background: 'rgba(148, 163, 184, 0.2)', color: '#64748b' }
   }
   const level = successRateLevel(rate)
   if (level === 'good') {
-    return 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
+    return { background: 'rgba(16, 185, 129, 0.18)', color: '#047857' }
   }
   if (level === 'warn') {
-    return 'bg-orange-500/15 text-orange-700 dark:text-orange-300'
+    return { background: 'rgba(249, 115, 22, 0.18)', color: '#c2410c' }
   }
-  return 'bg-red-500/15 text-red-700 dark:text-red-300'
+  return { background: 'rgba(239, 68, 68, 0.18)', color: '#b91c1c' }
 }
 
 export const ModelSuccessRates = memo(function ModelSuccessRates(
@@ -77,10 +80,10 @@ export const ModelSuccessRates = memo(function ModelSuccessRates(
             title={description}
             aria-label={description}
             className={cn(
-              'inline-flex items-baseline gap-1 rounded-md px-1.5 py-0.5 text-xs leading-4 font-semibold tabular-nums',
-              loading && 'animate-pulse',
-              rateClassName(rate, loading)
+              'inline-flex items-baseline gap-1 rounded-md px-1.5 py-0.5 text-xs leading-4 font-semibold tabular-nums whitespace-nowrap',
+              loading && 'animate-pulse'
             )}
+            style={rateStyle(rate, loading)}
           >
             <span className='font-medium'>{period.hours}h</span>
             <span>{value}</span>

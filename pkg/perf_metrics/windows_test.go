@@ -41,6 +41,17 @@ func TestSuccessWindowSummaryOmitsEmptyWindows(t *testing.T) {
 	}
 }
 
+func TestRateFromCountsKeepsWindowsIndependent(t *testing.T) {
+	// 3 successes and 5 failures in 3h is 37.5%.
+	// Older successes raise the 12h and 24h rates without changing 3h.
+	assertRate(t, rateFromCounts(3, 5), 37.5)
+	assertRate(t, rateFromCounts(106, 20), 84.13)
+	assertRate(t, rateFromCounts(446, 87), 83.68)
+	if rateFromCounts(0, 0) != nil {
+		t.Fatal("a window with no finished tasks should be empty")
+	}
+}
+
 func TestRoundedSuccessRate(t *testing.T) {
 	if roundedSuccessRate(windowCounts{}) != nil {
 		t.Fatal("empty window should be nil")

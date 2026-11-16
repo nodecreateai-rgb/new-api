@@ -37,18 +37,18 @@ function formatSuccessPercent(rate) {
   return shown.toFixed(1);
 }
 
-function successRateClass(rate, loading) {
+function successRateStyle(rate, loading) {
   if (loading || rate == null) {
-    return 'bg-gray-100 text-gray-500 dark:bg-white/10 dark:text-gray-300';
+    return { background: 'rgba(148, 163, 184, 0.2)', color: '#64748b' };
   }
   const shown = displayedSuccessPercent(rate);
   if (shown > 90) {
-    return 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300';
+    return { background: 'rgba(16, 185, 129, 0.18)', color: '#047857' };
   }
   if (shown >= 65) {
-    return 'bg-orange-500/15 text-orange-700 dark:text-orange-300';
+    return { background: 'rgba(249, 115, 22, 0.18)', color: '#c2410c' };
   }
-  return 'bg-red-500/15 text-red-700 dark:text-red-300';
+  return { background: 'rgba(239, 68, 68, 0.18)', color: '#b91c1c' };
 }
 
 const ModelSuccessRates = ({ rates, loading = false, t }) => {
@@ -78,7 +78,8 @@ const ModelSuccessRates = ({ rates, loading = false, t }) => {
             aria-label={description}
             className={`inline-flex items-baseline gap-1 whitespace-nowrap rounded-md px-1.5 py-0.5 text-xs font-semibold tabular-nums ${
               loading ? 'animate-pulse' : ''
-            } ${successRateClass(rate, loading)}`}
+            }`}
+            style={successRateStyle(rate, loading)}
           >
             <span className='font-medium'>{period.hours}h</span>
             <span>{value}</span>

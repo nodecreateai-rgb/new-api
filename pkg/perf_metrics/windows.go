@@ -76,8 +76,65 @@ func roundedSuccessRate(value windowCounts) *float64 {
 	return &rounded
 }
 
+func rateFromCounts(success int64, failure int64) *float64 {
+	total := success + failure
+	if total <= 0 {
+		return nil
+	}
+	if success < 0 {
+		success = 0
+	}
+	rate := float64(success) / float64(total) * 100
+	rounded := math.Round(rate*100) / 100
+	return &rounded
+}
+
 func QuerySuccessWindows(groups []string) (SuccessWindowsResult, error) {
 	now := time.Now().Unix()
+	byName := map[string]ModelSuccessWindows{}
+
+	taskRows, err := model.GetTaskSuccessWindows(now)
+	if err != nil {
+		return SuccessWindowsResult{}, err
+	}
+	for _, row := range taskRows {
+		if row.ModelName == "" {
+			continue
+		}
+		item := ModelSuccessWindows{
+			ModelName:      row.ModelName,
+			SuccessRate24h: rateFromCounts(row.Success24h, row.Failure24h),
+			SuccessRate12h: rateFromCounts(row.Success12h, row.Failure12h),
+			SuccessRate3h:  rateFromCounts(row.Success3h, row.Failure3h),
+		}
+		if item.SuccessRate24h == nil && item.SuccessRate12h == nil && item.SuccessRate3h == nil {
+			continue
+		}
+		byName[row.ModelName] = item
+	}
+
+	perfResult, err := queryPerfSuccessWindows(now, groups)
+	if err != nil {
+		return SuccessWindowsResult{}, err
+	}
+	for _, item := range perfResult.Models {
+		if _, exists := byName[item.ModelName]; exists {
+			continue
+		}
+		byName[item.ModelName] = item
+	}
+
+	models := make([]ModelSuccessWindows, 0, len(byName))
+	for _, item := range byName {
+		models = append(models, item)
+	}
+	sort.Slice(models, func(i, j int) bool {
+		return models[i].ModelName < models[j].ModelName
+	})
+	return SuccessWindowsResult{Models: models}, nil
+}
+
+func queryPerfSuccessWindows(now int64, groups []string) (SuccessWindowsResult, error) {
 	startTs := now - successWindow24h
 	allowedGroups := allowedGroupSet(groups)
 
