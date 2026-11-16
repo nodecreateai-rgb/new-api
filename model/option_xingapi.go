@@ -23,6 +23,8 @@ var xingapi25PublicModels = []string{
 var xingapi111PublicModels = []string{
 	"seedance-2.5-480p-c5",
 	"seedance-2.5-720p-c6",
+	"seedance-2.5-flash-480p-c5",
+	"seedance-2.5-flash-720p-c5",
 }
 
 const xingapiChannelName = "Video 720p C2"
@@ -71,9 +73,8 @@ func ensureXingapi25Routing() error {
 }
 
 func ensureXingapi111Routing() error {
-	// The two Flash aliases stay off this channel until upstream duration is fixed.
-	const modelsCSV = "seedance-2.5-480p-c5,seedance-2.5-720p-c6"
-	const mappingJSON = `{"seedance-2.5-480p-c5":"seedance2.5-M","seedance-2.5-720p-c6":"seedance2.5-M"}`
+	const modelsCSV = "seedance-2.5-480p-c5,seedance-2.5-720p-c6,seedance-2.5-flash-480p-c5,seedance-2.5-flash-720p-c5"
+	const mappingJSON = `{"seedance-2.5-480p-c5":"seedance2.5-M","seedance-2.5-720p-c6":"seedance2.5-M","seedance-2.5-flash-480p-c5":"seedance2.5-flash-M","seedance-2.5-flash-720p-c5":"seedance2.5-flash-M"}`
 	baseURL := strings.TrimSpace(os.Getenv("XINGAPI_BASE_URL"))
 	if baseURL == "" {
 		baseURL = "https://xingapi.top"
@@ -83,8 +84,10 @@ func ensureXingapi111Routing() error {
 		return err
 	}
 	modelDescriptions := map[string]string{
-		"seedance-2.5-480p-c5": "Seedance 2.5 文生/图生/参考生视频（异步，¥3.6/次，固定480P，5-30秒，画幅16:9、9:16、1:1、4:3、3:4、21:9，最多30张图片、10段视频、10段音频，原生过人脸）",
-		"seedance-2.5-720p-c6": "Seedance 2.5 文生/图生/参考生视频（异步，¥5/次，固定720P，5-30秒，画幅16:9、9:16、1:1、4:3、3:4、21:9，最多30张图片、10段视频、10段音频，原生过人脸）",
+		"seedance-2.5-480p-c5":       "Seedance 2.5 文生/图生/参考生视频（异步，¥3.6/次，固定480P，5-30秒，画幅16:9、9:16、1:1、4:3、3:4、21:9，最多30张图片、10段视频、10段音频，原生过人脸）",
+		"seedance-2.5-720p-c6":       "Seedance 2.5 文生/图生/参考生视频（异步，¥5/次，固定720P，5-30秒，画幅16:9、9:16、1:1、4:3、3:4、21:9，最多30张图片、10段视频、10段音频，原生过人脸）",
+		"seedance-2.5-flash-480p-c5": "Seedance 2.5 Flash 文生/图生/参考生视频（异步，¥2.6/次，固定480P，4-30秒，画幅16:9、9:16、1:1、4:3、3:4、21:9，最多10张图片、5段视频、5段音频，原生过人脸）",
+		"seedance-2.5-flash-720p-c5": "Seedance 2.5 Flash 文生/图生/参考生视频（异步，¥3.6/次，固定720P，4-30秒，画幅16:9、9:16、1:1、4:3、3:4、21:9，最多10张图片、5段视频、5段音频，原生过人脸）",
 	}
 	return ensureXingapiNamedChannel(xingapi111ChannelName, modelsCSV, mappingJSON, baseURL, key, xingapi111PublicModels, modelDescriptions)
 }

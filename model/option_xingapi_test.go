@@ -20,8 +20,8 @@ func TestXingapiModelsListedWithPrices(t *testing.T) {
 		`"seedance-2.0-720p-c3":               1.5,`,
 		`"seedance-2.5-720p-c5":               5,`,
 		`"seedance-2.5-480p-c5":               3.6,`,
-		`"seedance-2.5-flash-480p-c5":         3,`,
-		`"seedance-2.5-flash-720p-c5":         4,`,
+		`"seedance-2.5-flash-480p-c5":         2.6,`,
+		`"seedance-2.5-flash-720p-c5":         3.6,`,
 		`"seedance-2.5-720p-c6":               5,`,
 	} {
 		if !strings.Contains(body, want) {
@@ -42,6 +42,8 @@ func TestXingapiModelsListedWithPrices(t *testing.T) {
 		`"seedance-2.5-720p-c5":"seedance2.5-V"`,
 		`"seedance-2.5-480p-c5":"seedance2.5-M"`,
 		`"seedance-2.5-720p-c6":"seedance2.5-M"`,
+		`"seedance-2.5-flash-480p-c5":"seedance2.5-flash-M"`,
+		`"seedance-2.5-flash-720p-c5":"seedance2.5-flash-M"`,
 		`XINGAPI_111_GATEWAY_KEY`,
 		`XINGAPI_V_GATEWAY_KEY`,
 		`XINGAPI_V_API_KEY`,
@@ -52,6 +54,9 @@ func TestXingapiModelsListedWithPrices(t *testing.T) {
 		`最多9张图片、3段视频、3段音频，原生过人脸`,
 		`¥5/次，固定720P，5-30秒`,
 		`¥3.6/次，固定480P，5-30秒`,
+		`¥2.6/次，固定480P，4-30秒`,
+		`¥3.6/次，固定720P，4-30秒`,
+		`最多10张图片、5段视频、5段音频，原生过人脸`,
 		`¥5/次，固定720P，5-30秒`,
 		`最多30张图片、10段视频、10段音频，原生过人脸`,
 	} {
@@ -64,9 +69,6 @@ func TestXingapiModelsListedWithPrices(t *testing.T) {
 	}
 	if strings.Contains(s, "seedance2.0-933-Q") {
 		t.Fatal("720p c3 must use the discounted 933 upstream, not 933-Q")
-	}
-	if strings.Contains(s, "seedance-2.5-flash-480p-c5") || strings.Contains(s, "seedance-2.5-flash-720p-c5") {
-		t.Fatal("flash 480p/720p must stay unpublished until upstream duration is fixed")
 	}
 	if strings.Contains(s, "sk-") {
 		t.Fatal("channel key must come from env, not a hardcoded secret")
@@ -122,6 +124,8 @@ func TestXingapiModelsSurviveRestartCleanup(t *testing.T) {
 		`"seedance-2.5-720p-c5"`,
 		`"seedance-2.5-480p-c5"`,
 		`"seedance-2.5-720p-c6"`,
+		`"seedance-2.5-flash-480p-c5"`,
+		`"seedance-2.5-flash-720p-c5"`,
 		`"Video 720p C2"`,
 		`"Video 720p C5"`,
 		`"Video 720p C6"`,
