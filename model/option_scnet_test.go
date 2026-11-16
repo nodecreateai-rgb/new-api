@@ -6,43 +6,52 @@ import (
 	"testing"
 )
 
-func TestScnetModelsListedWithPrices(t *testing.T) {
+func TestScnetModelsStayRetired(t *testing.T) {
 	option, err := os.ReadFile("option.go")
 	if err != nil {
 		t.Fatal(err)
 	}
 	body := string(option)
-	for _, want := range []string{
-		`ensureScnetRouting()`,
+	if strings.Contains(body, "ensureScnetRouting()") {
+		t.Fatal("minimax-h3-2k and seedance-2.5-720p-c4 must stay unpublished")
+	}
+	for _, price := range []string{
 		`"minimax-h3-2k":                      1,`,
 		`"seedance-2.5-720p-c4":               4,`,
 		`"seedance-2.5-720p-c4":   1.5,`,
 	} {
-		if !strings.Contains(body, want) {
-			t.Fatalf("missing %s", want)
+		if strings.Contains(body, price) {
+			t.Fatalf("retired model price must not be enforced: %s", price)
 		}
 	}
-	data, err := os.ReadFile("option_scnet.go")
+	for _, gone := range []string{`"minimax-h3-2k"`, `"seedance-2.5-720p-c4"`} {
+		if !strings.Contains(body, gone) {
+			t.Fatalf("%s must be stripped from stored prices", gone)
+		}
+	}
+
+	retiredVideo, err := os.ReadFile("option_retired_video.go")
 	if err != nil {
 		t.Fatal(err)
 	}
-	s := string(data)
-	for _, want := range []string{
-		`scnetChannelName = "Video 2K C4"`,
-		`"minimax-h3-2k":"minimax-h3"`,
-		`"seedance-2.5-720p-c4":"seedance-2.5"`,
-		`http://172.17.0.1:38697`,
-		`¥1/次，固定2K输出`,
-		`¥4/次，固定720P`,
-	} {
-		if !strings.Contains(s, want) {
-			t.Fatalf("missing %s", want)
+	dead := string(retiredVideo)
+	for _, model := range []string{`"minimax-h3-2k"`, `"seedance-2.5-720p-c4"`} {
+		if !strings.Contains(dead, model) {
+			t.Fatalf("%s must be in deadVideoModels", model)
 		}
 	}
-	if strings.Contains(strings.ToLower(s[strings.Index(s, "modelDescriptions"):strings.Index(s, "endpoint :=")]), "scnet") {
-		t.Fatal("public descriptions must not name the upstream")
+	if !strings.Contains(dead, `"Video 2K C4"`) {
+		t.Fatal("Video 2K C4 must be in deadVideoChannels")
 	}
-	if strings.Contains(s, "172.17.0.1:38695") {
-		t.Fatal("Video 2K C4 must not use port 38695; that port is the other video gateway")
+
+	ratio, err := os.ReadFile("../setting/ratio_setting/model_ratio.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defaults := string(ratio)
+	for _, price := range []string{`"minimax-h3-2k":`, `"seedance-2.5-720p-c4":`} {
+		if strings.Contains(defaults, price) {
+			t.Fatalf("default ModelPrice must not keep %s", price)
+		}
 	}
 }

@@ -293,9 +293,7 @@ func ensureDopioRMBPricing() {
 		"seedance-2.0-fast-480p-c3":          1.2,
 		"seedance-2.5-c3":                    4,
 		"minimax-h3":                         0.5,
-		"minimax-h3-2k":                      1,
 		"minimax-h3-c3":                      1,
-		"seedance-2.5-720p-c4":               4,
 		"minimax-h3-max":                     0.4,
 		"minimax-h3-768p":                    0.5,
 		"sora-2":                             1,
@@ -453,7 +451,6 @@ func ensureDopioRMBPricing() {
 		},
 		"vip10": {
 			"seedance-2.0-fast-480p": 1.4,
-			"seedance-2.5-720p-c4":   1.5,
 		},
 		"vip11": {
 			"seedance-2.5-480p":         1,
@@ -529,7 +526,7 @@ func ensureDopioRMBPricing() {
 			changed = true
 		}
 	}
-	for _, gone := range []string{"seedance-2.0-fast-720p-c3", "kling-o3-omni", "anthropic/claude-opus-5-5", "minimax-h3-max-768p", "seedance-2.0-mini-480p-12s"} {
+	for _, gone := range []string{"seedance-2.0-fast-720p-c3", "kling-o3-omni", "anthropic/claude-opus-5-5", "minimax-h3-max-768p", "seedance-2.0-mini-480p-12s", "minimax-h3-2k", "seedance-2.5-720p-c4"} {
 		if _, exists := prices[gone]; exists {
 			delete(prices, gone)
 			changed = true
@@ -609,7 +606,7 @@ func ensureDopioRMBPricing() {
 	}
 	changed = false
 	for group, groupPrices := range modelGroupPrices {
-		for _, staleModel := range append([]string{"happy-horse-1.1", "happyhorse-1.1", "kling-v3", "wan2.7", "viduq3", "seedance-video-fast", "seedance-video-standard", "seedance-video-fast-per-second", "seedance-video-standard-per-second"}, permanentlyRetiredPublicModels...) {
+		for _, staleModel := range append([]string{"happy-horse-1.1", "happyhorse-1.1", "kling-v3", "wan2.7", "viduq3", "seedance-video-fast", "seedance-video-standard", "seedance-video-fast-per-second", "seedance-video-standard-per-second", "minimax-h3-2k", "seedance-2.5-720p-c4"}, permanentlyRetiredPublicModels...) {
 			if _, exists := groupPrices[staleModel]; exists {
 				delete(groupPrices, staleModel)
 				changed = true
@@ -912,12 +909,8 @@ func ensureDopioRMBPricing() {
 	if err := ensureUvera2apiRouting(); err != nil {
 		common.SysLog("failed to retire Seedance 480p Lite gateway routing: " + err.Error())
 	}
-	// mindvideo2api (Video 480p C3) and aqy2api (Video Seedance C5) are
-	// retired for good: their routing is no longer enforced and
-	// retireDeadVideoModels strips their models and disables the channels.
-	if err := ensureScnetRouting(); err != nil {
-		common.SysLog("failed to enforce Video 2K C4 gateway routing: " + err.Error())
-	}
+	// scnet (Video 2K C4) is retired for good. Startup must not publish
+	// minimax-h3-2k or seedance-2.5-720p-c4 again.
 	if err := ensureMoyinRouting(); err != nil {
 		common.SysLog("failed to enforce Video H3 768p gateway routing: " + err.Error())
 	}
@@ -953,6 +946,10 @@ func ensureDopioRMBPricing() {
 	}
 	if err := ensureVIP15OnEnabledChannels(); err != nil {
 		common.SysLog("failed to ensure vip15 channel abilities: " + err.Error())
+	}
+	// Last, so a later routing pass cannot put these models back on sale.
+	if err := retireDeadVideoModels(); err != nil {
+		common.SysLog("failed to retire dead video models: " + err.Error())
 	}
 	common.SysLog("enforced Dopio RMB pricing incl sd2.5=0.5 per call, sd2-c7=0.5 per call, sd2-fast=1 per call, vip6 Seedance 720p fast=1/full=2, oauth2=0.3, pay=0.5, sd2-c6=0.5, seedance-2.0-mini-480p=0.4, seedance-2.0-mini-720p=1, sd2-c11=2.5, sd2-c12=3, anthropic/claude-opus-5-5=10000000, llm-vip opus free, Price=1, USDExchangeRate=1, quota_display_type=CNY")
 }

@@ -25,6 +25,8 @@ var deadVideoModels = []string{
 	"anthropic/claude-opus-5-5",
 	"minimax-h3-max-768p",
 	"seedance-2.0-mini-480p-12s",
+	// scnet (Video 2K C4)
+	"minimax-h3-2k", "seedance-2.5-720p-c4",
 }
 
 // deadVideoChannels served only dead models, so they are switched off.
@@ -39,6 +41,7 @@ var deadVideoChannels = []string{
 	"Kling O3 Omni",
 	"Claude Chat",
 	"Aicron Video",
+	"Video 2K C4",
 }
 
 // retireDeadVideoModels runs after every ensure step, because several of
