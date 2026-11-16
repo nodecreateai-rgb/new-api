@@ -58,3 +58,18 @@ export type PerfSummaryAllData = {
     models: PerfModelSummary[]
   }
 }
+
+export type PerfSuccessWindowModel = {
+  model_name: string
+  success_rate_24h: number | null
+  success_rate_12h: number | null
+  success_rate_3h: number | null
+}
+
+export type PerfSuccessWindowsData = {
+  success: boolean
+  message?: string
+  data: {
+    models: PerfSuccessWindowModel[]
+  }
+}

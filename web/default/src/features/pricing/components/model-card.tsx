@@ -31,8 +31,10 @@ import {
 import { parseTags } from '../lib/filters'
 import { isTokenBasedModel } from '../lib/model-helpers'
 import { formatPrice, formatRequestPrice } from '../lib/price'
+import type { ModelSuccessRateWindows } from '../lib/success-rate'
 import type { PricingModel, TokenUnit } from '../types'
 import { ModelPerfBadge, type ModelPerfBadgeData } from './model-perf-badge'
+import { ModelSuccessRates } from './model-success-rates'
 
 export interface ModelCardProps {
   model: PricingModel
@@ -42,6 +44,8 @@ export interface ModelCardProps {
   tokenUnit?: TokenUnit
   showRechargePrice?: boolean
   perf?: ModelPerfBadgeData
+  successRates?: ModelSuccessRateWindows
+  successRatesLoading?: boolean
 }
 
 export const ModelCard = memo(function ModelCard(props: ModelCardProps) {
@@ -57,9 +61,7 @@ export const ModelCard = memo(function ModelCard(props: ModelCardProps) {
   const groups = props.model.enable_groups || []
   const endpoints = props.model.supported_endpoint_types || []
   const modelIconKey = props.model.icon || props.model.vendor_icon
-  const modelIcon = modelIconKey
-    ? getLobeIcon(modelIconKey, 28)
-    : null
+  const modelIcon = modelIconKey ? getLobeIcon(modelIconKey, 28) : null
   const initial = props.model.model_name?.charAt(0).toUpperCase() || '?'
   const isDynamicPricing =
     props.model.billing_mode === 'tiered_expr' &&
@@ -221,6 +223,12 @@ export const ModelCard = memo(function ModelCard(props: ModelCardProps) {
           </button>
         </div>
       </div>
+
+      <ModelSuccessRates
+        className='mt-3'
+        rates={props.successRates}
+        loading={props.successRatesLoading}
+      />
 
       {/* Description */}
       <p className='text-muted-foreground mt-2 line-clamp-1 flex-1 text-[13px] leading-relaxed sm:mt-4 sm:line-clamp-2 sm:min-h-[2.5rem]'>

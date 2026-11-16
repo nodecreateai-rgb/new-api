@@ -24,6 +24,7 @@ import {
   IllustrationNoResultDark,
 } from '@douyinfe/semi-illustrations';
 import { getPricingTableColumns } from './PricingTableColumns';
+import { useModelSuccessRates } from '../../../../../hooks/model-pricing/useModelSuccessRates';
 
 const PricingTable = ({
   filteredModels,
@@ -46,6 +47,7 @@ const PricingTable = ({
   openModelDetail,
   t,
 }) => {
+  const successRates = useModelSuccessRates();
   const columns = useMemo(() => {
     return getPricingTableColumns({
       t,
@@ -59,6 +61,8 @@ const PricingTable = ({
       tokenUnit,
       displayPrice,
       showRatio,
+      successRateMap: successRates.rates,
+      successRatesLoading: successRates.loading,
     });
   }, [
     t,
@@ -72,6 +76,8 @@ const PricingTable = ({
     tokenUnit,
     displayPrice,
     showRatio,
+    successRates.rates,
+    successRates.loading,
   ]);
 
   // 更新列定义中的 searchValue

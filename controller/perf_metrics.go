@@ -35,6 +35,23 @@ func GetPerfMetricsSummary(c *gin.Context) {
 	})
 }
 
+func GetPerfSuccessWindows(c *gin.Context) {
+	activeGroups := append(lo.Keys(ratio_setting.GetGroupRatioCopy()), "auto")
+	result, err := perfmetrics.QuerySuccessWindows(activeGroups)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"message": err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data":    result,
+	})
+}
+
 func GetPerfMetrics(c *gin.Context) {
 	modelName := c.Query("model")
 	if modelName == "" {

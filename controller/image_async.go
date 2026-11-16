@@ -390,6 +390,8 @@ func runImageAsyncTask(publicTaskID string, channelID int, key string, contentTy
 	}
 	if won, err := task.UpdateWithStatus(model.TaskStatusInProgress); err != nil || !won {
 		logger.LogError(ctx, fmt.Sprintf("image async update failed task=%s err=%v won=%v", publicTaskID, err, won))
+	} else {
+		service.RecordTaskOutcome(task, true)
 	}
 }
 
@@ -594,6 +596,7 @@ func failImageTask(ctx context.Context, task *model.Task, from model.TaskStatus,
 	if err != nil || !won {
 		return
 	}
+	service.RecordTaskOutcome(task, false)
 	if task.Quota != 0 {
 		service.RefundTaskQuota(ctx, task, reason)
 	}

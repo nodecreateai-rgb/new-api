@@ -49,9 +49,9 @@ import { getPerfMetrics } from '@/features/performance-metrics/api'
 import {
   formatLatency,
   formatThroughput,
-  formatUptimePct,
 } from '@/features/performance-metrics/lib/format'
 import { DEFAULT_TOKEN_UNIT, QUOTA_TYPE_VALUES } from '../constants'
+import { useModelSuccessRateMap } from '../hooks/use-model-success-rates'
 import { usePricingData } from '../hooks/use-pricing-data'
 import {
   getDynamicPriceEntries,
@@ -63,6 +63,7 @@ import { parseTags } from '../lib/filters'
 import { getAvailableGroups, isTokenBasedModel } from '../lib/model-helpers'
 import { inferModelMetadata } from '../lib/model-metadata'
 import { formatFixedPrice, formatGroupPrice } from '../lib/price'
+import { formatSuccessPercent, successRateLevel } from '../lib/success-rate'
 import type {
   Modality,
   ModelCapability,
@@ -75,6 +76,7 @@ import { ModelDetailsApi, ModelDetailsProviderInfo } from './model-details-api'
 import { ModalityIcons } from './model-details-modalities'
 import { ModelDetailsPerformance } from './model-details-performance'
 import { ModelDetailsQuickStats } from './model-details-quick-stats'
+import { ModelSuccessRates } from './model-success-rates'
 
 // ----------------------------------------------------------------------------
 // Local UI helpers
@@ -173,7 +175,7 @@ function OverviewMetric(props: {
   icon: React.ComponentType<{ className?: string }>
   label: string
   value: React.ReactNode
-  intent?: 'default' | 'warning' | 'success'
+  intent?: 'default' | 'warning' | 'success' | 'danger'
 }) {
   const Icon = props.icon
   const intent = props.intent ?? 'default'
@@ -188,8 +190,9 @@ function OverviewMetric(props: {
         <div
           className={cn(
             'text-foreground truncate font-mono text-sm font-semibold tabular-nums',
-            intent === 'warning' && 'text-amber-600 dark:text-amber-400',
-            intent === 'success' && 'text-emerald-600 dark:text-emerald-400'
+            intent === 'warning' && 'text-orange-600 dark:text-orange-400',
+            intent === 'success' && 'text-emerald-600 dark:text-emerald-400',
+            intent === 'danger' && 'text-red-600 dark:text-red-400'
           )}
         >
           {props.value}
@@ -208,18 +211,18 @@ function OverviewSummaryGrid(props: { model: PricingModel }) {
   })
 
   const groups = metricsQuery.data?.data.groups ?? []
-  const successRates = groups
-    .map((group) => group.success_rate)
-    .filter((rate) => Number.isFinite(rate))
-  const successRate =
-    successRates.length > 0
-      ? successRates.reduce((sum, rate) => sum + rate, 0) / successRates.length
-      : Number.NaN
-  let successIntent: 'default' | 'warning' | 'success' = 'warning'
-  if (successRate >= 99.9) {
-    successIntent = 'success'
-  } else if (successRate >= 99) {
-    successIntent = 'default'
+  const successRates = useModelSuccessRateMap()
+  const successRate = successRates.rates.get(props.model.model_name)?.rate24h
+  let successIntent: 'default' | 'warning' | 'success' | 'danger' = 'default'
+  if (successRate != null) {
+    const level = successRateLevel(successRate)
+    if (level === 'good') {
+      successIntent = 'success'
+    } else if (level === 'warn') {
+      successIntent = 'warning'
+    } else {
+      successIntent = 'danger'
+    }
   }
   const tpsValues = groups
     .map((group) => group.avg_tps)
@@ -254,7 +257,9 @@ function OverviewSummaryGrid(props: { model: PricingModel }) {
       <OverviewMetric
         icon={HeartPulse}
         label={t('Success rate')}
-        value={formatUptimePct(successRate)}
+        value={
+          successRate == null ? '—' : `${formatSuccessPercent(successRate)}%`
+        }
         intent={successIntent}
       />
     </div>
@@ -267,11 +272,10 @@ function OverviewSummaryGrid(props: { model: PricingModel }) {
 
 function ModelHeader(props: { model: PricingModel }) {
   const { t } = useTranslation()
+  const successRates = useModelSuccessRateMap()
   const model = props.model
   const modelIconKey = model.icon || model.vendor_icon
-  const modelIcon = modelIconKey
-    ? getLobeIcon(modelIconKey, 20)
-    : null
+  const modelIcon = modelIconKey ? getLobeIcon(modelIconKey, 20) : null
   const description = model.description || model.vendor_description || null
   const tags = parseTags(model.tags)
   const isSpecialExpression =
@@ -316,6 +320,11 @@ function ModelHeader(props: { model: PricingModel }) {
           </>
         )}
       </div>
+      <ModelSuccessRates
+        className='mt-3'
+        rates={successRates.rates.get(model.model_name || '')}
+        loading={successRates.isLoading}
+      />
       {description && (
         <p className='text-muted-foreground mt-2 text-sm leading-relaxed'>
           {description}

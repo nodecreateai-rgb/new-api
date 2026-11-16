@@ -29,6 +29,7 @@ import { DataTableColumnHeader } from '@/components/data-table/column-header'
 import { GroupBadge } from '@/components/group-badge'
 import { StatusBadge, StatusBadgeList } from '@/components/status-badge'
 import { DEFAULT_TOKEN_UNIT, QUOTA_TYPE_VALUES } from '../constants'
+import { useModelSuccessRateMap } from '../hooks/use-model-success-rates'
 import {
   getDynamicDisplayGroupRatio,
   getDynamicPricingSummary,
@@ -41,6 +42,7 @@ import {
   stripTrailingZeros,
 } from '../lib/price'
 import type { PricingModel, TokenUnit } from '../types'
+import { ModelSuccessRates } from './model-success-rates'
 
 // ----------------------------------------------------------------------------
 // Pricing Table Columns
@@ -87,6 +89,7 @@ export function usePricingColumns(
   options: PricingColumnsOptions = {}
 ): ColumnDef<PricingModel>[] {
   const { t } = useTranslation()
+  const successRates = useModelSuccessRateMap()
   const {
     tokenUnit = DEFAULT_TOKEN_UNIT,
     priceRate = 1,
@@ -107,9 +110,7 @@ export function usePricingColumns(
       cell: ({ row }) => {
         const model = row.original
         const modelIconKey = model.icon || model.vendor_icon
-        const modelIcon = modelIconKey
-          ? getLobeIcon(modelIconKey, 14)
-          : null
+        const modelIcon = modelIconKey ? getLobeIcon(modelIconKey, 14) : null
 
         return (
           <div className='flex min-w-[200px] items-center gap-2'>
@@ -121,6 +122,21 @@ export function usePricingColumns(
         )
       },
       minSize: 200,
+    },
+
+    {
+      id: 'success_rates',
+      meta: { label: t('Success rate') },
+      header: t('Success rate'),
+      cell: ({ row }) => (
+        <ModelSuccessRates
+          className='flex-nowrap'
+          rates={successRates.rates.get(row.original.model_name || '')}
+          loading={successRates.isLoading}
+        />
+      ),
+      size: 230,
+      enableSorting: false,
     },
 
     // Type column

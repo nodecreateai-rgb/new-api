@@ -32,6 +32,7 @@ import {
   renderDescription,
 } from '../../../../common/ui/RenderUtils';
 import { useIsMobile } from '../../../../../hooks/common/useIsMobile';
+import ModelSuccessRates from '../ModelSuccessRates';
 
 function renderQuotaType(type, t) {
   switch (type) {
@@ -113,6 +114,8 @@ export const getPricingTableColumns = ({
   tokenUnit,
   displayPrice,
   showRatio,
+  successRateMap,
+  successRatesLoading,
 }) => {
   const isMobile = useIsMobile();
   const priceDataCache = new WeakMap();
@@ -183,8 +186,21 @@ export const getPricingTableColumns = ({
     render: (text, record) => renderVendor(text, record.vendor_icon, t),
   };
 
+  const successRateColumn = {
+    title: t('成功率'),
+    dataIndex: 'success_rate',
+    render: (text, record) => (
+      <ModelSuccessRates
+        rates={successRateMap?.[record.model_name]}
+        loading={successRatesLoading}
+        t={t}
+      />
+    ),
+  };
+
   const baseColumns = [
     modelNameColumn,
+    successRateColumn,
     vendorColumn,
     descriptionColumn,
     tagsColumn,

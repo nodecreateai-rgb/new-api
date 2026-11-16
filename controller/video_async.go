@@ -328,6 +328,7 @@ func failVideoTask(ctx context.Context, task *model.Task, from model.TaskStatus,
 	if err != nil || !won {
 		return
 	}
+	service.RecordTaskOutcome(task, false)
 	if task.Quota != 0 {
 		service.RefundTaskQuota(ctx, task, reason)
 	}

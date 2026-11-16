@@ -45,6 +45,8 @@ import PricingCardSkeleton from './PricingCardSkeleton';
 import { useMinimumLoadingTime } from '../../../../../hooks/common/useMinimumLoadingTime';
 import { renderLimitedItems } from '../../../../common/ui/RenderUtils';
 import { useIsMobile } from '../../../../../hooks/common/useIsMobile';
+import { useModelSuccessRates } from '../../../../../hooks/model-pricing/useModelSuccessRates';
+import ModelSuccessRates from '../ModelSuccessRates';
 
 const CARD_STYLES = {
   container:
@@ -78,6 +80,7 @@ const PricingCardView = ({
   openModelDetail,
 }) => {
   const showSkeleton = useMinimumLoadingTime(loading);
+  const successRates = useModelSuccessRates();
   const startIndex = (currentPage - 1) * pageSize;
   const paginatedModels = filteredModels.slice(
     startIndex,
@@ -268,11 +271,13 @@ const PricingCardView = ({
                         {model.model_name}
                       </h3>
                       <div className='flex flex-col gap-1 text-xs mt-1'>
-                        {priceData.isDynamicPricing ? (
-                          formatDynamicPriceSummary(priceData.billingExpr, t, priceData.usedGroupRatio)
-                        ) : (
-                          formatPriceInfo(priceData, t, siteDisplayType)
-                        )}
+                        {priceData.isDynamicPricing
+                          ? formatDynamicPriceSummary(
+                              priceData.billingExpr,
+                              t,
+                              priceData.usedGroupRatio,
+                            )
+                          : formatPriceInfo(priceData, t, siteDisplayType)}
                       </div>
                     </div>
                   </div>
@@ -301,6 +306,14 @@ const PricingCardView = ({
                       />
                     )}
                   </div>
+                </div>
+
+                <div className='mb-3'>
+                  <ModelSuccessRates
+                    rates={successRates.rates[model.model_name]}
+                    loading={successRates.loading}
+                    t={t}
+                  />
                 </div>
 
                 {/* 模型描述 - 占据剩余空间 */}

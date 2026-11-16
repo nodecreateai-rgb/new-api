@@ -25,6 +25,7 @@ import (
 	"github.com/QuantumNous/new-api/dto"
 	"github.com/QuantumNous/new-api/logger"
 	"github.com/QuantumNous/new-api/model"
+	perfmetrics "github.com/QuantumNous/new-api/pkg/perf_metrics"
 	"github.com/QuantumNous/new-api/relay/channel/task/taskcommon"
 	relaycommon "github.com/QuantumNous/new-api/relay/common"
 
@@ -99,6 +100,7 @@ func sweepTimedOutTasks(ctx context.Context) {
 			logger.LogInfo(ctx, fmt.Sprintf("sweepTimedOutTasks: task %s already transitioned, skip", task.TaskID))
 			continue
 		}
+		RecordTaskOutcome(task, false)
 		timedOutCount++
 		if !isLegacy && task.Quota != 0 {
 			RefundTaskQuota(ctx, task, reason)
@@ -132,6 +134,7 @@ func failPendingUpstreamTask(ctx context.Context, task *model.Task) {
 	if err != nil || !won {
 		return
 	}
+	RecordTaskOutcome(task, false)
 	logger.LogInfo(ctx, fmt.Sprintf("failPendingUpstreamTask: %s failed after %d min", task.TaskID, pendingUpstreamSubmitTimeoutMinutes))
 	if task.Quota != 0 {
 		RefundTaskQuota(ctx, task, task.FailReason)
@@ -217,6 +220,7 @@ func recoverFalseFailedDownloads(ctx context.Context) {
 		if err != nil || !won {
 			continue
 		}
+		RecordTaskOutcome(task, true)
 		ReclaimTaskQuota(ctx, task, "上游已完成，恢复成功并补扣")
 		recovered++
 		logger.LogInfo(ctx, fmt.Sprintf("recoverFalseFailedDownloads: restored %s", task.TaskID))
@@ -244,6 +248,7 @@ func sweepFastModelTimeouts(ctx context.Context) {
 			if err != nil || !won {
 				continue
 			}
+			RecordTaskOutcome(task, false)
 			logger.LogInfo(ctx, fmt.Sprintf("sweepFastModelTimeouts: %s (%s) failed after %d min", task.TaskID, modelName, minutes))
 			if task.Quota != 0 {
 				RefundTaskQuota(ctx, task, reason)
@@ -925,6 +930,7 @@ func updateVideoSingleTask(ctx context.Context, adaptor TaskPollingAdaptor, ch *
 			shouldSettle = false
 		} else {
 			clearTaskProgressWrite(task.TaskID)
+			RecordTaskOutcome(task, task.Status == model.TaskStatusSuccess)
 		}
 	} else if shouldPersist {
 		if err := task.UpdateProgress(snap.Status); err != nil {
@@ -1433,4 +1439,21 @@ func markTaskProgressWritten(taskID string) {
 
 func clearTaskProgressWrite(taskID string) {
 	taskProgressLastWrite.Delete(taskID)
+}
+
+// RecordTaskOutcome counts one finished task toward the model-square success rate.
+// Call it only after the status transition is won, so the same task is not counted twice.
+func RecordTaskOutcome(task *model.Task, success bool) {
+	if task == nil {
+		return
+	}
+	modelName := strings.TrimSpace(task.Properties.OriginModelName)
+	if modelName == "" {
+		return
+	}
+	perfmetrics.Record(perfmetrics.Sample{
+		Model:   modelName,
+		Group:   task.Group,
+		Success: success,
+	})
 }

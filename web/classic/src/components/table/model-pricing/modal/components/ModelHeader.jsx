@@ -20,6 +20,8 @@ For commercial licensing, please contact support@quantumnous.com
 import React from 'react';
 import { Typography, Toast, Avatar } from '@douyinfe/semi-ui';
 import { getLobeHubIcon } from '../../../../../helpers';
+import { useModelSuccessRates } from '../../../../../hooks/model-pricing/useModelSuccessRates';
+import ModelSuccessRates from '../../view/ModelSuccessRates';
 
 const { Paragraph } = Typography;
 
@@ -30,6 +32,7 @@ const CARD_STYLES = {
 };
 
 const ModelHeader = ({ modelData, vendorsMap = {}, t }) => {
+  const successRates = useModelSuccessRates();
   // 获取模型图标（优先模型图标，其次供应商图标）
   const getModelIcon = () => {
     // 1) 优先使用模型自定义图标
@@ -88,6 +91,13 @@ const ModelHeader = ({ modelData, vendorsMap = {}, t }) => {
             {modelData?.model_name || t('未知模型')}
           </span>
         </Paragraph>
+        <div className='mt-1'>
+          <ModelSuccessRates
+            rates={successRates.rates[modelData?.model_name]}
+            loading={successRates.loading}
+            t={t}
+          />
+        </div>
       </div>
     </div>
   );
