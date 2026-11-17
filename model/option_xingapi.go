@@ -110,7 +110,7 @@ func ensureXingapiFastMRouting() error {
 		return err
 	}
 	modelDescriptions := map[string]string{
-		"seedance-2.0-fast-720p-c5": "Seedance 2.0 Fast 文生/图生/参考生视频（异步，¥1.5/次，固定720P，4-15秒，画幅16:9、9:16、1:1、4:3、3:4、21:9，最多9张图片、3段视频、3段音频，原生过人脸）",
+		"seedance-2.0-fast-720p-c5": "Seedance 2.0 Fast 文生/图生/参考生视频（异步，¥0.9/次，固定720P，4-15秒，画幅16:9、9:16、1:1、4:3、3:4、21:9，最多9张图片、3段视频、3段音频，原生过人脸）",
 	}
 	return ensureXingapiNamedChannel(xingapiFastMChannelName, modelsCSV, mappingJSON, baseURL, key, xingapiFastMPublicModels, modelDescriptions)
 }
