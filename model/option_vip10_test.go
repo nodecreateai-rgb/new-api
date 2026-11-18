@@ -25,6 +25,7 @@ func TestVip10PriceForSubtractsOneTenthFromSticker(t *testing.T) {
 		"sd2-c7":                     {0.5, 0.4},
 		"seedance-2.0-fast-720p-c5":  {1.5, 1.4},
 		"seedance-2.0-720p-c2":       {2.8, 2.7},
+		"seedance-2.0-720p-c3":       {1.8, 1.7},
 		"seedance-2.5-480p-c5":       {4, 3.9},
 		"seedance-2.5-flash-480p-c5": {3, 2.9},
 		"seedance-2.5-flash-720p-c5": {4, 3.9},
