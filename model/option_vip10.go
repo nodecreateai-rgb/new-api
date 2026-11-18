@@ -3,19 +3,16 @@ package model
 import "math"
 
 const (
-	vip10GroupName      = "vip10"
-	vip10PriceOff       = 0.1
-	vip10Fast480Model   = "seedance-2.0-fast-480p"
-	vip10Fast480Price   = 1.4
-	vip10Fast720C5Model = "seedance-2.0-fast-720p-c5"
-	vip10Fast720C5Price = 0.9
+	vip10GroupName    = "vip10"
+	vip10PriceOff     = 0.1
+	vip10Fast480Model = "seedance-2.0-fast-480p"
+	vip10Fast480Price = 1.4
 )
 
 // vip10DedicatedPrices skip the automatic sticker-¥0.1 cut. seedance-2.0-fast-480p
-// stays at ¥1.4 (already discounted). seedance-2.0-fast-720p-c5 stays at sticker ¥0.9.
+// stays at ¥1.4 (already discounted).
 var vip10DedicatedPrices = map[string]float64{
-	vip10Fast480Model:   vip10Fast480Price,
-	vip10Fast720C5Model: vip10Fast720C5Price,
+	vip10Fast480Model: vip10Fast480Price,
 }
 
 func roundYuan(v float64) float64 {
@@ -44,7 +41,7 @@ func vip10PriceFor(model string, base float64) float64 {
 // Sticker is the default-group price (falling back to ModelPrice). Computing
 // from sticker — never from the current vip10 value — keeps a restart from
 // stacking another 0.1 off. seedance-2.0-fast-480p stays at ¥1.4 (already
-// discounted). seedance-2.0-fast-720p-c5 stays at sticker ¥0.9 (no vip10 cut).
+// discounted).
 func applyVip10ModelPriceDiscount(modelGroupPrices map[string]map[string]float64, basePrices map[string]float64) bool {
 	if modelGroupPrices == nil {
 		return false

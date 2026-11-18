@@ -316,15 +316,15 @@ func ensureDopioRMBPricing() {
 		"seedance-2.5":                       4,
 		"seedance-2.0-fast-720p-c1":          1.8,
 		"seedance-2.0-fast-720p-c2":          2,
-		"seedance-2.0-fast-720p-c5":          0.9,
+		"seedance-2.0-fast-720p-c5":          1.5,
 		"seedance-2.5-flash-720p":            5,
 		"seedance-2.0-fast-720p-c3":          1.8,
-		"seedance-2.0-720p-c2":               2.4,
+		"seedance-2.0-720p-c2":               2.8,
 		"seedance-2.0-720p-c3":               1.5,
 		"seedance-2.5-720p-c5":               5,
-		"seedance-2.5-480p-c5":               3.6,
-		"seedance-2.5-flash-480p-c5":         2.6,
-		"seedance-2.5-flash-720p-c5":         3.6,
+		"seedance-2.5-480p-c5":               4,
+		"seedance-2.5-flash-480p-c5":         3,
+		"seedance-2.5-flash-720p-c5":         4,
 		"seedance-2.5-720p-c6":               5,
 		"anthropic/claude-opus-5-5":          10000000,
 	}
@@ -485,7 +485,7 @@ func ensureDopioRMBPricing() {
 		targetModelGroupPrices[group]["sd2.5"] = 0.5
 		targetModelGroupPrices[group]["seedance-2.5-c2"] = 1
 		targetModelGroupPrices[group]["seedance-2.0-fast-720p-c2"] = 2
-		targetModelGroupPrices[group]["seedance-2.0-fast-720p-c5"] = 0.9
+		targetModelGroupPrices[group]["seedance-2.0-fast-720p-c5"] = 1.5
 		targetModelGroupPrices[group]["seedance-2.5-flash-720p"] = 5
 		if group != "vip9" {
 			targetModelGroupPrices[group]["seedance-2.5-1080p"] = 5
@@ -727,16 +727,16 @@ func ensureDopioRMBPricing() {
 			groupPrices["seedance-2.0-fast-720p-c2"] = 2
 			changed = true
 		}
-		if groupPrices["seedance-2.0-fast-720p-c5"] != 0.9 {
-			groupPrices["seedance-2.0-fast-720p-c5"] = 0.9
+		if groupPrices["seedance-2.0-fast-720p-c5"] != 1.5 {
+			groupPrices["seedance-2.0-fast-720p-c5"] = 1.5
 			changed = true
 		}
 		if groupPrices["seedance-2.5-flash-720p"] != 5 {
 			groupPrices["seedance-2.5-flash-720p"] = 5
 			changed = true
 		}
-		if groupPrices["seedance-2.0-720p-c2"] != 2.4 {
-			groupPrices["seedance-2.0-720p-c2"] = 2.4
+		if groupPrices["seedance-2.0-720p-c2"] != 2.8 {
+			groupPrices["seedance-2.0-720p-c2"] = 2.8
 			changed = true
 		}
 		if groupPrices["seedance-2.0-720p-c3"] != 1.5 {
@@ -758,16 +758,16 @@ func ensureDopioRMBPricing() {
 			groupPrices["seedance-2.5-720p-c5"] = 5
 			changed = true
 		}
-		if groupPrices["seedance-2.5-480p-c5"] != 3.6 {
-			groupPrices["seedance-2.5-480p-c5"] = 3.6
+		if groupPrices["seedance-2.5-480p-c5"] != 4 {
+			groupPrices["seedance-2.5-480p-c5"] = 4
 			changed = true
 		}
-		if groupPrices["seedance-2.5-flash-480p-c5"] != 2.6 {
-			groupPrices["seedance-2.5-flash-480p-c5"] = 2.6
+		if groupPrices["seedance-2.5-flash-480p-c5"] != 3 {
+			groupPrices["seedance-2.5-flash-480p-c5"] = 3
 			changed = true
 		}
-		if groupPrices["seedance-2.5-flash-720p-c5"] != 3.6 {
-			groupPrices["seedance-2.5-flash-720p-c5"] = 3.6
+		if groupPrices["seedance-2.5-flash-720p-c5"] != 4 {
+			groupPrices["seedance-2.5-flash-720p-c5"] = 4
 			changed = true
 		}
 		if groupPrices["seedance-2.5-720p-c6"] != 5 {
@@ -1005,7 +1005,7 @@ func ensureDopioRMBPricing() {
 	if err := ensureSeedanceC7Routing(); err != nil {
 		common.SysLog("failed to enforce Video Seedance C7 gateway routing: " + err.Error())
 	}
-	common.SysLog("enforced Dopio RMB pricing incl sd2.5=0.5 per call, sd2-c7=0.5 per call, sd2-fast=1 per call, vip6 Seedance 720p fast=1/full=2, vip10 sticker-0.1 except seedance-2.0-fast-480p=1.4 seedance-2.0-fast-720p-c5=0.9, oauth2=0.3, pay=0.5, sd2-c6=0.5, seedance-2.0-mini-480p=0.4, seedance-2.0-mini-720p=1, sd2-c11=2.5, sd2-c12=3, anthropic/claude-opus-5-5=10000000, llm-vip opus free, Price=1, USDExchangeRate=1, quota_display_type=CNY")
+	common.SysLog("enforced Dopio RMB pricing incl sd2.5=0.5 per call, sd2-c7=0.5 per call, sd2-fast=1 per call, vip6 Seedance 720p fast=1/full=2, vip10 sticker-0.1 except seedance-2.0-fast-480p=1.4, oauth2=0.3, pay=0.5, sd2-c6=0.5, seedance-2.0-mini-480p=0.4, seedance-2.0-mini-720p=1, sd2-c11=2.5, sd2-c12=3, anthropic/claude-opus-5-5=10000000, llm-vip opus free, Price=1, USDExchangeRate=1, quota_display_type=CNY")
 }
 
 func ensureRoboneoMiniRouting() error {

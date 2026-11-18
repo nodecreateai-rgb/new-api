@@ -54,7 +54,7 @@ func ensureXingapiRouting() error {
 		return err
 	}
 	modelDescriptions := map[string]string{
-		"seedance-2.0-720p-c2": "Seedance 2.0 文生/图生视频（异步，¥2.4/次，固定720P，4-15秒，画幅16:9、9:16、1:1、4:3、3:4、21:9，最多9张图片、3段音频，不支持参考视频，原生过人脸）",
+		"seedance-2.0-720p-c2": "Seedance 2.0 文生/图生视频（异步，¥2.8/次，固定720P，4-15秒，画幅16:9、9:16、1:1、4:3、3:4、21:9，最多9张图片、3段音频，不支持参考视频，原生过人脸）",
 		"seedance-2.0-720p-c3": "Seedance 2.0 文生/图生/参考生视频（异步，¥1.5/次，固定720P，仅9:16，4-15秒，最多9张图片、3段视频、3段音频，原生过人脸）",
 	}
 	return ensureXingapiNamedChannel(xingapiChannelName, modelsCSV, mappingJSON, baseURL, key, xingapiPublicModels, modelDescriptions)
@@ -90,10 +90,10 @@ func ensureXingapi111Routing() error {
 		return err
 	}
 	modelDescriptions := map[string]string{
-		"seedance-2.5-480p-c5":       "Seedance 2.5 文生/图生/参考生视频（异步，¥3.6/次，固定480P，5-30秒，画幅16:9、9:16、1:1、4:3、3:4、21:9，最多30张图片、10段视频、10段音频，原生过人脸）",
+		"seedance-2.5-480p-c5":       "Seedance 2.5 文生/图生/参考生视频（异步，¥4/次，固定480P，5-30秒，画幅16:9、9:16、1:1、4:3、3:4、21:9，最多30张图片、10段视频、10段音频，原生过人脸）",
 		"seedance-2.5-720p-c6":       "Seedance 2.5 文生/图生/参考生视频（异步，¥5/次，固定720P，5-30秒，画幅16:9、9:16、1:1、4:3、3:4、21:9，最多30张图片、10段视频、10段音频，原生过人脸）",
-		"seedance-2.5-flash-480p-c5": "Seedance 2.5 Flash 文生/图生/参考生视频（异步，¥2.6/次，固定480P，4-30秒，画幅16:9、9:16、1:1、4:3、3:4、21:9，最多10张图片、5段视频、5段音频，原生过人脸）",
-		"seedance-2.5-flash-720p-c5": "Seedance 2.5 Flash 文生/图生/参考生视频（异步，¥3.6/次，固定720P，4-30秒，画幅16:9、9:16、1:1、4:3、3:4、21:9，最多10张图片、5段视频、5段音频，原生过人脸）",
+		"seedance-2.5-flash-480p-c5": "Seedance 2.5 Flash 文生/图生/参考生视频（异步，¥3/次，固定480P，4-30秒，画幅16:9、9:16、1:1、4:3、3:4、21:9，最多10张图片、5段视频、5段音频，原生过人脸）",
+		"seedance-2.5-flash-720p-c5": "Seedance 2.5 Flash 文生/图生/参考生视频（异步，¥4/次，固定720P，4-30秒，画幅16:9、9:16、1:1、4:3、3:4、21:9，最多10张图片、5段视频、5段音频，原生过人脸）",
 	}
 	return ensureXingapiNamedChannel(xingapi111ChannelName, modelsCSV, mappingJSON, baseURL, key, xingapi111PublicModels, modelDescriptions)
 }
@@ -110,7 +110,7 @@ func ensureXingapiFastMRouting() error {
 		return err
 	}
 	modelDescriptions := map[string]string{
-		"seedance-2.0-fast-720p-c5": "Seedance 2.0 Fast 文生/图生/参考生视频（异步，¥0.9/次，固定720P，4-15秒，画幅16:9、9:16、1:1、4:3、3:4、21:9，最多9张图片、3段视频、3段音频，原生过人脸）",
+		"seedance-2.0-fast-720p-c5": "Seedance 2.0 Fast 文生/图生/参考生视频（异步，¥1.5/次，固定720P，4-15秒，画幅16:9、9:16、1:1、4:3、3:4、21:9，最多9张图片、3段视频、3段音频，原生过人脸）",
 	}
 	return ensureXingapiNamedChannel(xingapiFastMChannelName, modelsCSV, mappingJSON, baseURL, key, xingapiFastMPublicModels, modelDescriptions)
 }
