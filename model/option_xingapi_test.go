@@ -24,7 +24,6 @@ func TestXingapiModelsListedWithPrices(t *testing.T) {
 		`"seedance-2.5-480p-c5":               4,`,
 		`"seedance-2.5-flash-480p-c5":         3,`,
 		`"seedance-2.5-flash-720p-c5":         4,`,
-		`"seedance-2.5-720p-c6":               5,`,
 	} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("missing %s", want)
@@ -45,7 +44,6 @@ func TestXingapiModelsListedWithPrices(t *testing.T) {
 		`"seedance-2.0-720p-c3":"seedance-933"`,
 		`"seedance-2.5-720p-c5":"seedance2.5-V"`,
 		`"seedance-2.5-480p-c5":"seedance2.5-M"`,
-		`"seedance-2.5-720p-c6":"seedance2.5-M"`,
 		`"seedance-2.5-flash-480p-c5":"seedance2.5-flash-M"`,
 		`"seedance-2.5-flash-720p-c5":"seedance2.5-flash-M"`,
 		`XINGAPI_111_GATEWAY_KEY`,
@@ -63,12 +61,14 @@ func TestXingapiModelsListedWithPrices(t *testing.T) {
 		`¥3/次，固定480P，4-30秒`,
 		`¥4/次，固定720P，4-30秒`,
 		`最多10张图片、5段视频、5段音频，原生过人脸`,
-		`¥5/次，固定720P，5-30秒`,
 		`最多30张图片、10段视频、10段音频，原生过人脸`,
 	} {
 		if !strings.Contains(s, want) {
 			t.Fatalf("missing %s", want)
 		}
+	}
+	if strings.Contains(s, `"seedance-2.5-720p-c6"`) {
+		t.Fatal("seedance-2.5-720p-c6 must stay withdrawn")
 	}
 	if strings.Contains(s, `"seedance-2.0-720p-c2,seedance-2.0-720p-c3,seedance-2.5-720p-c5"`) {
 		t.Fatal("2.5-V must not share the 933 channel key")
@@ -110,7 +110,7 @@ func TestXingapiModelsSurviveRestartCleanup(t *testing.T) {
 	if ensureAt < 0 || ensure25At < 0 || ensure111At < 0 || ensureFastAt < 0 || retireAt < 0 || ensureAt < retireAt || ensure25At < ensureAt || ensure111At < ensure25At || ensureFastAt < ensure111At {
 		t.Fatal("xingapi ensure must run on every start, after retireDeadVideoModels, with 2.5-V after 933, the 111 channel after that, and Fast-M after the 111 channel")
 	}
-	for _, model := range []string{"seedance-2.0-720p-c2", "seedance-2.0-720p-c3", "seedance-2.0-fast-720p-c5", "seedance-2.5-720p-c5", "seedance-2.5-480p-c5", "seedance-2.5-720p-c6", "seedance-2.5-flash-480p-c5", "seedance-2.5-flash-720p-c5"} {
+	for _, model := range []string{"seedance-2.0-720p-c2", "seedance-2.0-720p-c3", "seedance-2.0-fast-720p-c5", "seedance-2.5-720p-c5", "seedance-2.5-480p-c5", "seedance-2.5-flash-480p-c5", "seedance-2.5-flash-720p-c5"} {
 		if strings.Contains(body, `"`+model+`"`) && strings.Contains(body, "permanentlyRetiredPublicModels") {
 			retired := body[strings.Index(body, "var permanentlyRetiredPublicModels"):]
 			retired = retired[:strings.Index(retired, "}")]
@@ -125,12 +125,14 @@ func TestXingapiModelsSurviveRestartCleanup(t *testing.T) {
 		t.Fatal(err)
 	}
 	dead := string(retiredVideo)
+	if !strings.Contains(dead, `"seedance-2.5-720p-c6"`) {
+		t.Fatal("seedance-2.5-720p-c6 must be in deadVideoModels")
+	}
 	for _, needle := range []string{
 		`"seedance-2.0-720p-c2"`,
 		`"seedance-2.0-720p-c3"`,
 		`"seedance-2.5-720p-c5"`,
 		`"seedance-2.5-480p-c5"`,
-		`"seedance-2.5-720p-c6"`,
 		`"seedance-2.5-flash-480p-c5"`,
 		`"seedance-2.5-flash-720p-c5"`,
 		`"seedance-2.0-fast-720p-c5"`,

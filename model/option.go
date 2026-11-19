@@ -325,7 +325,6 @@ func ensureDopioRMBPricing() {
 		"seedance-2.5-480p-c5":               4,
 		"seedance-2.5-flash-480p-c5":         3,
 		"seedance-2.5-flash-720p-c5":         4,
-		"seedance-2.5-720p-c6":               5,
 		"anthropic/claude-opus-5-5":          10000000,
 	}
 	targetGroupRatios := map[string]float64{
@@ -539,7 +538,7 @@ func ensureDopioRMBPricing() {
 			changed = true
 		}
 	}
-	for _, gone := range []string{"seedance-2.0-fast-720p-c3", "kling-o3-omni", "anthropic/claude-opus-5-5", "minimax-h3-max-768p", "seedance-2.0-mini-480p-12s", "minimax-h3-2k", "seedance-2.5-720p-c4", "seedance-2.0", "seedance-2.5-720p", "seedance-2.0-720p-c1"} {
+	for _, gone := range []string{"seedance-2.0-fast-720p-c3", "kling-o3-omni", "anthropic/claude-opus-5-5", "minimax-h3-max-768p", "seedance-2.0-mini-480p-12s", "minimax-h3-2k", "seedance-2.5-720p-c4", "seedance-2.0", "seedance-2.5-720p", "seedance-2.0-720p-c1", "seedance-2.5-720p-c6"} {
 		if _, exists := prices[gone]; exists {
 			delete(prices, gone)
 			changed = true
@@ -770,10 +769,6 @@ func ensureDopioRMBPricing() {
 			groupPrices["seedance-2.5-flash-720p-c5"] = 4
 			changed = true
 		}
-		if groupPrices["seedance-2.5-720p-c6"] != 5 {
-			groupPrices["seedance-2.5-720p-c6"] = 5
-			changed = true
-		}
 		if group != "vip9" {
 			if groupPrices["seedance-2.5-1080p"] != 5 {
 				groupPrices["seedance-2.5-1080p"] = 5
@@ -807,7 +802,7 @@ func ensureDopioRMBPricing() {
 				changed = true
 			}
 		}
-		for _, model := range append([]string{"minimax-h3-2k", "seedance-2.5-720p-c4", "seedance-2.0", "seedance-2.5-720p", "seedance-2.0-c2", "seedance-2.0-480p-c2", "seedance-2.0-fast-c2", "seedance-2.0-fast-480p-c2", "seedance-2.0-mini-c2", "wan-3.0-c2", "seedance-2.0-fast-720p-c3", "kling-o3-omni", "anthropic/claude-opus-5-5", "minimax-h3-max-768p", "seedance-2.0-mini-480p-12s", "seedance-2.0-720p-c1"}, permanentlyRetiredPublicModels...) {
+		for _, model := range append([]string{"minimax-h3-2k", "seedance-2.5-720p-c4", "seedance-2.0", "seedance-2.5-720p", "seedance-2.0-c2", "seedance-2.0-480p-c2", "seedance-2.0-fast-c2", "seedance-2.0-fast-480p-c2", "seedance-2.0-mini-c2", "wan-3.0-c2", "seedance-2.0-fast-720p-c3", "kling-o3-omni", "anthropic/claude-opus-5-5", "minimax-h3-max-768p", "seedance-2.0-mini-480p-12s", "seedance-2.0-720p-c1", "seedance-2.5-720p-c6"}, permanentlyRetiredPublicModels...) {
 			if _, exists := groupPrices[model]; exists {
 				delete(groupPrices, model)
 				changed = true

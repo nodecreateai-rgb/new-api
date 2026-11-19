@@ -33,6 +33,8 @@ var deadVideoModels = []string{
 	// Video Seedance C8. ensureSeedanceC8Routing now only retires the
 	// channel; this list is the safety net if another pass republishes it.
 	"seedance-2.0-c8", "seedance-2.0-mini-c8",
+	// Video 720p C6 no longer sells 720p on this upstream model.
+	"seedance-2.5-720p-c6",
 }
 
 // deadVideoChannels served only dead models, so they are switched off.
