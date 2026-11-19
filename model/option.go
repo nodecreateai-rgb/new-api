@@ -341,6 +341,7 @@ func ensureDopioRMBPricing() {
 		"vip11":   1,
 		"vip13":   1,
 		"vip15":   1,
+		"vip16":   1,
 		"llm-vip": 1,
 	}
 	targetUserUsableGroups := map[string]string{
@@ -352,6 +353,7 @@ func ensureDopioRMBPricing() {
 		"vip11":   "VIP11分组",
 		"vip13":   "VIP13分组",
 		"vip15":   "VIP15分组",
+		"vip16":   "VIP16分组",
 		"llm-vip": "LLM VIP分组",
 	}
 	// Fixed per-group RMB prices for Dopio video aliases. ModelGroupPrice
@@ -460,8 +462,9 @@ func ensureDopioRMBPricing() {
 			// Flat -¥0.1 is applied to every other model at the end of this
 			// function so a restart recomputes from sticker prices instead of
 			// stacking another 0.1. seedance-2.0-fast-480p already has that cut.
-			"seedance-2.0-fast-480p": 1.4,
-			"seedance-2.0-720p":      2.9,
+			"seedance-2.0-fast-480p":    1.4,
+			"seedance-2.0-720p":         2.9,
+			"seedance-2.0-fast-720p-c5": 1.2,
 		},
 		"vip11": {
 			"seedance-2.5-480p":         1,
@@ -472,6 +475,9 @@ func ensureDopioRMBPricing() {
 		},
 		"vip15": {
 			"seedance-2.0-fast-720p-c3": 1,
+		},
+		"vip16": {
+			"seedance-2.0-fast-720p-c5": 1.2,
 		},
 		"llm-vip": {
 			"anthropic/claude-opus-5-5": 0,
@@ -484,7 +490,9 @@ func ensureDopioRMBPricing() {
 		targetModelGroupPrices[group]["sd2.5"] = 0.5
 		targetModelGroupPrices[group]["seedance-2.5-c2"] = 1
 		targetModelGroupPrices[group]["seedance-2.0-fast-720p-c2"] = 2
-		targetModelGroupPrices[group]["seedance-2.0-fast-720p-c5"] = 1.5
+		if group != "vip10" && group != "vip16" {
+			targetModelGroupPrices[group]["seedance-2.0-fast-720p-c5"] = 1.5
+		}
 		targetModelGroupPrices[group]["seedance-2.5-flash-720p"] = 5
 		if group != "vip9" {
 			targetModelGroupPrices[group]["seedance-2.5-1080p"] = 5
@@ -726,8 +734,12 @@ func ensureDopioRMBPricing() {
 			groupPrices["seedance-2.0-fast-720p-c2"] = 2
 			changed = true
 		}
-		if groupPrices["seedance-2.0-fast-720p-c5"] != 1.5 {
-			groupPrices["seedance-2.0-fast-720p-c5"] = 1.5
+		priceFast720C5 := 1.5
+		if group == "vip10" || group == "vip16" {
+			priceFast720C5 = 1.2
+		}
+		if groupPrices["seedance-2.0-fast-720p-c5"] != priceFast720C5 {
+			groupPrices["seedance-2.0-fast-720p-c5"] = priceFast720C5
 			changed = true
 		}
 		if groupPrices["seedance-2.5-flash-720p"] != 5 {
@@ -1000,7 +1012,36 @@ func ensureDopioRMBPricing() {
 	if err := ensureSeedanceC7Routing(); err != nil {
 		common.SysLog("failed to enforce Video Seedance C7 gateway routing: " + err.Error())
 	}
+	if err := ensureVIP16UserAndChannels(); err != nil {
+		common.SysLog("failed to ensure vip16 user and channel abilities: " + err.Error())
+	}
 	common.SysLog("enforced Dopio RMB pricing incl sd2.5=0.5 per call, sd2-c7=0.5 per call, sd2-fast=1 per call, vip6 Seedance 720p fast=1/full=2, vip10 sticker-0.1 except seedance-2.0-fast-480p=1.4, oauth2=0.3, pay=0.5, sd2-c6=0.5, seedance-2.0-mini-480p=0.4, seedance-2.0-mini-720p=1, sd2-c11=2.5, sd2-c12=3, anthropic/claude-opus-5-5=10000000, llm-vip opus free, Price=1, USDExchangeRate=1, quota_display_type=CNY")
+}
+
+func ensureVIP16UserAndChannels() error {
+	const vip16Group = "vip16"
+	const vip16UserID = 1687
+	if err := ensureGroupOnEnabledChannels(vip16Group); err != nil {
+		return err
+	}
+	if DB == nil {
+		return nil
+	}
+	if common.UsingClickHouse {
+		_ = DB.Exec(`ALTER TABLE users UPDATE `+commonGroupCol+` = ? WHERE id = ? AND `+commonGroupCol+` <> ?`, vip16Group, vip16UserID, vip16Group).Error
+		_ = DB.Exec(`ALTER TABLE tokens UPDATE `+commonGroupCol+` = ? WHERE user_id = ? AND `+commonGroupCol+` IN ('default', '')`, vip16Group, vip16UserID).Error
+	} else {
+		_ = DB.Model(&User{}).Where("id = ? AND "+commonGroupCol+" <> ?", vip16UserID, vip16Group).Update("group", vip16Group).Error
+		_ = DB.Model(&Token{}).Where("user_id = ? AND "+commonGroupCol+" IN ('default', '')", vip16UserID).Update("group", vip16Group).Error
+	}
+	_ = InvalidateUserCache(vip16UserID)
+	var tokens []Token
+	if err := DB.Where("user_id = ?", vip16UserID).Find(&tokens).Error; err == nil {
+		for _, tok := range tokens {
+			_ = cacheDeleteToken(tok.Key)
+		}
+	}
+	return nil
 }
 
 func ensureRoboneoMiniRouting() error {

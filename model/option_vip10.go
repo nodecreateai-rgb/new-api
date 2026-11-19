@@ -3,16 +3,19 @@ package model
 import "math"
 
 const (
-	vip10GroupName    = "vip10"
-	vip10PriceOff     = 0.1
-	vip10Fast480Model = "seedance-2.0-fast-480p"
-	vip10Fast480Price = 1.4
+	vip10GroupName      = "vip10"
+	vip10PriceOff       = 0.1
+	vip10Fast480Model   = "seedance-2.0-fast-480p"
+	vip10Fast480Price   = 1.4
+	vip10Fast720C5Model = "seedance-2.0-fast-720p-c5"
+	vip10Fast720C5Price = 1.2
 )
 
 // vip10DedicatedPrices skip the automatic sticker-¥0.1 cut. seedance-2.0-fast-480p
-// stays at ¥1.4 (already discounted).
+// stays at ¥1.4 (already discounted). seedance-2.0-fast-720p-c5 is ¥1.2 in vip10.
 var vip10DedicatedPrices = map[string]float64{
-	vip10Fast480Model: vip10Fast480Price,
+	vip10Fast480Model:   vip10Fast480Price,
+	vip10Fast720C5Model: vip10Fast720C5Price,
 }
 
 func roundYuan(v float64) float64 {
