@@ -1034,11 +1034,13 @@ func ensureVIP16UserAndChannels() error {
 		_ = DB.Model(&User{}).Where("id = ? AND "+commonGroupCol+" <> ?", vip16UserID, vip16Group).Update("group", vip16Group).Error
 		_ = DB.Model(&Token{}).Where("user_id = ? AND "+commonGroupCol+" IN ('default', '')", vip16UserID).Update("group", vip16Group).Error
 	}
-	_ = InvalidateUserCache(vip16UserID)
-	var tokens []Token
-	if err := DB.Where("user_id = ?", vip16UserID).Find(&tokens).Error; err == nil {
-		for _, tok := range tokens {
-			_ = cacheDeleteToken(tok.Key)
+	if common.RDB != nil {
+		_ = InvalidateUserCache(vip16UserID)
+		var tokens []Token
+		if err := DB.Where("user_id = ?", vip16UserID).Find(&tokens).Error; err == nil {
+			for _, tok := range tokens {
+				_ = cacheDeleteToken(tok.Key)
+			}
 		}
 	}
 	return nil
