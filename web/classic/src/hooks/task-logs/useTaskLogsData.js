@@ -41,6 +41,7 @@ export const useTaskLogsData = () => {
     DURATION: 'duration',
     CHANNEL: 'channel',
     USERNAME: 'username',
+    MODEL: 'model',
     PLATFORM: 'platform',
     TYPE: 'type',
     TASK_ID: 'task_id',
@@ -119,6 +120,9 @@ export const useTaskLogsData = () => {
         if (!isAdminUser) {
           merged[COLUMN_KEYS.USERNAME] = false;
         }
+        if (merged[COLUMN_KEYS.MODEL] == null) {
+          merged[COLUMN_KEYS.MODEL] = true;
+        }
         setVisibleColumns(merged);
       } catch (e) {
         console.error('Failed to parse saved column preferences', e);
@@ -137,6 +141,7 @@ export const useTaskLogsData = () => {
       [COLUMN_KEYS.DURATION]: true,
       [COLUMN_KEYS.CHANNEL]: false,
       [COLUMN_KEYS.USERNAME]: isAdminUser,
+      [COLUMN_KEYS.MODEL]: true,
       [COLUMN_KEYS.PLATFORM]: true,
       [COLUMN_KEYS.TYPE]: true,
       [COLUMN_KEYS.TASK_ID]: true,

@@ -44,7 +44,7 @@ import {
   TASK_ACTION_REMIX_GENERATE,
 } from '../../../constants/common.constant';
 import { CHANNEL_OPTIONS } from '../../../constants/channel.constants';
-import { stringToColor } from '../../../helpers/render';
+import { renderModelTag, stringToColor } from '../../../helpers/render';
 import { Avatar, Space } from '@douyinfe/semi-ui';
 
 const colors = [
@@ -105,6 +105,27 @@ const parseTaskDataObject = (data) => {
   } catch {
     return null;
   }
+};
+
+const getTaskModelName = (record) => {
+  if (!record || typeof record !== 'object') return '';
+  const props = parseTaskDataObject(record.properties);
+  const direct =
+    props?.origin_model_name ||
+    props?.upstream_model_name ||
+    record.model_name ||
+    record.model;
+  if (typeof direct === 'string' && direct.trim()) {
+    return direct.trim();
+  }
+  const dataObj = parseTaskDataObject(record.data);
+  if (dataObj) {
+    const candidate = dataObj.model || dataObj.model_name;
+    if (typeof candidate === 'string' && candidate.trim()) {
+      return candidate.trim();
+    }
+  }
+  return '';
 };
 
 const getFirstImageUrl = (record) => {
@@ -404,6 +425,26 @@ export const getTaskLogsColumns = ({
               {displayText}
             </Typography.Text>
           </Space>
+        );
+      },
+    },
+    {
+      key: COLUMN_KEYS.MODEL,
+      title: t('模型'),
+      dataIndex: 'model',
+      render: (text, record) => {
+        const modelName = getTaskModelName(record);
+        if (!modelName) {
+          return <div>-</div>;
+        }
+        return (
+          <div>
+            {renderModelTag(modelName, {
+              onClick: () => {
+                copyText(modelName);
+              },
+            })}
+          </div>
         );
       },
     },
