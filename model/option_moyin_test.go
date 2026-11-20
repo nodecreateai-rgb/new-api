@@ -15,6 +15,7 @@ func TestMoyinModelsListedWithPrices(t *testing.T) {
 	for _, want := range []string{
 		`ensureMoyinRouting()`,
 		`"minimax-h3-768p":                    0.5,`,
+		`"minimax-h3-30-768p":                 1.2,`,
 	} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("missing %s", want)
@@ -28,8 +29,10 @@ func TestMoyinModelsListedWithPrices(t *testing.T) {
 	for _, want := range []string{
 		`moyinChannelName = "Video H3 768p"`,
 		`"minimax-h3-768p":"minimax-h3-syt"`,
+		`"minimax-h3-30-768p":"minimax-h3-30s-syt"`,
 		`https://ai.moyinai.com/api`,
 		`¥0.5/次，固定768P输出`,
+		`¥1.2/次，固定768P输出，有声，4-30秒`,
 		`最多9张图片、0段视频、3段音频`,
 	} {
 		if !strings.Contains(s, want) {
@@ -57,21 +60,23 @@ func TestMoyinModelSurvivesRestartCleanup(t *testing.T) {
 	if ensureAt < 0 || retireAt < 0 || ensureAt > retireAt {
 		t.Fatal("ensureMoyinRouting must run on every start, before retireDeadVideoModels")
 	}
-	if strings.Contains(body, `"minimax-h3-768p"`) && strings.Contains(body, "permanentlyRetiredPublicModels") {
-		retired := body[strings.Index(body, "var permanentlyRetiredPublicModels"):]
-		retired = retired[:strings.Index(retired, "}")]
-		if strings.Contains(retired, `"minimax-h3-768p"`) {
-			t.Fatal("minimax-h3-768p must not be permanently retired")
-		}
-	}
-
 	retiredVideo, err := os.ReadFile("option_retired_video.go")
 	if err != nil {
 		t.Fatal(err)
 	}
 	dead := string(retiredVideo)
-	if strings.Contains(dead, `"minimax-h3-768p"`) {
-		t.Fatal("minimax-h3-768p must not be in deadVideoModels")
+	for _, model := range []string{"minimax-h3-768p", "minimax-h3-30-768p"} {
+		quoted := `"` + model + `"`
+		if strings.Contains(body, quoted) && strings.Contains(body, "permanentlyRetiredPublicModels") {
+			retired := body[strings.Index(body, "var permanentlyRetiredPublicModels"):]
+			retired = retired[:strings.Index(retired, "}")]
+			if strings.Contains(retired, quoted) {
+				t.Fatalf("%s must not be permanently retired", model)
+			}
+		}
+		if strings.Contains(dead, quoted) {
+			t.Fatalf("%s must not be in deadVideoModels", model)
+		}
 	}
 	if strings.Contains(dead, `"Video H3 768p"`) {
 		t.Fatal("Video H3 768p must not be in deadVideoChannels")

@@ -298,6 +298,7 @@ func ensureDopioRMBPricing() {
 		"minimax-h3-c3":                      1,
 		"minimax-h3-max":                     0.4,
 		"minimax-h3-768p":                    0.5,
+		"minimax-h3-30-768p":                 1.2,
 		"sora-2":                             1,
 		"seedance-2.5-1080p":                 5,
 		"seedance-2.0-c1":                    2.5,

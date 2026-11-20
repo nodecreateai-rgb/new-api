@@ -29,6 +29,7 @@ func TestSD2MiniUsesFixedPerRequestBilling(t *testing.T) {
 	require.False(t, a.UseRequestBillingRatios(&relaycommon.RelayInfo{OriginModelName: "minimax-h3"}))
 	require.False(t, a.UseRequestBillingRatios(&relaycommon.RelayInfo{OriginModelName: "minimax-h3-max"}))
 	require.False(t, a.UseRequestBillingRatios(&relaycommon.RelayInfo{OriginModelName: "minimax-h3-768p"}))
+	require.False(t, a.UseRequestBillingRatios(&relaycommon.RelayInfo{OriginModelName: "minimax-h3-30-768p"}))
 	require.False(t, a.UseRequestBillingRatios(&relaycommon.RelayInfo{OriginModelName: "seedance-2.0-fast"}))
 	require.False(t, a.UseRequestBillingRatios(&relaycommon.RelayInfo{OriginModelName: "seedance-2.0-fast-720p-c1"}))
 	require.False(t, a.UseRequestBillingRatios(&relaycommon.RelayInfo{OriginModelName: "seedance-2.0-fast-720p-c2"}))
@@ -240,6 +241,23 @@ func TestLaihuaSeedanceLocksResolutionFromModel(t *testing.T) {
 	require.Equal(t, 4, body["duration"])
 	body = map[string]interface{}{}
 	applyOriginModelDurationLimit(body, relaycommon.TaskSubmitReq{}, "minimax-h3-768p")
+	require.Equal(t, 5, body["duration"])
+
+	body = map[string]interface{}{"duration": 35, "seconds": "35", "size": "1080x1920"}
+	applyOriginModelDurationLimit(body, relaycommon.TaskSubmitReq{Duration: 35}, "minimax-h3-30-768p")
+	applyOriginModelResolution(body, "minimax-h3-30-768p")
+	require.Equal(t, 30, body["duration"])
+	require.Equal(t, "30", body["seconds"])
+	require.Equal(t, "768p", body["resolution"])
+	require.Equal(t, "768p", body["size"])
+	body = map[string]interface{}{}
+	applyOriginModelDurationLimit(body, relaycommon.TaskSubmitReq{Duration: 25}, "minimax-h3-30-768p")
+	require.Equal(t, 25, body["duration"])
+	body = map[string]interface{}{}
+	applyOriginModelDurationLimit(body, relaycommon.TaskSubmitReq{Duration: 2}, "minimax-h3-30-768p")
+	require.Equal(t, 4, body["duration"])
+	body = map[string]interface{}{}
+	applyOriginModelDurationLimit(body, relaycommon.TaskSubmitReq{}, "minimax-h3-30-768p")
 	require.Equal(t, 5, body["duration"])
 
 	body = map[string]interface{}{"duration": 20, "seconds": "20", "resolution": "2k"}

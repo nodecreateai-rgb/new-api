@@ -135,65 +135,81 @@ func TestApplyParsedReferencesFillsImagesWhenOnlyAliasPresent(t *testing.T) {
 }
 
 func TestSanitizeMoyinH3VideoBodyStripsAliasesThatMoyinRejects(t *testing.T) {
-	body := map[string]interface{}{
-		"model":                     "minimax-h3-syt",
-		"prompt":                    "a cat walking",
-		"seconds":                   "4",
-		"duration":                  4,
-		"aspect_ratio":              "16:9",
-		"ratio":                     "16:9",
-		"size":                      "768p",
-		"resolution":                "768p",
-		"images":                    []interface{}{"https://cdn.example/a.png"},
-		"image_refs":                []interface{}{"https://cdn.example/a.png"},
-		"image_url":                 "https://cdn.example/a.png",
-		"image_urls":                []interface{}{"https://cdn.example/a.png"},
-		"reference_images":          []interface{}{"https://cdn.example/a.png"},
-		"audio_refs":                []interface{}{"https://cdn.example/voice.mp3"},
-		"compliance_enabled":        true,
-		"prompt_compliance_enabled": true,
-		"generate_audio":            true,
-		"video_refs":                []interface{}{"https://cdn.example/clip.mp4"},
-	}
-	sanitizeOriginModelUpstreamBody(body, relaycommon.TaskSubmitReq{
-		Prompt:      "a cat walking",
-		Seconds:     "4",
-		Duration:    4,
-		AspectRatio: "16:9",
-		Images:      []string{"https://cdn.example/a.png"},
-		ImageRefs:   []string{"https://cdn.example/a.png"},
-		AudioRefs:   []string{"https://cdn.example/voice.mp3"},
-	}, "minimax-h3-768p")
-
-	require.Equal(t, "minimax-h3-syt", body["model"])
-	require.Equal(t, "a cat walking", body["prompt"])
-	require.Equal(t, "4", body["seconds"])
-	require.Equal(t, 4, body["duration"])
-	require.Equal(t, "16:9", body["aspect_ratio"])
-	require.Equal(t, "768p", body["size"])
-	require.Equal(t, "768p", body["resolution"])
-	require.Equal(t, []string{"https://cdn.example/a.png"}, body["images"])
-	require.Equal(t, []string{"https://cdn.example/voice.mp3"}, body["audios"])
-	for _, forbidden := range []string{
-		"image_refs", "image_url", "image_urls", "reference_images",
-		"audio_refs", "video_refs", "ratio",
-		"compliance_enabled", "prompt_compliance_enabled", "generate_audio",
+	for _, tc := range []struct {
+		origin   string
+		upstream string
+	}{
+		{origin: "minimax-h3-768p", upstream: "minimax-h3-syt"},
+		{origin: "minimax-h3-30-768p", upstream: "minimax-h3-30s-syt"},
 	} {
-		require.NotContains(t, body, forbidden)
+		body := map[string]interface{}{
+			"model":                     tc.upstream,
+			"prompt":                    "a cat walking",
+			"seconds":                   "4",
+			"duration":                  4,
+			"aspect_ratio":              "16:9",
+			"ratio":                     "16:9",
+			"size":                      "768p",
+			"resolution":                "768p",
+			"images":                    []interface{}{"https://cdn.example/a.png"},
+			"image_refs":                []interface{}{"https://cdn.example/a.png"},
+			"image_url":                 "https://cdn.example/a.png",
+			"image_urls":                []interface{}{"https://cdn.example/a.png"},
+			"reference_images":          []interface{}{"https://cdn.example/a.png"},
+			"audio_refs":                []interface{}{"https://cdn.example/voice.mp3"},
+			"compliance_enabled":        true,
+			"prompt_compliance_enabled": true,
+			"generate_audio":            true,
+			"video_refs":                []interface{}{"https://cdn.example/clip.mp4"},
+		}
+		sanitizeOriginModelUpstreamBody(body, relaycommon.TaskSubmitReq{
+			Prompt:      "a cat walking",
+			Seconds:     "4",
+			Duration:    4,
+			AspectRatio: "16:9",
+			Images:      []string{"https://cdn.example/a.png"},
+			ImageRefs:   []string{"https://cdn.example/a.png"},
+			AudioRefs:   []string{"https://cdn.example/voice.mp3"},
+		}, tc.origin)
+
+		require.Equal(t, tc.upstream, body["model"])
+		require.Equal(t, "a cat walking", body["prompt"])
+		require.Equal(t, "4", body["seconds"])
+		require.Equal(t, 4, body["duration"])
+		require.Equal(t, "16:9", body["aspect_ratio"])
+		require.Equal(t, "768p", body["size"])
+		require.Equal(t, "768p", body["resolution"])
+		require.Equal(t, []string{"https://cdn.example/a.png"}, body["images"])
+		require.Equal(t, []string{"https://cdn.example/voice.mp3"}, body["audios"])
+		for _, forbidden := range []string{
+			"image_refs", "image_url", "image_urls", "reference_images",
+			"audio_refs", "video_refs", "ratio",
+			"compliance_enabled", "prompt_compliance_enabled", "generate_audio",
+		} {
+			require.NotContains(t, body, forbidden)
+		}
 	}
 }
 
 func TestSanitizeMoyinH3VideoBodyCopiesImageRefsWhenImagesMissing(t *testing.T) {
-	body := map[string]interface{}{
-		"model":      "minimax-h3-syt",
-		"prompt":     "x",
-		"image_refs": []interface{}{"https://cdn.example/a.png"},
+	for _, tc := range []struct {
+		origin   string
+		upstream string
+	}{
+		{origin: "minimax-h3-768p", upstream: "minimax-h3-syt"},
+		{origin: "minimax-h3-30-768p", upstream: "minimax-h3-30s-syt"},
+	} {
+		body := map[string]interface{}{
+			"model":      tc.upstream,
+			"prompt":     "x",
+			"image_refs": []interface{}{"https://cdn.example/a.png"},
+		}
+		sanitizeOriginModelUpstreamBody(body, relaycommon.TaskSubmitReq{
+			ImageRefs: []string{"https://cdn.example/a.png"},
+		}, tc.origin)
+		require.Equal(t, []string{"https://cdn.example/a.png"}, body["images"])
+		require.NotContains(t, body, "image_refs")
 	}
-	sanitizeOriginModelUpstreamBody(body, relaycommon.TaskSubmitReq{
-		ImageRefs: []string{"https://cdn.example/a.png"},
-	}, "minimax-h3-768p")
-	require.Equal(t, []string{"https://cdn.example/a.png"}, body["images"])
-	require.NotContains(t, body, "image_refs")
 }
 
 func TestSanitizeWanfeng720pC1ForcesPortraitAndKeepsVideoRefs(t *testing.T) {

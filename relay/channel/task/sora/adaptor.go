@@ -281,7 +281,7 @@ func (a *TaskAdaptor) ForceApplyBillingRatios(info *relaycommon.RelayInfo) bool 
 // IDs are fixed-price per generated video, independent of requested duration.
 func (a *TaskAdaptor) UseRequestBillingRatios(info *relaycommon.RelayInfo) bool {
 	switch strings.TrimSpace(info.OriginModelName) {
-	case "sd2.5", "sd2-mini", "sd2-fast", "sd2-c6", "sd2-c7", "seedance-720", "seedance-2.0-mini", "seedance-2.0-mini-480p", "seedance-2.0-mini-720p", "seedance-2.0-mini-480p-c2", "seedance-2.0-mini-720p-c2", "seedance-2.0-fast", "seedance-2.0-fast-480p", "seedance-2.0-fast-480p-c1", "grok-imagine-720p", "seedance-2.0-fast-720p", "seedance-2.0-fast-720p-c1", "seedance-2.0-fast-720p-c2", "seedance-2.0-fast-720p-c3", "seedance-2.0-fast-720p-c5", "seedance-2.0-720p", "seedance-2.0-1080p", "seedance-2.0", "seedance-2.5", "seedance-2.0-480p", "seedance-2.5-480p", "seedance-2.5-720p", "seedance-2.5-flash-720p", "seedance-2.5-1080p", "seedance-2.0-c1", "seedance-2.5-c1", "seedance-2.5-c2", "seedance-2.0-c2", "seedance-2.0-480p-c2", "seedance-2.0-fast-c2", "seedance-2.0-fast-480p-c2", "seedance-2.0-mini-c2", "wan-3.0-c2", "wan-3.0-480p-c2", "wan-3.0", "wan-3.0-c1", "wan-3.0-480p", "wan-3.0-480p-c3", "seedance-2.0-480p-c3", "seedance-2.0-mini-480p-c3", "seedance-2.0-fast-480p-c3", "seedance-2.5-c3", "minimax-h3", "minimax-h3-max", "minimax-h3-2k", "minimax-h3-768p", "seedance-2.5-720p-c4", "seedance-2.0-720p-c1", "seedance-2.0-720p-c2", "seedance-2.0-720p-c3", "seedance-2.5-720p-c5", "seedance-2.5-480p-c5", "seedance-2.5-720p-c6", "seedance-2.5-flash-480p-c5", "seedance-2.5-flash-720p-c5", "sora-2", "kling-o3", "kling-o3-omni", "wan3.0-video-prime", "seedance-2.0-480p-c7", "seedance-2.0-fast-480p-c7", "seedance-2.0-mini-480p-c7", "seedance-2.0-mini-720p-c7", "seedance-2.0-c8", "seedance-2.0-mini-c8":
+	case "sd2.5", "sd2-mini", "sd2-fast", "sd2-c6", "sd2-c7", "seedance-720", "seedance-2.0-mini", "seedance-2.0-mini-480p", "seedance-2.0-mini-720p", "seedance-2.0-mini-480p-c2", "seedance-2.0-mini-720p-c2", "seedance-2.0-fast", "seedance-2.0-fast-480p", "seedance-2.0-fast-480p-c1", "grok-imagine-720p", "seedance-2.0-fast-720p", "seedance-2.0-fast-720p-c1", "seedance-2.0-fast-720p-c2", "seedance-2.0-fast-720p-c3", "seedance-2.0-fast-720p-c5", "seedance-2.0-720p", "seedance-2.0-1080p", "seedance-2.0", "seedance-2.5", "seedance-2.0-480p", "seedance-2.5-480p", "seedance-2.5-720p", "seedance-2.5-flash-720p", "seedance-2.5-1080p", "seedance-2.0-c1", "seedance-2.5-c1", "seedance-2.5-c2", "seedance-2.0-c2", "seedance-2.0-480p-c2", "seedance-2.0-fast-c2", "seedance-2.0-fast-480p-c2", "seedance-2.0-mini-c2", "wan-3.0-c2", "wan-3.0-480p-c2", "wan-3.0", "wan-3.0-c1", "wan-3.0-480p", "wan-3.0-480p-c3", "seedance-2.0-480p-c3", "seedance-2.0-mini-480p-c3", "seedance-2.0-fast-480p-c3", "seedance-2.5-c3", "minimax-h3", "minimax-h3-max", "minimax-h3-2k", "minimax-h3-768p", "minimax-h3-30-768p", "seedance-2.5-720p-c4", "seedance-2.0-720p-c1", "seedance-2.0-720p-c2", "seedance-2.0-720p-c3", "seedance-2.5-720p-c5", "seedance-2.5-480p-c5", "seedance-2.5-720p-c6", "seedance-2.5-flash-480p-c5", "seedance-2.5-flash-720p-c5", "sora-2", "kling-o3", "kling-o3-omni", "wan3.0-video-prime", "seedance-2.0-480p-c7", "seedance-2.0-fast-480p-c7", "seedance-2.0-mini-480p-c7", "seedance-2.0-mini-720p-c7", "seedance-2.0-c8", "seedance-2.0-mini-c8":
 		return false
 	default:
 		return true
@@ -580,6 +580,8 @@ func applyOriginModelDurationLimit(body map[string]interface{}, req relaycommon.
 		applyCatalogDurationLimit(body, req, 15)
 	case "minimax-h3-768p":
 		applyCatalogDurationBounds(body, req, 5, 4, 15)
+	case "minimax-h3-30-768p":
+		applyCatalogDurationBounds(body, req, 5, 4, 30)
 	case "seedance-2.0-720p-c1":
 		applyCatalogDurationBounds(body, req, 5, 5, 15)
 	case "minimax-h3-2k", "minimax-h3-c3":
@@ -613,7 +615,7 @@ func applyOriginModelAudio(body map[string]interface{}, originModel string) {
 func sanitizeOriginModelUpstreamBody(body map[string]interface{}, req relaycommon.TaskSubmitReq, originModel string) {
 	originModel = strings.TrimSpace(originModel)
 	switch originModel {
-	case "minimax-h3-768p":
+	case "minimax-h3-768p", "minimax-h3-30-768p":
 		sanitizeMoyinH3VideoBody(body, req)
 	case "seedance-2.0-720p-c1":
 		sanitizeWanfeng720pC1VideoBody(body, req)
@@ -1224,7 +1226,7 @@ func applyOriginModelResolution(body map[string]interface{}, originModel string)
 	case "minimax-h3-2k", "minimax-h3-c3":
 		body["resolution"] = "2K"
 		body["size"] = "2K"
-	case "minimax-h3", "minimax-h3-max", "minimax-h3-768p":
+	case "minimax-h3", "minimax-h3-max", "minimax-h3-768p", "minimax-h3-30-768p":
 		body["resolution"] = "768p"
 		body["size"] = "768p"
 	case "seedance-2.5-1080p":
@@ -1780,7 +1782,7 @@ func originModelMediaLimit(origin string, req relaycommon.TaskSubmitReq) error {
 		if len(collectUpstreamVideoAudioRefs(req)) > 10 {
 			return fmt.Errorf("this model accepts at most 10 reference audios")
 		}
-	case "minimax-h3-768p":
+	case "minimax-h3-768p", "minimax-h3-30-768p":
 		if len(collectUpstreamVideoVideoRefs(req)) > 0 {
 			return fmt.Errorf("this model accepts at most 0 reference videos")
 		}

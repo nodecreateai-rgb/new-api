@@ -11,14 +11,14 @@ import (
 	"gorm.io/gorm"
 )
 
-var moyinPublicModels = []string{"minimax-h3-768p"}
+var moyinPublicModels = []string{"minimax-h3-768p", "minimax-h3-30-768p"}
 
 const moyinChannelName = "Video H3 768p"
 
 func ensureMoyinRouting() error {
-	const modelsCSV = "minimax-h3-768p"
-	const mappingJSON = `{"minimax-h3-768p":"minimax-h3-syt"}`
-	const groupsCSV = "default,vip,svip,vip1,vip2,vip3,vip6,vip7,vip8,vip9,vip10,vip11,vip13,llm-vip"
+	const modelsCSV = "minimax-h3-768p,minimax-h3-30-768p"
+	const mappingJSON = `{"minimax-h3-768p":"minimax-h3-syt","minimax-h3-30-768p":"minimax-h3-30s-syt"}`
+	const groupsCSV = "default,vip,svip,vip1,vip2,vip3,vip6,vip7,vip8,vip9,vip10,vip11,vip13,llm-vip,vip15,vip16"
 	// Sora adaptor appends /v1/videos, so the channel base must keep the /api
 	// prefix: https://ai.moyinai.com/api + /v1/videos.
 	baseURL := strings.TrimSpace(os.Getenv("MOYINAI_BASE_URL"))
@@ -45,9 +45,10 @@ func ensureMoyinRouting() error {
 		}
 	}
 
-	groups := []string{"default", "vip", "svip", "vip1", "vip2", "vip3", "vip6", "vip7", "vip8", "vip9", "vip10", "vip11", "vip13", "llm-vip"}
+	groups := []string{"default", "vip", "svip", "vip1", "vip2", "vip3", "vip6", "vip7", "vip8", "vip9", "vip10", "vip11", "vip13", "llm-vip", "vip15", "vip16"}
 	modelDescriptions := map[string]string{
-		"minimax-h3-768p": "MiniMax H3 文生/图生/参考生视频（异步，¥0.5/次，固定768P输出，有声，4-15秒，画幅 16:9/9:16/1:1/21:9，最多9张图片、0段视频、3段音频）",
+		"minimax-h3-768p":    "MiniMax H3 文生/图生/参考生视频（异步，¥0.5/次，固定768P输出，有声，4-15秒，画幅 16:9/9:16/1:1/21:9，最多9张图片、0段视频、3段音频）",
+		"minimax-h3-30-768p": "MiniMax H3 30S 文生/图生/参考生视频（异步，¥1.2/次，固定768P输出，有声，4-30秒，画幅 16:9/9:16/1:1/21:9，最多9张图片、0段视频、3段音频）",
 	}
 	endpoint := `{"openai-video":{"path":"/v1/videos","method":"POST"}}`
 
