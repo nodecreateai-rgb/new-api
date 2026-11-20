@@ -248,7 +248,7 @@ func RelayTaskSubmit(c *gin.Context, info *relaycommon.RelayInfo) (*TaskSubmitRe
 		}
 	}
 
-	// 6.5 合规素材在网关处理，每张参考图加 1 积分（templix GPT Image 2.5 low，5 积分档）。
+	// 6.5 合规素材在网关内置免费处理（与超分一致，不额外加收额度）。
 	// 原生过人脸的模型即使请求开了合规也不处理、不加约束、不加价。
 	complianceOpt := service.ComplianceMaterial{}
 	if service.CompliancePassthrough(info.OriginModelName) {

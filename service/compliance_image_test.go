@@ -27,8 +27,8 @@ func TestInspectComplianceCountsDistinctImagesAndPrice(t *testing.T) {
 	if !opt.Enabled || opt.Mode != "colored-pencil" || n != 2 {
 		t.Fatalf("opt=%+v images=%d", opt, n)
 	}
-	if got := opt.Quota(n, 1); got != 2*int(common.QuotaPerUnit) {
-		t.Fatalf("quota=%d", got)
+	if got := opt.Quota(n, 1); got != 0 {
+		t.Fatalf("compliance preprocessing must be free, got quota=%d", got)
 	}
 	if opt.Quota(n, 0) != 0 {
 		t.Fatal("zero group ratio must not charge")

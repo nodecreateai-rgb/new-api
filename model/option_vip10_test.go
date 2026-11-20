@@ -13,6 +13,9 @@ func TestVip10PriceForSkipsAlreadyDiscountedFast480(t *testing.T) {
 	if got := vip10PriceFor("seedance-2.0-fast-480p", 1.4); got != 1.4 {
 		t.Fatalf("fast-480p must not drop again from 1.4: got %v", got)
 	}
+	if got := vip10PriceFor("minimax-h3-768p", 0.5); got != 0.5 {
+		t.Fatalf("minimax-h3-768p must keep sticker price 0.5 in vip10: got %v", got)
+	}
 }
 
 func TestVip10PriceForSubtractsOneTenthFromSticker(t *testing.T) {
@@ -50,6 +53,7 @@ func TestApplyVip10DiscountIsRestartSafe(t *testing.T) {
 		"seedance-2.0-fast-480p-c1": 1.5,
 		"seedance-2.0-720p":         3,
 		"sd2.5":                     0.5,
+		"minimax-h3-768p":           0.5,
 		"gemini-3.5-flash":          0.015,
 	}
 	groupPrices := map[string]map[string]float64{
@@ -77,6 +81,7 @@ func TestApplyVip10DiscountIsRestartSafe(t *testing.T) {
 			"seedance-2.0-fast-480p-c1": 1.4,
 			"seedance-2.0-720p":         2.9,
 			"sd2.5":                     0.4,
+			"minimax-h3-768p":           0.5,
 		}
 		for model, price := range want {
 			if vip10[model] != price {
@@ -111,6 +116,7 @@ func TestVip10DiscountWiredIntoStartup(t *testing.T) {
 		`applyVip10ModelPriceDiscount(modelGroupPrices, prices)`,
 		`"seedance-2.0-fast-480p":    1.4`,
 		`"seedance-2.0-720p":         2.9`,
+		`"minimax-h3-768p":           0.5`,
 		`ensureVIP16UserAndChannels()`,
 		`vip10 sticker-0.1 except seedance-2.0-fast-480p=1.4`,
 	} {

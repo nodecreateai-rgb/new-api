@@ -23,10 +23,9 @@ import (
 const complianceImageModel = "gpt-image-26"
 const complianceImageQuality = "low"
 
-// complianceImageCredit is the gateway price, in the same unit as model
-// prices (1 == one credit / ¥1 at the default quota rate), charged once per
-// distinct reference image when compliance is requested.
-const complianceImageCredit = 1.0
+// complianceImageCredit is 0: reference-image compliance preprocessing is
+// built-in and free (matching video upscaling).
+const complianceImageCredit = 0.0
 
 // ComplianceMaterial is the gateway decision for a video request.
 // Enabled means reference images are edited here before the video upstream
@@ -40,7 +39,7 @@ type ComplianceMaterial struct {
 }
 
 func (m ComplianceMaterial) Quota(images int, groupRatio float64) int {
-	if m.Passthrough || !m.Enabled || images <= 0 || groupRatio <= 0 {
+	if complianceImageCredit <= 0 || m.Passthrough || !m.Enabled || images <= 0 || groupRatio <= 0 {
 		return 0
 	}
 	return images * int(complianceImageCredit*common.QuotaPerUnit*groupRatio)

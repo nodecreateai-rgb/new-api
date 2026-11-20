@@ -462,6 +462,7 @@ func ensureDopioRMBPricing() {
 			// stacking another 0.1. seedance-2.0-fast-480p already has that cut.
 			"seedance-2.0-fast-480p": 1.4,
 			"seedance-2.0-720p":      2.9,
+			"minimax-h3-768p":        0.5,
 		},
 		"vip11": {
 			"seedance-2.5-480p":         1,
