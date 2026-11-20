@@ -21,11 +21,11 @@ var xingapi25PublicModels = []string{
 }
 
 var xingapi111PublicModels = []string{
-	"seedance-2.5-480p-c5",
 	"seedance-2.5-flash-480p-c5",
 	"seedance-2.5-flash-720p-c5",
 }
 
+// Video Fast 720p C5 stays disabled. Its former public id is retired on every start.
 var xingapiFastMPublicModels = []string{
 	"seedance-2.0-fast-720p-c5",
 }
@@ -78,8 +78,8 @@ func ensureXingapi25Routing() error {
 }
 
 func ensureXingapi111Routing() error {
-	const modelsCSV = "seedance-2.5-480p-c5,seedance-2.5-flash-480p-c5,seedance-2.5-flash-720p-c5"
-	const mappingJSON = `{"seedance-2.5-480p-c5":"seedance2.5-M","seedance-2.5-flash-480p-c5":"seedance2.5-flash-M","seedance-2.5-flash-720p-c5":"seedance2.5-flash-M"}`
+	const modelsCSV = "seedance-2.5-flash-480p-c5,seedance-2.5-flash-720p-c5"
+	const mappingJSON = `{"seedance-2.5-flash-480p-c5":"seedance2.5-flash-M","seedance-2.5-flash-720p-c5":"seedance2.5-flash-M"}`
 	baseURL := strings.TrimSpace(os.Getenv("XINGAPI_BASE_URL"))
 	if baseURL == "" {
 		baseURL = "https://xingapi.top"
@@ -89,28 +89,25 @@ func ensureXingapi111Routing() error {
 		return err
 	}
 	modelDescriptions := map[string]string{
-		"seedance-2.5-480p-c5":       "Seedance 2.5 文生/图生/参考生视频（异步，¥4/次，固定480P，5-30秒，画幅16:9、9:16、1:1、4:3、3:4、21:9，最多30张图片、10段视频、10段音频，原生过人脸）",
 		"seedance-2.5-flash-480p-c5": "Seedance 2.5 Flash 文生/图生/参考生视频（异步，¥3/次，固定480P，4-30秒，画幅16:9、9:16、1:1、4:3、3:4、21:9，最多10张图片、5段视频、5段音频，原生过人脸）",
 		"seedance-2.5-flash-720p-c5": "Seedance 2.5 Flash 文生/图生/参考生视频（异步，¥4/次，固定720P，4-30秒，画幅16:9、9:16、1:1、4:3、3:4、21:9，最多10张图片、5段视频、5段音频，原生过人脸）",
 	}
 	return ensureXingapiNamedChannel(xingapi111ChannelName, modelsCSV, mappingJSON, baseURL, key, xingapi111PublicModels, modelDescriptions)
 }
 
+// ensureXingapiFastMRouting retires the Video Fast 720p C5 channel on every start.
 func ensureXingapiFastMRouting() error {
-	const modelsCSV = "seedance-2.0-fast-720p-c5"
-	const mappingJSON = `{"seedance-2.0-fast-720p-c5":"seedance2.0-fast-M"}`
-	baseURL := strings.TrimSpace(os.Getenv("XINGAPI_BASE_URL"))
-	if baseURL == "" {
-		baseURL = "https://xingapi.top"
-	}
-	key, err := xingapiResolveKey("XINGAPI_FAST_M_GATEWAY_KEY", "XINGAPI_FAST_M_GATEWAY_KEY_FILE", "XINGAPI_V_API_KEY", xingapiFastMChannelName, "XINGAPI_FAST_M_GATEWAY_KEY or XINGAPI_V_API_KEY is required")
-	if err != nil {
+	if err := disableChannelByName(xingapiFastMChannelName); err != nil {
 		return err
 	}
-	modelDescriptions := map[string]string{
-		"seedance-2.0-fast-720p-c5": "Seedance 2.0 Fast 文生/图生/参考生视频（异步，¥1.5/次，固定720P，4-15秒，画幅16:9、9:16、1:1、4:3、3:4、21:9，最多9张图片、3段视频、3段音频，原生过人脸）",
+	if err := retireMarketplaceModels(xingapiFastMPublicModels); err != nil {
+		return err
 	}
-	return ensureXingapiNamedChannel(xingapiFastMChannelName, modelsCSV, mappingJSON, baseURL, key, xingapiFastMPublicModels, modelDescriptions)
+	if err := stripModelsFromChannels(xingapiFastMPublicModels); err != nil {
+		return err
+	}
+	InitChannelCache()
+	return nil
 }
 
 func xingapiResolveKey(gatewayEnv, gatewayFileEnv, apiKeyEnv, channelName, requiredMsg string) (string, error) {

@@ -132,7 +132,7 @@ func resolveTaskPricePatches(raw string) []string {
 	defaults := []string{
 		"sd2-c1", "sd2-c2", "sd2-c3", "sd2-c5", "sd2-c6", "sd2-c7",
 		"sd2.5", "sd2-c8", "sd2-c9", "sd2-c10", "sd2-c11", "sd2-c12", "sd2-mini", "sd2-fast",
-		"seedance-720", "seedance-2.0-mini", "seedance-2.0-mini-480p", "seedance-2.0-mini-720p", "seedance-2.0-mini-480p-c2", "seedance-2.0-mini-720p-c2", "seedance-2.0-fast-480p", "grok-imagine-720p", "seedance-2.0-fast-720p", "seedance-2.0-fast-720p-c1", "seedance-2.0-fast-720p-c2", "seedance-2.0-fast-720p-c3", "seedance-2.0-fast-720p-c5", "seedance-2.0-720p", "seedance-2.0-1080p",
+		"seedance-720", "seedance-2.0-mini", "seedance-2.0-mini-480p", "seedance-2.0-mini-720p", "seedance-2.0-mini-480p-c2", "seedance-2.0-mini-720p-c2", "seedance-2.0-fast-480p", "grok-imagine-720p", "seedance-2.0-fast-720p", "seedance-2.0-fast-720p-c1", "seedance-2.0-fast-720p-c2", "seedance-2.0-fast-720p-c3", "seedance-2.0-720p", "seedance-2.0-1080p",
 		"gemini-omni", "happyhorse-1.1-720p", "happyhorse-1.1-1080p",
 		"wan2.7-720p", "wan2.7-1080p",
 		"viduq3-turbo-720p", "viduq3-turbo-1080p", "viduq3-pro-1080p",
@@ -141,7 +141,7 @@ func resolveTaskPricePatches(raw string) []string {
 		"seedance-2.0", "seedance-2.5", "seedance-2.0-480p", "seedance-2.0-fast-480p-c1", "seedance-2.5-480p", "seedance-2.5-720p", "seedance-2.5-flash-720p", "seedance-2.5-1080p", "seedance-2.0-c1", "seedance-2.5-c1", "seedance-2.5-c2",
 		"seedance-2.0-c2", "seedance-2.0-480p-c2", "seedance-2.0-fast-c2", "seedance-2.0-fast-480p-c2", "seedance-2.0-mini-c2", "wan-3.0-c2", "wan-3.0-480p-c2",
 		"wan-3.0", "wan-3.0-c1", "wan-3.0-480p", "wan-3.0-prime", "wan3.0-video-prime",
-		"wan-3.0-480p-c3", "seedance-2.0-480p-c3", "seedance-2.0-mini-480p-c3", "seedance-2.0-fast-480p-c3", "seedance-2.5-c3", "minimax-h3", "minimax-h3-max", "minimax-h3-2k", "minimax-h3-c3", "minimax-h3-768p", "seedance-2.5-720p-c4", "seedance-2.0-720p-c1", "seedance-2.0-720p-c2", "seedance-2.0-720p-c3", "seedance-2.5-720p-c5", "seedance-2.5-480p-c5", "seedance-2.5-flash-480p-c5", "seedance-2.5-flash-720p-c5", "seedance-2.5-720p-c6",
+		"wan-3.0-480p-c3", "seedance-2.0-480p-c3", "seedance-2.0-mini-480p-c3", "seedance-2.0-fast-480p-c3", "seedance-2.5-c3", "minimax-h3", "minimax-h3-max", "minimax-h3-2k", "minimax-h3-c3", "minimax-h3-768p", "seedance-2.5-720p-c4", "seedance-2.0-720p-c1", "seedance-2.0-720p-c2", "seedance-2.0-720p-c3", "seedance-2.5-720p-c5", "seedance-2.5-flash-480p-c5", "seedance-2.5-flash-720p-c5", "seedance-2.5-720p-c6",
 		"seedance-2.0-480p-c7", "seedance-2.0-fast-480p-c7", "seedance-2.0-mini-480p-c7", "seedance-2.0-mini-720p-c7",
 		"seedance-2.0-c8", "seedance-2.0-mini-c8",
 		"pay", "oauth2",

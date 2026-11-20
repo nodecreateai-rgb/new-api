@@ -99,7 +99,10 @@ func TestApplyComplianceMaterialsRewritesImagesAndStripsFlags(t *testing.T) {
 	if posts != 1 {
 		t.Fatalf("posts=%d", posts)
 	}
-	if gotModel != complianceImageModel || gotImage != "https://cdn.example/a.png" || !strings.Contains(gotPrompt, "square grid") || gotQuality != complianceImageQuality {
+	if complianceImageModel != "gpt-image-26" || complianceImageQuality != "low" {
+		t.Fatalf("unexpected compliance defaults: model=%s quality=%s", complianceImageModel, complianceImageQuality)
+	}
+	if gotModel != "gpt-image-26" || gotImage != "https://cdn.example/a.png" || !strings.Contains(gotPrompt, "square grid") || gotQuality != "low" {
 		t.Fatalf("model=%s image=%s quality=%s prompt=%s", gotModel, gotImage, gotQuality, gotPrompt)
 	}
 	var payload map[string]any
@@ -123,6 +126,49 @@ func TestApplyComplianceMaterialsRewritesImagesAndStripsFlags(t *testing.T) {
 	imageURL, _ := payload["image_url"].(map[string]any)
 	if imageURL["url"] != refs[0] {
 		t.Fatalf("image_url=%#v", imageURL)
+	}
+}
+
+func TestComplianceModelPreservesEnvOverrideAndLowQuality(t *testing.T) {
+	t.Setenv("TEMPLIX_COMPLIANCE_MODEL", "")
+	if got := complianceModel(); got != "gpt-image-26" {
+		t.Fatalf("fallback complianceModel()=%s, want gpt-image-26", got)
+	}
+	t.Setenv("TEMPLIX_COMPLIANCE_MODEL", "  gpt-image-custom  ")
+	if got := complianceModel(); got != "gpt-image-custom" {
+		t.Fatalf("override complianceModel()=%s, want gpt-image-custom", got)
+	}
+
+	var gotModel, gotQuality string
+	png := []byte{0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a}
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.Method == http.MethodPost && r.URL.Path == "/v1/images/generations":
+			raw, _ := io.ReadAll(r.Body)
+			var req map[string]any
+			if err := common.Unmarshal(raw, &req); err != nil {
+				t.Errorf("request json: %v", err)
+			}
+			gotModel, _ = req["model"].(string)
+			gotQuality, _ = req["quality"].(string)
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"id":"img2","status":"completed","image_url":"` + srvURL(r) + `/outputs/a.png"}`))
+		case r.URL.Path == "/outputs/a.png":
+			w.Header().Set("Content-Type", "image/png")
+			_, _ = w.Write(png)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer srv.Close()
+	t.Setenv("TEMPLIX2API_BASE_URL", srv.URL)
+
+	body := []byte(`{"model":"seedance-2.0","prompt":"walk","compliance_enabled":true,"image_refs":["https://cdn.example/a.png"]}`)
+	if _, _, err := ApplyComplianceMaterials(context.Background(), body, "application/json", ComplianceMaterial{Enabled: true, Mode: "grid"}); err != nil {
+		t.Fatal(err)
+	}
+	if gotModel != "gpt-image-custom" || gotQuality != "low" {
+		t.Fatalf("model=%s quality=%s", gotModel, gotQuality)
 	}
 }
 

@@ -19,10 +19,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// complianceImageModel is GPT Image 2.5 at the low tier. That tier is 5
-// templix credits, the same as turbo, and finishes faster. The gateway still
-// charges the caller 1 credit per image.
-const complianceImageModel = "gpt-image-25"
+// Default reference-image preprocessing model; explicit environment overrides take precedence.
+const complianceImageModel = "gpt-image-26"
 const complianceImageQuality = "low"
 
 // complianceImageCredit is the gateway price, in the same unit as model
