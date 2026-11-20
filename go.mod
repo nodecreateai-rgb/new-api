@@ -63,6 +63,7 @@ require (
 require (
 	github.com/ClickHouse/clickhouse-go/v2 v2.40.3
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.97.1
+	github.com/esimov/pigo v1.4.6
 	github.com/waffo-com/waffo-pancake-sdk-go v0.3.1
 	gorm.io/driver/clickhouse v0.7.0
 )

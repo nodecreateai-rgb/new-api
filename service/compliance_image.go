@@ -10,26 +10,20 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/textproto"
-	"os"
 	"strings"
-	"time"
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/logger"
 	"github.com/gin-gonic/gin"
 )
 
-// Default reference-image preprocessing model; explicit environment overrides take precedence.
-const complianceImageModel = "gpt-image-26"
-const complianceImageQuality = "low"
-
 // complianceImageCredit is 0: reference-image compliance preprocessing is
 // built-in and free (matching video upscaling).
 const complianceImageCredit = 0.0
 
 // ComplianceMaterial is the gateway decision for a video request.
-// Enabled means reference images are edited here before the video upstream
-// sees them, instead of forwarding compliance_enabled for air2api.
+// Enabled means reference images are edited locally here before the video
+// upstream sees them.
 // Passthrough means the selected model already accepts real faces, so an
 // enabled flag must not edit images, add a cleanup prompt, or add a charge.
 type ComplianceMaterial struct {
@@ -55,24 +49,6 @@ func CompliancePassthrough(model string) bool {
 	default:
 		return false
 	}
-}
-
-func complianceBaseURL() string {
-	if v := strings.TrimSpace(os.Getenv("TEMPLIX2API_BASE_URL")); v != "" {
-		return strings.TrimRight(v, "/")
-	}
-	return "http://domiex-templix-5pvyf6-templix2api-1:38715"
-}
-
-func complianceModel() string {
-	if v := strings.TrimSpace(os.Getenv("TEMPLIX_COMPLIANCE_MODEL")); v != "" {
-		return v
-	}
-	return complianceImageModel
-}
-
-func complianceKey() string {
-	return strings.TrimSpace(firstEnv("TEMPLIX2API_GATEWAY_KEY", "TX2API_API_KEY"))
 }
 
 var complianceImageKeys = map[string]struct{}{
@@ -128,9 +104,9 @@ func InspectComplianceFromContext(c *gin.Context) (ComplianceMaterial, int, erro
 	return InspectCompliance(body, c.GetHeader("Content-Type"))
 }
 
-// ApplyComplianceMaterials edits each reference image through templix and
-// rewrites the upstream body so the video service receives the treated
-// materials with compliance flags removed.
+// ApplyComplianceMaterials edits each reference image locally and rewrites
+// the upstream body so the video service receives the treated materials with
+// compliance flags removed.
 func ApplyComplianceMaterials(ctx context.Context, body []byte, contentType string, opt ComplianceMaterial) ([]byte, string, error) {
 	if opt.Passthrough {
 		return body, contentType, nil
@@ -169,12 +145,14 @@ func applyComplianceJSON(ctx context.Context, body []byte, opt ComplianceMateria
 	if len(images) == 0 {
 		return body, "application/json", nil
 	}
-	replaced, err := editComplianceImages(ctx, opt.Mode, images)
+	replaced, edited, err := editComplianceImages(ctx, opt.Mode, images)
 	if err != nil {
 		return nil, "application/json", err
 	}
 	rewritten, _ := replaceImageValues(payload, false, replaced).(map[string]any)
-	applyCompliancePrompt(rewritten, opt.Mode)
+	if edited > 0 {
+		applyCompliancePrompt(rewritten, opt.Mode)
+	}
 	stripComplianceFlags(rewritten)
 	out, err := common.Marshal(rewritten)
 	if err != nil {
@@ -183,237 +161,24 @@ func applyComplianceJSON(ctx context.Context, body []byte, opt ComplianceMateria
 	return out, "application/json", nil
 }
 
-func editComplianceImages(ctx context.Context, mode string, images []string) (map[string]string, error) {
-	logger.LogInfo(ctx, fmt.Sprintf("compliance: treating %d image(s) via templix model %s mode %s", len(images), complianceModel(), mode))
-	ctx, cancel := context.WithTimeout(ctx, 20*time.Minute)
-	defer cancel()
+func editComplianceImages(ctx context.Context, mode string, images []string) (map[string]string, int, error) {
 	out := make(map[string]string, len(images))
+	edited := 0
 	for i, src := range images {
-		dataURL, err := editComplianceImage(ctx, mode, src)
+		if err := ctx.Err(); err != nil {
+			return nil, edited, err
+		}
+		dataURL, modified, err := editComplianceImageLocal(ctx, mode, src)
 		if err != nil {
-			return nil, fmt.Errorf("compliance image %d failed: %w", i+1, err)
+			return nil, edited, fmt.Errorf("compliance image %d failed: %w", i+1, err)
 		}
 		out[src] = dataURL
-	}
-	return out, nil
-}
-
-func editComplianceImage(ctx context.Context, mode, src string) (string, error) {
-	payload, err := common.Marshal(map[string]any{
-		"model":     complianceModel(),
-		"prompt":    compliancePrompt(mode),
-		"image_url": src,
-		"quality":   complianceImageQuality,
-		"n":         1,
-	})
-	if err != nil {
-		return "", err
-	}
-	var created map[string]any
-	var last error
-	for try := 0; try < 3; try++ {
-		if try > 0 {
-			select {
-			case <-ctx.Done():
-				return "", ctx.Err()
-			case <-time.After(time.Duration(try) * 2 * time.Second):
-			}
-		}
-		created, last = complianceJSON(ctx, http.MethodPost, "/v1/images/generations", payload, time.Minute)
-		if last == nil {
-			break
-		}
-		if !complianceTransient(last) {
-			return "", last
+		if modified {
+			edited++
 		}
 	}
-	if last != nil {
-		return "", last
-	}
-	if url := complianceResultURL(created); url != "" && complianceDone(created) {
-		return complianceFetchDataURL(ctx, url)
-	}
-	id := complianceTaskID(created)
-	if id == "" {
-		return "", fmt.Errorf("templix did not return a task id")
-	}
-	deadline := time.Now().Add(6 * time.Minute)
-	for {
-		if time.Now().After(deadline) {
-			return "", fmt.Errorf("templix image timed out")
-		}
-		select {
-		case <-ctx.Done():
-			return "", ctx.Err()
-		case <-time.After(2 * time.Second):
-		}
-		view, err := complianceJSON(ctx, http.MethodGet, "/v1/task/"+id, nil, 30*time.Second)
-		if err != nil {
-			if complianceTransient(err) {
-				continue
-			}
-			return "", err
-		}
-		status := strings.ToLower(asComplianceString(view["status"]))
-		switch status {
-		case "failed", "error", "canceled", "cancelled":
-			return "", fmt.Errorf("templix image %s", complianceErrorMessage(view))
-		}
-		if complianceDone(view) {
-			if url := complianceResultURL(view); url != "" {
-				return complianceFetchDataURL(ctx, url)
-			}
-			return complianceFetchDataURL(ctx, complianceBaseURL()+"/v1/task/"+id+"/content")
-		}
-	}
-}
-
-func complianceJSON(ctx context.Context, method, path string, body []byte, timeout time.Duration) (map[string]any, error) {
-	resp, err := complianceDo(ctx, method, path, body, timeout)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-	raw, err := io.ReadAll(io.LimitReader(resp.Body, 2<<20))
-	if err != nil {
-		return nil, err
-	}
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return nil, fmt.Errorf("templix http %d", resp.StatusCode)
-	}
-	var out map[string]any
-	if err := common.Unmarshal(raw, &out); err != nil {
-		return nil, fmt.Errorf("templix response is not json")
-	}
-	if errObj, ok := out["error"]; ok && errObj != nil {
-		return nil, fmt.Errorf("templix rejected the image")
-	}
-	return out, nil
-}
-
-func complianceDo(ctx context.Context, method, path string, body []byte, timeout time.Duration) (*http.Response, error) {
-	rctx, cancel := context.WithTimeout(ctx, timeout)
-	var rd io.Reader
-	if body != nil {
-		rd = bytes.NewReader(body)
-	}
-	req, err := http.NewRequestWithContext(rctx, method, complianceBaseURL()+path, rd)
-	if err != nil {
-		cancel()
-		return nil, err
-	}
-	if k := complianceKey(); k != "" {
-		req.Header.Set("Authorization", "Bearer "+k)
-	}
-	if body != nil {
-		req.Header.Set("Content-Type", "application/json")
-	}
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		cancel()
-		return nil, err
-	}
-	resp.Body = &cancelOnClose{ReadCloser: resp.Body, cancel: cancel}
-	return resp, nil
-}
-
-func complianceFetchDataURL(ctx context.Context, link string) (string, error) {
-	link = strings.TrimSpace(link)
-	if link == "" {
-		return "", fmt.Errorf("templix image has no output")
-	}
-	if strings.HasPrefix(link, "data:") {
-		return link, nil
-	}
-	if strings.HasPrefix(link, "/") {
-		link = complianceBaseURL() + link
-	}
-	reqCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
-	defer cancel()
-	req, err := http.NewRequestWithContext(reqCtx, http.MethodGet, link, nil)
-	if err != nil {
-		return "", err
-	}
-	if k := complianceKey(); k != "" && strings.HasPrefix(link, complianceBaseURL()) {
-		req.Header.Set("Authorization", "Bearer "+k)
-	}
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return "", err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return "", fmt.Errorf("templix image http %d", resp.StatusCode)
-	}
-	data, err := io.ReadAll(io.LimitReader(resp.Body, 32<<20))
-	if err != nil || len(data) == 0 {
-		return "", fmt.Errorf("templix image is empty")
-	}
-	ct := resp.Header.Get("Content-Type")
-	if i := strings.Index(ct, ";"); i > 0 {
-		ct = ct[:i]
-	}
-	ct = strings.TrimSpace(ct)
-	if ct == "" || !strings.HasPrefix(ct, "image/") {
-		ct = http.DetectContentType(data)
-	}
-	return "data:" + ct + ";base64," + base64.StdEncoding.EncodeToString(data), nil
-}
-
-func complianceTaskID(v map[string]any) string {
-	id := asComplianceString(v["id"])
-	if id == "" {
-		id = asComplianceString(v["task_id"])
-	}
-	return strings.TrimPrefix(id, "task_")
-}
-
-func complianceResultURL(v map[string]any) string {
-	for _, key := range []string{"image_url", "output_url", "url"} {
-		if s := asComplianceString(v[key]); s != "" {
-			return s
-		}
-	}
-	return ""
-}
-
-func complianceDone(v map[string]any) bool {
-	switch strings.ToLower(asComplianceString(v["status"])) {
-	case "completed", "succeeded", "success":
-		return true
-	default:
-		return false
-	}
-}
-
-func complianceErrorMessage(v map[string]any) string {
-	switch errVal := v["error"].(type) {
-	case string:
-		if s := strings.TrimSpace(errVal); s != "" {
-			return s
-		}
-	case map[string]any:
-		if s := asComplianceString(errVal["message"]); s != "" {
-			return s
-		}
-	}
-	if s := asComplianceString(v["message"]); s != "" {
-		return s
-	}
-	return "failed"
-}
-
-func complianceTransient(err error) bool {
-	if err == nil {
-		return false
-	}
-	msg := err.Error()
-	for _, k := range []string{"http 429", "http 502", "http 503", "http 504", "connection refused", "connection reset", "timeout", "EOF"} {
-		if strings.Contains(msg, k) {
-			return true
-		}
-	}
-	return false
+	logger.LogInfo(ctx, fmt.Sprintf("compliance: locally inspected %d image(s), treated %d image(s) with mode %s", len(images), edited, mode))
+	return out, edited, nil
 }
 
 func asComplianceString(v any) string {
@@ -721,7 +486,7 @@ func applyComplianceMultipart(ctx context.Context, body []byte, contentType stri
 			ordered = append(ordered, dataURL)
 		}
 	}
-	replaced, err := editComplianceImages(ctx, opt.Mode, uniqueStrings(ordered))
+	replaced, edited, err := editComplianceImages(ctx, opt.Mode, uniqueStrings(ordered))
 	if err != nil {
 		return nil, contentType, err
 	}
@@ -739,7 +504,9 @@ func applyComplianceMultipart(ctx context.Context, body []byte, contentType stri
 				}
 			}
 			if key == "prompt" {
-				val = carryComplianceVideoPrompt(val, opt.Mode)
+				if edited > 0 {
+					val = carryComplianceVideoPrompt(val, opt.Mode)
+				}
 				wrotePrompt = true
 			}
 			if err := writer.WriteField(key, val); err != nil {
@@ -748,7 +515,7 @@ func applyComplianceMultipart(ctx context.Context, body []byte, contentType stri
 			}
 		}
 	}
-	if !wrotePrompt {
+	if !wrotePrompt && edited > 0 {
 		if err := writer.WriteField("prompt", carryComplianceVideoPrompt("", opt.Mode)); err != nil {
 			_ = writer.Close()
 			return nil, contentType, err
@@ -759,7 +526,9 @@ func applyComplianceMultipart(ctx context.Context, body []byte, contentType stri
 			id := "file:" + field + ":" + fh.Filename
 			data := ""
 			if src, ok := fileSources[id]; ok {
-				data = replaced[src]
+				if rep := replaced[src]; rep != "" && rep != src {
+					data = rep
+				}
 			}
 			if data == "" {
 				if err := complianceCopyFile(writer, field, fh); err != nil {
