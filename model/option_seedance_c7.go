@@ -12,17 +12,14 @@ import (
 )
 
 var seedanceC7PublicModels = []string{
-	"seedance-2.0-480p-c7",
-	"seedance-2.0-fast-480p-c7",
 	"seedance-2.0-mini-480p-c7",
-	"seedance-2.0-mini-720p-c7",
 }
 
 const seedanceC7ChannelName = "Video Seedance C7"
 
 func ensureSeedanceC7Routing() error {
-	const modelsCSV = "seedance-2.0-480p-c7,seedance-2.0-fast-480p-c7,seedance-2.0-mini-480p-c7,seedance-2.0-mini-720p-c7"
-	const mappingJSON = `{"seedance-2.0-480p-c7":"seedance-2.0","seedance-2.0-fast-480p-c7":"seedance-2.0-fast","seedance-2.0-mini-480p-c7":"seedance-2.0-mini","seedance-2.0-mini-720p-c7":"seedance-2.0-mini-720p"}`
+	const modelsCSV = "seedance-2.0-mini-480p-c7"
+	const mappingJSON = `{"seedance-2.0-mini-480p-c7":"seedance-2.0-mini"}`
 	const groupsCSV = "default,vip,svip,vip1,vip2,vip3,vip6,vip7,vip8,vip9,vip10,vip11,vip13,llm-vip,vip15"
 	groups := strings.Split(groupsCSV, ",")
 	baseURL := strings.TrimRight(strings.TrimSpace(os.Getenv("SEELE2API_BASE_URL")), "/")
@@ -34,10 +31,7 @@ func ensureSeedanceC7Routing() error {
 		key = "seele"
 	}
 	modelDescriptions := map[string]string{
-		"seedance-2.0-480p-c7":      "Seedance 2.0 480P 文生/图生视频（异步，¥1/次，最长14秒，最多9张图片、0段视频、3段音频，不支持原生人脸，可内置人脸，可超分）",
-		"seedance-2.0-fast-480p-c7": "Seedance 2.0 Fast 480P 文生/图生视频（异步，¥0.6/次，最长15秒，最多9张图片、0段视频、3段音频，不支持原生人脸，可内置人脸，可超分）",
-		"seedance-2.0-mini-480p-c7": "Seedance 2.0 Mini 480P 文生/图生视频（异步，¥0.5/次，最长15秒，最多9张图片、0段视频、3段音频，不支持原生人脸，可内置人脸，可超分）",
-		"seedance-2.0-mini-720p-c7": "Seedance 2.0 Mini 720P 文生/图生视频（异步，¥0.5/次，最长12秒，最多9张图片、0段视频、3段音频，不支持原生人脸，可内置人脸，可超分）",
+		"seedance-2.0-mini-480p-c7": "Seedance 2.0 Mini 480P 文生/图生视频（异步，¥0.5/次，最大支持10秒，最多9张图片、0段视频、3段音频，不支持原生人脸，可内置人脸，可超分）",
 	}
 	endpoint := `{"openai-video":{"path":"/v1/videos","method":"POST"}}`
 	if common.UsingClickHouse {

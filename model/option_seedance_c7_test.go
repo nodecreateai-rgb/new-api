@@ -14,10 +14,7 @@ func TestSeedanceC7ModelsListedWithPrices(t *testing.T) {
 	body := string(option)
 	for _, want := range []string{
 		`ensureSeedanceC7Routing()`,
-		`"seedance-2.0-480p-c7":`,
-		`"seedance-2.0-fast-480p-c7":`,
 		`"seedance-2.0-mini-480p-c7":`,
-		`"seedance-2.0-mini-720p-c7":`,
 	} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("missing %s", want)
@@ -30,20 +27,23 @@ func TestSeedanceC7ModelsListedWithPrices(t *testing.T) {
 	s := string(data)
 	for _, want := range []string{
 		`seedanceC7ChannelName = "Video Seedance C7"`,
-		`"seedance-2.0-480p-c7":"seedance-2.0"`,
-		`"seedance-2.0-fast-480p-c7":"seedance-2.0-fast"`,
 		`"seedance-2.0-mini-480p-c7":"seedance-2.0-mini"`,
-		`"seedance-2.0-mini-720p-c7":"seedance-2.0-mini-720p"`,
 		`http://seele2api:38510`,
-		`¥1/次，最长14秒`,
-		`¥0.6/次，最长15秒`,
-		`¥0.5/次，最长15秒`,
-		`¥0.5/次，最长12秒`,
+		`¥0.5/次，最大支持10秒`,
 		`最多9张图片、0段视频、3段音频`,
 		`不支持原生人脸，可内置人脸，可超分`,
 	} {
 		if !strings.Contains(s, want) {
 			t.Fatalf("missing %s", want)
+		}
+	}
+	for _, retired := range []string{
+		"seedance-2.0-480p-c7",
+		"seedance-2.0-fast-480p-c7",
+		"seedance-2.0-mini-720p-c7",
+	} {
+		if strings.Contains(s, retired) {
+			t.Fatalf("retired c7 model %s must not be published in option_seedance_c7.go", retired)
 		}
 	}
 	descStart := strings.Index(s, "modelDescriptions")
@@ -69,15 +69,8 @@ func TestSeedanceC7ModelsSurviveRestartCleanup(t *testing.T) {
 	}
 	retired := body[strings.Index(body, "var permanentlyRetiredPublicModels"):]
 	retired = retired[:strings.Index(retired, "}")]
-	for _, name := range []string{
-		"seedance-2.0-480p-c7",
-		"seedance-2.0-fast-480p-c7",
-		"seedance-2.0-mini-480p-c7",
-		"seedance-2.0-mini-720p-c7",
-	} {
-		if strings.Contains(retired, `"`+name+`"`) {
-			t.Fatalf("%s must not be permanently retired", name)
-		}
+	if strings.Contains(retired, `"seedance-2.0-mini-480p-c7"`) {
+		t.Fatal("seedance-2.0-mini-480p-c7 must not be permanently retired")
 	}
 
 	retiredVideo, err := os.ReadFile("option_retired_video.go")
@@ -85,15 +78,21 @@ func TestSeedanceC7ModelsSurviveRestartCleanup(t *testing.T) {
 		t.Fatal(err)
 	}
 	dead := string(retiredVideo)
-	for _, name := range []string{
+	for _, wantDead := range []string{
 		`"seedance-2.0-480p-c7"`,
 		`"seedance-2.0-fast-480p-c7"`,
-		`"seedance-2.0-mini-480p-c7"`,
 		`"seedance-2.0-mini-720p-c7"`,
+	} {
+		if !strings.Contains(dead, wantDead) {
+			t.Fatalf("%s must be permanently retired in deadVideoModels", wantDead)
+		}
+	}
+	for _, keep := range []string{
+		`"seedance-2.0-mini-480p-c7"`,
 		`"Video Seedance C7"`,
 	} {
-		if strings.Contains(dead, name) {
-			t.Fatalf("%s must not be withdrawn", name)
+		if strings.Contains(dead, keep) {
+			t.Fatalf("%s must not be withdrawn", keep)
 		}
 	}
 }

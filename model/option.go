@@ -249,10 +249,7 @@ func ensureDopioRMBPricing() {
 		"seedance-2.0-720p":                  3,
 		"seedance-2.0-480p":                  1.6,
 		"seedance-2.0-fast-480p-c1":          1.5,
-		"seedance-2.0-480p-c7":               1,
-		"seedance-2.0-fast-480p-c7":          0.6,
 		"seedance-2.0-mini-480p-c7":          0.5,
-		"seedance-2.0-mini-720p-c7":          0.5,
 		"seedance-2.0-c8":                    0.3,
 		"seedance-2.0-mini-c8":               0.2,
 		"seedance-2.5-480p":                  1.5,
@@ -539,7 +536,7 @@ func ensureDopioRMBPricing() {
 			changed = true
 		}
 	}
-	for _, gone := range []string{"seedance-2.0-fast-720p-c3", "kling-o3-omni", "anthropic/claude-opus-5-5", "minimax-h3-max-768p", "seedance-2.0-mini-480p-12s", "minimax-h3-2k", "seedance-2.5-720p-c4", "seedance-2.0", "seedance-2.5-720p", "seedance-2.0-720p-c1", "seedance-2.5-720p-c6", "seedance-2.0-fast-720p-c5", "seedance-2.5-480p-c5"} {
+	for _, gone := range []string{"seedance-2.0-fast-720p-c3", "kling-o3-omni", "anthropic/claude-opus-5-5", "minimax-h3-max-768p", "seedance-2.0-mini-480p-12s", "minimax-h3-2k", "seedance-2.5-720p-c4", "seedance-2.0", "seedance-2.5-720p", "seedance-2.0-720p-c1", "seedance-2.5-720p-c6", "seedance-2.0-fast-720p-c5", "seedance-2.5-480p-c5", "seedance-2.0-480p-c7", "seedance-2.0-fast-480p-c7", "seedance-2.0-mini-720p-c7"} {
 		if _, exists := prices[gone]; exists {
 			delete(prices, gone)
 			changed = true
@@ -795,7 +792,7 @@ func ensureDopioRMBPricing() {
 				changed = true
 			}
 		}
-		for _, model := range append([]string{"minimax-h3-2k", "seedance-2.5-720p-c4", "seedance-2.0", "seedance-2.5-720p", "seedance-2.0-c2", "seedance-2.0-480p-c2", "seedance-2.0-fast-c2", "seedance-2.0-fast-480p-c2", "seedance-2.0-mini-c2", "wan-3.0-c2", "seedance-2.0-fast-720p-c3", "kling-o3-omni", "anthropic/claude-opus-5-5", "minimax-h3-max-768p", "seedance-2.0-mini-480p-12s", "seedance-2.0-720p-c1", "seedance-2.5-720p-c6", "seedance-2.0-fast-720p-c5", "seedance-2.5-480p-c5"}, permanentlyRetiredPublicModels...) {
+		for _, model := range append([]string{"minimax-h3-2k", "seedance-2.5-720p-c4", "seedance-2.0", "seedance-2.5-720p", "seedance-2.0-c2", "seedance-2.0-480p-c2", "seedance-2.0-fast-c2", "seedance-2.0-fast-480p-c2", "seedance-2.0-mini-c2", "wan-3.0-c2", "seedance-2.0-fast-720p-c3", "kling-o3-omni", "anthropic/claude-opus-5-5", "minimax-h3-max-768p", "seedance-2.0-mini-480p-12s", "seedance-2.0-720p-c1", "seedance-2.5-720p-c6", "seedance-2.0-fast-720p-c5", "seedance-2.5-480p-c5", "seedance-2.0-480p-c7", "seedance-2.0-fast-480p-c7", "seedance-2.0-mini-720p-c7"}, permanentlyRetiredPublicModels...) {
 			if _, exists := groupPrices[model]; exists {
 				delete(groupPrices, model)
 				changed = true

@@ -792,3 +792,20 @@ func TestConvertToOpenAIVideoHidesSekoError(t *testing.T) {
 	}
 	require.Equal(t, "request failed", gjson.GetBytes(body, "error.message").String())
 }
+
+func TestApplySeedanceMini480C7DurationCapsAtTenSeconds(t *testing.T) {
+	body := map[string]interface{}{"seconds": "15"}
+	applyOriginModelDurationLimit(body, relaycommon.TaskSubmitReq{Seconds: "15"}, "seedance-2.0-mini-480p-c7")
+	require.Equal(t, 10, body["duration"])
+	require.Equal(t, "10", body["seconds"])
+
+	body = map[string]interface{}{}
+	applyOriginModelDurationLimit(body, relaycommon.TaskSubmitReq{Duration: 8}, "seedance-2.0-mini-480p-c7")
+	require.Equal(t, 8, body["duration"])
+	require.Equal(t, "8", body["seconds"])
+
+	body = map[string]interface{}{}
+	applyOriginModelDurationLimit(body, relaycommon.TaskSubmitReq{}, "seedance-2.0-mini-480p-c7")
+	require.Equal(t, 5, body["duration"])
+	require.Equal(t, "5", body["seconds"])
+}

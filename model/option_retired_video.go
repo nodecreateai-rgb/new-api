@@ -38,6 +38,10 @@ var deadVideoModels = []string{
 	"seedance-2.5-720p-c6",
 	"seedance-2.0-fast-720p-c5",
 	"seedance-2.5-480p-c5",
+	// Video Seedance C7 keeps only seedance-2.0-mini-480p-c7 (max 10s).
+	"seedance-2.0-480p-c7",
+	"seedance-2.0-fast-480p-c7",
+	"seedance-2.0-mini-720p-c7",
 }
 
 // deadVideoChannels served only dead models, so they are switched off.
