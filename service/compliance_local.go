@@ -36,7 +36,7 @@ const (
 	complianceMaxImageBytes     = 32 << 20
 	complianceDetectMaxEdge     = 1024
 	complianceSmallFaceMinPx    = 34
-	complianceSmallFaceMinScore = 8.0
+	complianceSmallFaceMinScore = 18.0
 )
 
 var (
@@ -381,10 +381,10 @@ type detectPass struct {
 }
 
 var complianceDetectPasses = []detectPass{
-	{angle: 0.0, mirror: false, shift: 0.08, scale: 1.08, minQ: 5.5},
-	{angle: 0.04, mirror: false, shift: 0.08, scale: 1.08, minQ: 6.5},
-	{angle: 0.96, mirror: false, shift: 0.08, scale: 1.08, minQ: 6.5},
-	{angle: 0.0, mirror: true, shift: 0.08, scale: 1.08, minQ: 6.5},
+	{angle: 0.0, mirror: false, shift: 0.08, scale: 1.08, minQ: 14.0},
+	{angle: 0.04, mirror: false, shift: 0.08, scale: 1.08, minQ: 16.0},
+	{angle: 0.96, mirror: false, shift: 0.08, scale: 1.08, minQ: 16.0},
+	{angle: 0.0, mirror: true, shift: 0.08, scale: 1.08, minQ: 16.0},
 }
 
 func detectComplianceFaces(src *image.NRGBA) ([]complianceFace, error) {
