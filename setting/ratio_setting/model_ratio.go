@@ -362,8 +362,6 @@ var defaultModelPrice = map[string]float64{
 	"seedance-2.0-720p-c2":               2.8,
 	"seedance-2.0-720p-c3":               1.8,
 	"seedance-2.5-720p-c5":               5,
-	"seedance-2.5-flash-480p-c5":         3,
-	"seedance-2.5-flash-720p-c5":         4,
 	"seedance-2.0-c8":                    0.3,
 	"seedance-2.0-mini-c8":               0.2,
 	"anthropic/claude-opus-5-5":          10000000,

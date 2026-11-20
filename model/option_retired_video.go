@@ -33,11 +33,12 @@ var deadVideoModels = []string{
 	// Video Seedance C8. ensureSeedanceC8Routing now only retires the
 	// channel; this list is the safety net if another pass republishes it.
 	"seedance-2.0-c8", "seedance-2.0-mini-c8",
-	// Video 720p C6 no longer sells 720p or non-flash 480p on this upstream model,
-	// and Video Fast 720p C5 is retired for good.
+	// Video 720p C6 and Video Fast 720p C5 are retired for good.
 	"seedance-2.5-720p-c6",
 	"seedance-2.0-fast-720p-c5",
 	"seedance-2.5-480p-c5",
+	"seedance-2.5-flash-480p-c5",
+	"seedance-2.5-flash-720p-c5",
 	// Video Seedance C7 keeps only seedance-2.0-mini-480p-c7 (max 10s).
 	"seedance-2.0-480p-c7",
 	"seedance-2.0-fast-480p-c7",
@@ -59,6 +60,7 @@ var deadVideoChannels = []string{
 	"Video 2K C4",
 	"Video 720p C1",
 	"Video Seedance C8",
+	"Video 720p C6",
 	"Video Fast 720p C5",
 }
 
