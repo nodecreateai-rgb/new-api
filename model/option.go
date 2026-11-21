@@ -470,7 +470,9 @@ func ensureDopioRMBPricing() {
 		"vip15": {
 			"seedance-2.0-fast-720p-c3": 1,
 		},
-		"vip16": {},
+		"vip16": {
+			"seedance-2.5-flash-720p": 4.9,
+		},
 		"llm-vip": {
 			"anthropic/claude-opus-5-5": 0,
 		},
@@ -482,7 +484,9 @@ func ensureDopioRMBPricing() {
 		targetModelGroupPrices[group]["sd2.5"] = 0.5
 		targetModelGroupPrices[group]["seedance-2.5-c2"] = 1
 		targetModelGroupPrices[group]["seedance-2.0-fast-720p-c2"] = 2
-		targetModelGroupPrices[group]["seedance-2.5-flash-720p"] = 5
+		if group != "vip16" {
+			targetModelGroupPrices[group]["seedance-2.5-flash-720p"] = 5
+		}
 		if group != "vip9" {
 			targetModelGroupPrices[group]["seedance-2.5-1080p"] = 5
 		}
@@ -723,8 +727,12 @@ func ensureDopioRMBPricing() {
 			groupPrices["seedance-2.0-fast-720p-c2"] = 2
 			changed = true
 		}
-		if groupPrices["seedance-2.5-flash-720p"] != 5 {
-			groupPrices["seedance-2.5-flash-720p"] = 5
+		priceFlash720 := 5.0
+		if group == "vip16" {
+			priceFlash720 = 4.9
+		}
+		if groupPrices["seedance-2.5-flash-720p"] != priceFlash720 {
+			groupPrices["seedance-2.5-flash-720p"] = priceFlash720
 			changed = true
 		}
 		if groupPrices["seedance-2.0-720p-c2"] != 2.8 {

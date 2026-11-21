@@ -123,11 +123,12 @@ func ensureSeedanceFastRouting() error {
 
 	for _, publicModel := range publicModels {
 		desc := modelDescriptions[publicModel]
+		tags := seedanceFastModelTags(publicModel)
 		var meta Model
 		err = DB.Unscoped().Where("model_name = ?", publicModel).First(&meta).Error
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			meta = Model{
-				ModelName: publicModel, Description: desc, Icon: "", Tags: "video",
+				ModelName: publicModel, Description: desc, Icon: "", Tags: tags,
 				Endpoints: seedanceFastEndpointJSON, Status: 1, SyncOfficial: 0,
 				CreatedTime: common.GetTimestamp(), UpdatedTime: common.GetTimestamp(),
 			}
@@ -140,7 +141,7 @@ func ensureSeedanceFastRouting() error {
 			return err
 		}
 		if err := DB.Unscoped().Model(&Model{}).Where("id = ?", meta.Id).Updates(map[string]any{
-			"description": desc, "icon": "", "tags": "video", "endpoints": seedanceFastEndpointJSON,
+			"description": desc, "icon": "", "tags": tags, "endpoints": seedanceFastEndpointJSON,
 			"status": 1, "sync_official": 0, "deleted_at": nil, "updated_time": common.GetTimestamp(),
 		}).Error; err != nil {
 			return err
@@ -208,6 +209,7 @@ func ensureSeedanceFastRoutingClickHouse(baseURL, key string, publicModels, grou
 
 	for _, publicModel := range publicModels {
 		desc := modelDescriptions[publicModel]
+		tags := seedanceFastModelTags(publicModel)
 		var meta Model
 		err = DB.Unscoped().Where("model_name = ?", publicModel).First(&meta).Error
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -215,8 +217,8 @@ func ensureSeedanceFastRoutingClickHouse(baseURL, key string, publicModels, grou
 			now := common.GetTimestamp()
 			if err := DB.Exec(
 				`INSERT INTO models (id, model_name, description, icon, tags, endpoints, status, sync_official, created_time, updated_time, name_rule)
-				 VALUES (?, ?, ?, '', 'video', ?, 1, 0, ?, ?, 0)`,
-				id, publicModel, desc, seedanceFastEndpointJSON, now, now,
+				 VALUES (?, ?, ?, '', ?, ?, 1, 0, ?, ?, 0)`,
+				id, publicModel, desc, tags, seedanceFastEndpointJSON, now, now,
 			).Error; err != nil {
 				return err
 			}
@@ -226,16 +228,23 @@ func ensureSeedanceFastRoutingClickHouse(baseURL, key string, publicModels, grou
 			return err
 		}
 		if err := DB.Unscoped().Model(&Model{}).Where("id = ?", meta.Id).Updates(map[string]any{
-			"description": desc, "tags": "video", "endpoints": seedanceFastEndpointJSON,
+			"description": desc, "tags": tags, "endpoints": seedanceFastEndpointJSON,
 			"status": 1, "sync_official": 0, "deleted_at": nil, "updated_time": common.GetTimestamp(),
 		}).Error; err != nil {
 			return err
 		}
-		if err := DB.Exec(`ALTER TABLE models UPDATE description = ?, status = 1, updated_time = ? WHERE id = ?`, desc, common.GetTimestamp(), meta.Id).Error; err != nil {
+		if err := DB.Exec(`ALTER TABLE models UPDATE description = ?, tags = ?, status = 1, updated_time = ? WHERE id = ? SETTINGS mutations_sync = 2`, desc, tags, common.GetTimestamp(), meta.Id).Error; err != nil {
 			return err
 		}
 	}
 	InvalidatePricingCache()
 	InitChannelCache()
 	return nil
+}
+
+func seedanceFastModelTags(modelName string) string {
+	if modelName == seedanceFastPublicModel {
+		return "video,官渠"
+	}
+	return "video"
 }

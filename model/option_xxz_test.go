@@ -12,15 +12,17 @@ func TestXxzModelsListedWithPrices(t *testing.T) {
 		t.Fatal(err)
 	}
 	body := string(option)
+	normalizedBody := strings.Join(strings.Fields(body), " ")
 	for _, want := range []string{
 		`ensureXxzRouting()`,
-		`"seedance-2.0-fast-720p-c2":          2,`,
-		`"seedance-2.5-flash-720p":            5,`,
+		`"seedance-2.0-fast-720p-c2": 2,`,
+		`"seedance-2.5-flash-720p": 5,`,
 		`groupPrices["seedance-2.0-fast-720p-c2"] != 2`,
-		`groupPrices["seedance-2.5-flash-720p"] != 5`,
+		`groupPrices["seedance-2.5-flash-720p"] != priceFlash720`,
 		`targetModelGroupPrices[group]["seedance-2.5-flash-720p"] = 5`,
+		`"seedance-2.5-flash-720p": 4.9`,
 	} {
-		if !strings.Contains(body, want) {
+		if !strings.Contains(normalizedBody, strings.Join(strings.Fields(want), " ")) {
 			t.Fatalf("missing %s", want)
 		}
 	}
@@ -40,6 +42,7 @@ func TestXxzModelsListedWithPrices(t *testing.T) {
 		`最多9张图片、3段音频，不支持参考视频，原生过人脸`,
 		`¥5/次，固定720P，4-30秒`,
 		`最多10张图片、5段音频，不支持参考视频，原生过人脸`,
+		`"video,方舟"`,
 		`ChannelStatusEnabled`,
 	} {
 		if !strings.Contains(s, want) {
@@ -134,5 +137,14 @@ func TestXxzModelSurvivesRestartCleanup(t *testing.T) {
 	}
 	if strings.Contains(string(laihua), `"seedance-2.5-720p"`) {
 		t.Fatal("laihua must not reclaim seedance-2.5-720p")
+	}
+	fast, err := os.ReadFile("option_seedance_fast.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{`"video,官渠"`, `tags = ?`} {
+		if !strings.Contains(string(fast), want) {
+			t.Fatalf("option_seedance_fast.go missing %s", want)
+		}
 	}
 }

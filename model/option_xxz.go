@@ -119,13 +119,14 @@ func ensureXxzRouting() error {
 		}
 	}
 
+	modelTags := "video,方舟"
 	for _, publicModel := range xxzPublicModels {
 		desc := modelDescriptions[publicModel]
 		var meta Model
 		err = DB.Unscoped().Where("model_name = ?", publicModel).First(&meta).Error
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			meta = Model{
-				ModelName: publicModel, Description: desc, Icon: "", Tags: "video",
+				ModelName: publicModel, Description: desc, Icon: "", Tags: modelTags,
 				Endpoints: endpoint, Status: 1, SyncOfficial: 0,
 				CreatedTime: common.GetTimestamp(), UpdatedTime: common.GetTimestamp(),
 			}
@@ -138,7 +139,7 @@ func ensureXxzRouting() error {
 			return err
 		}
 		if err := DB.Unscoped().Model(&Model{}).Where("id = ?", meta.Id).Updates(map[string]any{
-			"description": desc, "icon": "", "tags": "video", "endpoints": endpoint,
+			"description": desc, "icon": "", "tags": modelTags, "endpoints": endpoint,
 			"status": 1, "sync_official": 0, "deleted_at": nil, "updated_time": common.GetTimestamp(),
 		}).Error; err != nil {
 			return err
@@ -204,6 +205,7 @@ func ensureXxzRoutingClickHouse(neutralName, modelsCSV, mappingJSON, groupsCSV, 
 		}
 	}
 
+	modelTags := "video,方舟"
 	for _, publicModel := range publicModels {
 		desc := modelDescriptions[publicModel]
 		var meta Model
@@ -213,8 +215,8 @@ func ensureXxzRoutingClickHouse(neutralName, modelsCSV, mappingJSON, groupsCSV, 
 			now := common.GetTimestamp()
 			if err := DB.Exec(
 				`INSERT INTO models (id, model_name, description, icon, tags, endpoints, status, sync_official, created_time, updated_time, name_rule)
-				 VALUES (?, ?, ?, '', 'video', ?, 1, 0, ?, ?, 0)`,
-				id, publicModel, desc, endpoint, now, now,
+				 VALUES (?, ?, ?, '', ?, ?, 1, 0, ?, ?, 0)`,
+				id, publicModel, desc, modelTags, endpoint, now, now,
 			).Error; err != nil {
 				return err
 			}
@@ -224,12 +226,12 @@ func ensureXxzRoutingClickHouse(neutralName, modelsCSV, mappingJSON, groupsCSV, 
 			return err
 		}
 		if err := DB.Unscoped().Model(&Model{}).Where("id = ?", meta.Id).Updates(map[string]any{
-			"description": desc, "tags": "video", "endpoints": endpoint,
+			"description": desc, "tags": modelTags, "endpoints": endpoint,
 			"status": 1, "sync_official": 0, "deleted_at": nil, "updated_time": common.GetTimestamp(),
 		}).Error; err != nil {
 			return err
 		}
-		if err := DB.Exec(`ALTER TABLE models UPDATE description = ?, status = 1, updated_time = ? WHERE id = ?`, desc, common.GetTimestamp(), meta.Id).Error; err != nil {
+		if err := DB.Exec(`ALTER TABLE models UPDATE description = ?, tags = ?, status = 1, updated_time = ? WHERE id = ? SETTINGS mutations_sync = 2`, desc, modelTags, common.GetTimestamp(), meta.Id).Error; err != nil {
 			return err
 		}
 	}
