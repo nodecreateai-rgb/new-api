@@ -249,7 +249,6 @@ func ensureDopioRMBPricing() {
 		"seedance-2.0-720p":                  3,
 		"seedance-2.0-480p":                  1.6,
 		"seedance-2.0-fast-480p-c1":          1.5,
-		"seedance-2.0-mini-480p-c7":          0.5,
 		"seedance-2.0-c8":                    0.3,
 		"seedance-2.0-mini-c8":               0.2,
 		"seedance-2.5-480p":                  1.5,
@@ -539,7 +538,7 @@ func ensureDopioRMBPricing() {
 			changed = true
 		}
 	}
-	for _, gone := range []string{"seedance-2.0-fast-720p-c3", "kling-o3-omni", "anthropic/claude-opus-5-5", "minimax-h3-max-768p", "seedance-2.0-mini-480p-12s", "minimax-h3-2k", "seedance-2.5-720p-c4", "seedance-2.0", "seedance-2.5-720p", "seedance-2.0-720p-c1", "seedance-2.5-720p-c6", "seedance-2.0-fast-720p-c5", "seedance-2.5-480p-c5", "seedance-2.5-flash-480p-c5", "seedance-2.5-flash-720p-c5", "seedance-2.0-480p-c7", "seedance-2.0-fast-480p-c7", "seedance-2.0-mini-720p-c7"} {
+	for _, gone := range []string{"seedance-2.0-fast-720p-c3", "kling-o3-omni", "anthropic/claude-opus-5-5", "minimax-h3-max-768p", "seedance-2.0-mini-480p-12s", "minimax-h3-2k", "seedance-2.5-720p-c4", "seedance-2.0", "seedance-2.5-720p", "seedance-2.0-720p-c1", "seedance-2.5-720p-c6", "seedance-2.0-fast-720p-c5", "seedance-2.5-480p-c5", "seedance-2.5-flash-480p-c5", "seedance-2.5-flash-720p-c5", "seedance-2.0-480p-c7", "seedance-2.0-fast-480p-c7", "seedance-2.0-mini-480p-c7", "seedance-2.0-mini-720p-c7"} {
 		if _, exists := prices[gone]; exists {
 			delete(prices, gone)
 			changed = true
@@ -791,7 +790,7 @@ func ensureDopioRMBPricing() {
 				changed = true
 			}
 		}
-		for _, model := range append([]string{"minimax-h3-2k", "seedance-2.5-720p-c4", "seedance-2.0", "seedance-2.5-720p", "seedance-2.0-c2", "seedance-2.0-480p-c2", "seedance-2.0-fast-c2", "seedance-2.0-fast-480p-c2", "seedance-2.0-mini-c2", "wan-3.0-c2", "seedance-2.0-fast-720p-c3", "kling-o3-omni", "anthropic/claude-opus-5-5", "minimax-h3-max-768p", "seedance-2.0-mini-480p-12s", "seedance-2.0-720p-c1", "seedance-2.5-720p-c6", "seedance-2.0-fast-720p-c5", "seedance-2.5-480p-c5", "seedance-2.5-flash-480p-c5", "seedance-2.5-flash-720p-c5", "seedance-2.0-480p-c7", "seedance-2.0-fast-480p-c7", "seedance-2.0-mini-720p-c7"}, permanentlyRetiredPublicModels...) {
+		for _, model := range append([]string{"minimax-h3-2k", "seedance-2.5-720p-c4", "seedance-2.0", "seedance-2.5-720p", "seedance-2.0-c2", "seedance-2.0-480p-c2", "seedance-2.0-fast-c2", "seedance-2.0-fast-480p-c2", "seedance-2.0-mini-c2", "wan-3.0-c2", "seedance-2.0-fast-720p-c3", "kling-o3-omni", "anthropic/claude-opus-5-5", "minimax-h3-max-768p", "seedance-2.0-mini-480p-12s", "seedance-2.0-720p-c1", "seedance-2.5-720p-c6", "seedance-2.0-fast-720p-c5", "seedance-2.5-480p-c5", "seedance-2.5-flash-480p-c5", "seedance-2.5-flash-720p-c5", "seedance-2.0-480p-c7", "seedance-2.0-fast-480p-c7", "seedance-2.0-mini-480p-c7", "seedance-2.0-mini-720p-c7"}, permanentlyRetiredPublicModels...) {
 			if _, exists := groupPrices[model]; exists {
 				delete(groupPrices, model)
 				changed = true
@@ -935,8 +934,10 @@ func ensureDopioRMBPricing() {
 	if err := ensureMoyinRouting(); err != nil {
 		common.SysLog("failed to enforce Video H3 768p gateway routing: " + err.Error())
 	}
+	// Video Seedance C7 is retired for good. Startup must not publish
+	// seedance-2.0-mini-480p-c7 or any other C7 variant again.
 	if err := ensureSeedanceC7Routing(); err != nil {
-		common.SysLog("failed to enforce Video Seedance C7 gateway routing: " + err.Error())
+		common.SysLog("failed to retire Video Seedance C7 gateway routing: " + err.Error())
 	}
 	// Video Seedance C8 is retired for good. Startup must not publish
 	// seedance-2.0-c8 or seedance-2.0-mini-c8 again.
@@ -988,10 +989,6 @@ func ensureDopioRMBPricing() {
 	// Last, so a later routing pass cannot put retired models back on sale.
 	if err := retireDeadVideoModels(); err != nil {
 		common.SysLog("failed to retire dead video models: " + err.Error())
-	}
-	// After every cleanup pass, so a redeploy puts these back on the plaza.
-	if err := ensureSeedanceC7Routing(); err != nil {
-		common.SysLog("failed to enforce Video Seedance C7 gateway routing: " + err.Error())
 	}
 	if err := ensureVIP16UserAndChannels(); err != nil {
 		common.SysLog("failed to ensure vip16 user and channel abilities: " + err.Error())

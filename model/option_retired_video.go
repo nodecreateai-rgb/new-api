@@ -39,7 +39,8 @@ var deadVideoModels = []string{
 	"seedance-2.5-480p-c5",
 	"seedance-2.5-flash-480p-c5",
 	"seedance-2.5-flash-720p-c5",
-	// Video Seedance C7 keeps only seedance-2.0-mini-480p-c7 (max 10s).
+	// Video Seedance C7 is retired for good.
+	"seedance-2.0-mini-480p-c7",
 	"seedance-2.0-480p-c7",
 	"seedance-2.0-fast-480p-c7",
 	"seedance-2.0-mini-720p-c7",
@@ -59,9 +60,26 @@ var deadVideoChannels = []string{
 	"Aicron Video",
 	"Video 2K C4",
 	"Video 720p C1",
+	"Video Seedance C7",
 	"Video Seedance C8",
 	"Video 720p C6",
 	"Video Fast 720p C5",
+}
+
+// retireNamedChannelAndModels permanently disables one retired channel and
+// unpublishes its public models.
+func retireNamedChannelAndModels(channelName string, publicModels []string) error {
+	if err := disableChannelByName(channelName); err != nil {
+		return err
+	}
+	if err := retireMarketplaceModels(publicModels); err != nil {
+		return err
+	}
+	if err := stripModelsFromChannels(publicModels); err != nil {
+		return err
+	}
+	InitChannelCache()
+	return nil
 }
 
 // retireDeadVideoModels runs after every ensure step, because several of
